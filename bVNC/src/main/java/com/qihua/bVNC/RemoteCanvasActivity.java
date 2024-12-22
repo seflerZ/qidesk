@@ -36,6 +36,7 @@ import android.content.res.Configuration;
 import android.database.Cursor;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
+import android.hardware.display.DisplayManager;
 import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Build;
@@ -47,6 +48,7 @@ import android.os.PersistableBundle;
 import android.os.SystemClock;
 import android.os.Vibrator;
 import android.util.Log;
+import android.view.Display;
 import android.view.Gravity;
 import android.view.InputDevice;
 import android.view.KeyEvent;
@@ -166,52 +168,12 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     ToolbarHiderRunnable toolbarHider = new ToolbarHiderRunnable();
     private Vibrator myVibrator;
     private RemoteCanvas canvas;
+    private CanvasPresentation canvasPresentation;
     private MenuItem[] inputModeMenuItems;
     private MenuItem[] scalingModeMenuItems;
     private InputHandler inputModeHandlers[];
     private Connection connection;
-    /**
-     * This runnable enables immersive mode.
-     */
-    private Runnable immersiveEnabler = new Runnable() {
-        public void run() {
-            try {
-                if (Utils.querySharedPreferenceBoolean(RemoteCanvasActivity.this,
-                        Constants.disableImmersiveTag)) {
-                    return;
-                }
 
-                if (Constants.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
-                    canvas.setSystemUiVisibility(
-                            View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                                    | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                                    | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                                    | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                                    | View.SYSTEM_UI_FLAG_FULLSCREEN
-                                    | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
-                }
-
-            } catch (Exception e) {
-            }
-        }
-    };
-    /**
-     * This runnable disables immersive mode.
-     */
-    private Runnable immersiveDisabler = new Runnable() {
-        public void run() {
-            try {
-                if (Constants.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
-                    canvas.setSystemUiVisibility(
-                            View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                                    | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                                    | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
-                }
-
-            } catch (Exception e) {
-            }
-        }
-    };
     /**
      * This runnable fixes things up after a rotation.
      */
@@ -229,16 +191,16 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
      * Enables sticky immersive mode if supported.
      */
     private void enableImmersive() {
-        handler.removeCallbacks(immersiveEnabler);
-        handler.postDelayed(immersiveEnabler, 200);
+//        handler.removeCallbacks(immersiveEnabler);
+//        handler.postDelayed(immersiveEnabler, 200);
     }
 
     /**
      * Disables sticky immersive mode.
      */
     private void disableImmersive() {
-        handler.removeCallbacks(immersiveDisabler);
-        handler.postDelayed(immersiveDisabler, 200);
+//        handler.removeCallbacks(immersiveDisabler);
+//        handler.postDelayed(immersiveDisabler, 200);
     }
 
     @Override
@@ -264,13 +226,33 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 
         Utils.showMenu(this);
 
-        setContentView(R.layout.canvas);
+        DisplayManager displayManager = (DisplayManager) getSystemService(DISPLAY_SERVICE);
+        Display[] displays = displayManager.getDisplays();
 
-        canvas = (RemoteCanvas) findViewById(R.id.canvas);
+        if (displays.length > 1) {
+            setContentView(R.layout.control);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            canvas.setDefaultFocusHighlightEnabled(false);
+            // use external display in first place
+            Display choosedDisplay = displays[displays.length - 1];
+
+            canvasPresentation = new CanvasPresentation(getBaseContext(), choosedDisplay);
+            canvasPresentation.show();
+            canvas = canvasPresentation.getCanvas();
+        } else {
+            setContentView(R.layout.canvas_full);
+            canvas = (RemoteCanvas) findViewById(R.id.canvas);
         }
+
+
+
+        canvas.setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_FULLSCREEN
+                        | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+
         if (android.os.Build.VERSION.SDK_INT >= 9) {
             android.os.StrictMode.ThreadPolicy policy = new android.os.StrictMode.ThreadPolicy.Builder().permitAll().build();
             android.os.StrictMode.setThreadPolicy(policy);
@@ -330,7 +312,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             if (!isShow && !extraKeysHidden) {
                 hideKeyboardAndExtraKeys();
             }
-            
+
             canvas.movePanToMakePointerVisible();
         });
 
@@ -1763,7 +1745,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     @Override
     public void onTextSelected(String selectedString) {
         android.util.Log.i(TAG, "onTextSelected called with selectedString: " + selectedString);
-        canvas.pd.show();
+//        canvas.pd.show();
         connection.setVmname(canvas.vmNameToId.get(selectedString));
         connection.save(this);
         synchronized (canvas.spicecomm) {

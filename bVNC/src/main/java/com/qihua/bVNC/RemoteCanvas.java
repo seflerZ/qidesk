@@ -120,7 +120,7 @@ public class RemoteCanvas extends AppCompatImageView
     public boolean maintainConnection = true;
     public AbstractBitmapData myDrawable;
     // Progress dialog shown at connection time.
-    public ProgressDialog pd;
+//    public ProgressDialog pd;
     public boolean serverJustCutText = false;
     public Runnable setModes;
     public Runnable hideKeyboardAndExtraKeys;
@@ -244,13 +244,22 @@ public class RemoteCanvas extends AppCompatImageView
     public RemoteCanvas(final Context context, AttributeSet attrs) {
         super(context, attrs);
 
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R) {
+            return;
+        }
+
         clipboard = (ClipboardManager) getContext().getSystemService(Context.CLIPBOARD_SERVICE);
         isVnc = Utils.isVnc(getContext());
         isRdp = Utils.isRdp(getContext());
         isSpice = Utils.isSpice(getContext());
         isOpaque = Utils.isOpaque(getContext());
 
-        final Display display = ((Activity) context).getWindow().getWindowManager().getDefaultDisplay();
+        Display display;
+        if (context instanceof Activity) {
+            display = ((Activity) context).getWindow().getWindowManager().getDefaultDisplay();
+        } else {
+            display = context.getDisplay();
+        }
 
         // TODO resolve deprecated
         displayWidth = display.getWidth();
@@ -261,22 +270,22 @@ public class RemoteCanvas extends AppCompatImageView
 
         // TODO find out why progress dialog not showing
         // Startup the connection thread with a progress dialog
-        pd = ProgressDialog.show(getContext(), getContext().getString(R.string.info_progress_dialog_connecting),
-                getContext().getString(R.string.info_progress_dialog_establishing),
-                true, true, new DialogInterface.OnCancelListener() {
-                    @Override
-                    public void onCancel(DialogInterface dialog) {
-                        closeConnection();
-                        handler.post(new Runnable() {
-                            public void run() {
-                                Utils.showFatalErrorMessage(getContext(), getContext().getString(R.string.info_progress_dialog_aborted));
-                            }
-                        });
-                    }
-                });
+//        pd = ProgressDialog.show(getContext(), getContext().getString(R.string.info_progress_dialog_connecting),
+//                getContext().getString(R.string.info_progress_dialog_establishing),
+//                true, true, new DialogInterface.OnCancelListener() {
+//                    @Override
+//                    public void onCancel(DialogInterface dialog) {
+//                        closeConnection();
+//                        handler.post(new Runnable() {
+//                            public void run() {
+//                                Utils.showFatalErrorMessage(getContext(), getContext().getString(R.string.info_progress_dialog_aborted));
+//                            }
+//                        });
+//                    }
+//                });
 
         // Make this dialog cancellable only upon hitting the Back button and not touching outside.
-        pd.setCanceledOnTouchOutside(false);
+//        pd.setCanceledOnTouchOutside(false);
     }
 
     void init(final Connection settings, final Handler handler, final Runnable setModes, final Runnable hideKeyboardAndExtraKeys, final String vvFileName) {
@@ -449,8 +458,8 @@ public class RemoteCanvas extends AppCompatImageView
             Log.e(TAG, e.toString());
             e.printStackTrace();
             // Ensure we dismiss the progress dialog before we finish
-            if (pd.isShowing())
-                pd.dismiss();
+//            if (pd.isShowing())
+//                pd.dismiss();
 
             if (e instanceof OutOfMemoryError) {
                 disposeDrawable();
@@ -575,7 +584,7 @@ public class RemoteCanvas extends AppCompatImageView
                 connection.getRemoteFx(), connection.getEnableGfx(), connection.getEnableGfxH264(),
                 connection.getRdpColor());
         rdpcomm.connect();
-        pd.dismiss();
+//        pd.dismiss();
     }
 
     /**
@@ -647,18 +656,18 @@ public class RemoteCanvas extends AppCompatImageView
         reallocateDrawable(displayWidth, displayHeight);
         decoder.setPixelFormat(rfb);
 
-        handler.post(new Runnable() {
-            public void run() {
-                pd.setMessage(getContext().getString(R.string.info_progress_dialog_downloading));
-            }
-        });
+//        handler.post(new Runnable() {
+//            public void run() {
+//                pd.setMessage(getContext().getString(R.string.info_progress_dialog_downloading));
+//            }
+//        });
 
         sendUnixAuth();
         handler.post(drawableSetter);
 
         // Hide progress dialog
-        if (pd.isShowing())
-            pd.dismiss();
+//        if (pd.isShowing())
+//            pd.dismiss();
 
         try {
             rfb.processProtocol();
@@ -674,8 +683,8 @@ public class RemoteCanvas extends AppCompatImageView
      * Initialize the canvas to show the remote desktop
      */
     void startOvirt() {
-        if (!pd.isShowing())
-            pd.show();
+//        if (!pd.isShowing())
+//            pd.show();
 
         Thread cThread = new Thread() {
             @Override
@@ -850,8 +859,8 @@ public class RemoteCanvas extends AppCompatImageView
      * Initialize the canvas to show the remote desktop
      */
     void startPve() {
-        if (!pd.isShowing())
-            pd.show();
+//        if (!pd.isShowing())
+//            pd.show();
 
         Thread cThread = new Thread() {
             @Override

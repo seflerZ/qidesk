@@ -108,9 +108,9 @@ public class RemoteCanvasHandler extends Handler {
                                      GetTextFragment.OnFragmentDismissedListener dismissalListener,
                                      int dialogType, int messageNum, int errorNum,
                                      String t1, String t2, String t3, boolean keep) {
-        if (c.pd != null && c.pd.isShowing()) {
-            c.pd.dismiss();
-        }
+//        if (c.pd != null && c.pd.isShowing()) {
+//            c.pd.dismiss();
+//        }
         GetTextFragment frag = GetTextFragment.newInstance(dialogId, title, dismissalListener,
                 dialogType, messageNum, errorNum, t1, t2, t3, keep);
         frag.setCancelable(false);
@@ -121,9 +121,9 @@ public class RemoteCanvasHandler extends Handler {
                                                  GetTextFragment.OnFragmentDismissedListener dismissalListener,
                                                  int dialogType, int messageNum, int errorNum,
                                                  String t1, String t2, String t3, boolean keep) {
-        if (c.pd != null && c.pd.isShowing()) {
-            c.pd.dismiss();
-        }
+//        if (c.pd != null && c.pd.isShowing()) {
+//            c.pd.dismiss();
+//        }
         GetTextFragment frag = GetTextFragment.newInstance(dialogId, title, dismissalListener,
                 dialogType, messageNum, errorNum, t1, t2, t3, keep);
         frag.setCancelable(false);
@@ -327,7 +327,7 @@ public class RemoteCanvasHandler extends Handler {
                 public void onClick(DialogInterface dialog, int which) {
                     // We were told to not continue, so stop the activity
                     sshConnection.terminateSSHTunnel();
-                    c.pd.dismiss();
+//                    c.pd.dismiss();
                     Utils.justFinish(context);
                 }
             };
@@ -369,9 +369,9 @@ public class RemoteCanvasHandler extends Handler {
         final String messageText = Utils.getStringFromMessage(msg, "message");
         switch (msg.what) {
             case RemoteClientLibConstants.PRO_FEATURE:
-                if (c.pd != null && c.pd.isShowing()) {
-                    c.pd.dismiss();
-                }
+//                if (c.pd != null && c.pd.isShowing()) {
+//                    c.pd.dismiss();
+//                }
                 c.showFatalMessageAndQuit(context.getString(R.string.pro_feature_mfa));
                 break;
             case RemoteClientLibConstants.GET_VERIFICATIONCODE:
@@ -582,7 +582,7 @@ public class RemoteCanvasHandler extends Handler {
                         connection.getKeepPassword());
                 break;
             case RemoteClientLibConstants.GET_OTP_CODE:
-                c.pd.dismiss();
+//                c.pd.dismiss();
                 showGetTextFragmentRemoteCanvas(context.getString(R.string.enter_otp_code),
                         GetTextFragment.DIALOG_ID_GET_OPAQUE_OTP_CODE,
                         context.getString(R.string.enter_otp_code),
@@ -623,7 +623,7 @@ public class RemoteCanvasHandler extends Handler {
                     break;
                 }
             case RemoteClientLibConstants.DIALOG_DISPLAY_VMS:
-                c.pd.dismiss();
+//                c.pd.dismiss();
                 ArrayList<String> vms = msg.getData().getStringArrayList("vms");
 
                 if (vms.size() > 0) {
@@ -636,9 +636,9 @@ public class RemoteCanvasHandler extends Handler {
                 }
                 break;
             case RemoteClientLibConstants.SPICE_CONNECT_SUCCESS:
-                if (c.pd != null && c.pd.isShowing()) {
-                    c.pd.dismiss();
-                }
+//                if (c.pd != null && c.pd.isShowing()) {
+//                    c.pd.dismiss();
+//                }
                 synchronized (c.spicecomm) {
                     c.spiceUpdateReceived = true;
                     c.spicecomm.notifyAll();
@@ -648,9 +648,9 @@ public class RemoteCanvasHandler extends Handler {
                 String e = msg.getData().getString("message");
                 if (c.maintainConnection) {
                     c.maintainConnection = false;
-                    if (c.pd != null && c.pd.isShowing()) {
-                        c.pd.dismiss();
-                    }
+//                    if (c.pd != null && c.pd.isShowing()) {
+//                        c.pd.dismiss();
+//                    }
                     // Only if we were intending to stay connected, and the connection failed, show an error message.
                     if (!c.spiceUpdateReceived) {
                         c.disconnectAndShowMessage(R.string.error_ovirt_unable_to_connect, R.string.error_dialog_title, e);
@@ -660,7 +660,7 @@ public class RemoteCanvasHandler extends Handler {
                 }
                 break;
             case RemoteClientLibConstants.OVIRT_TIMEOUT:
-                c.pd.dismiss();
+//                c.pd.dismiss();
                 c.disconnectAndShowMessage(R.string.error_ovirt_timeout, R.string.error_dialog_title);
                 break;
             case RemoteClientLibConstants.DIALOG_X509_CERT:
