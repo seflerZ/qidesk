@@ -5,6 +5,13 @@
     android:background="@android:color/background_dark"
     android:orientation="vertical">
 
+    <com.qihua.bVNC.RemoteCanvas
+        android:id="@+id/touchpad"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_gravity="bottom|center"
+        android:background="@android:color/background_dark"></com.qihua.bVNC.RemoteCanvas>
+
     <com.undatech.opaque.util.RemoteToolbar
         android:id="@+id/toolbar"
         android:layout_width="wrap_content"

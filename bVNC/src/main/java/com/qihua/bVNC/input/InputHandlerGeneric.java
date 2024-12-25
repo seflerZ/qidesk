@@ -52,6 +52,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     protected MyScaleGestureDetector scalingGestureDetector;
     // Handles to the RemoteCanvas view and RemoteCanvasActivity activity.
     protected RemoteCanvas canvas;
+    protected RemoteCanvas touchpad;
     protected RemoteCanvasActivity activity;
     protected PanRepeater panRepeater;
     // Various drag modes in which we don't detect gestures.
@@ -130,9 +131,10 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     private boolean dragHelped = false;
     private boolean canEnlarge = true;
 
-    InputHandlerGeneric(RemoteCanvasActivity activity, RemoteCanvas canvas, RemotePointer pointer,
+    InputHandlerGeneric(RemoteCanvasActivity activity, RemoteCanvas canvas, RemoteCanvas touchpad, RemotePointer pointer,
                         boolean debugLogging) {
         this.activity = activity;
+        this.touchpad = touchpad;
         this.canvas = canvas;
         this.pointer = pointer;
         this.debugLogging = debugLogging;
@@ -444,8 +446,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     private void detectImmersiveSwipe(float x, float y) {
         GeneralUtils.debugLog(debugLogging, TAG, "detectImmersiveSwipe");
         if (Constants.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT &&
-                (x <= immersiveSwipeDistance || canvas.getWidth() - x <= immersiveSwipeDistance
-                        || canvas.getHeight() - y <= immersiveSwipeDistance)) {
+                (x <= immersiveSwipeDistance || touchpad.getWidth() - x <= immersiveSwipeDistance
+                        || touchpad.getHeight() - y <= immersiveSwipeDistance)) {
             inSwiping = true;
             immersiveSwipe = true;
         } else if (!singleHandedGesture) {
@@ -530,11 +532,11 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
                         if (timeElapsed > interval) {
                             if (lastX != 0) {
-                                lastSpeedX = (1000 * (e.getX() - lastX)) / (timeElapsed * inertiaBaseInterval * canvas.getZoomFactor());
+                                lastSpeedX = (1000 * (e.getX() - lastX)) / (timeElapsed * inertiaBaseInterval * (canvas.getZoomFactor() * 0.8f));
                             }
 
                             if (lastY != 0) {
-                                lastSpeedY = (1000 * (e.getY() - lastY)) / (timeElapsed * inertiaBaseInterval * canvas.getZoomFactor());
+                                lastSpeedY = (1000 * (e.getY() - lastY)) / (timeElapsed * inertiaBaseInterval * (canvas.getZoomFactor() * 0.8f));
                             }
 
                             inertiaStartTime = System.currentTimeMillis();

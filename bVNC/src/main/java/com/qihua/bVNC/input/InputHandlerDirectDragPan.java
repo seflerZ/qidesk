@@ -33,7 +33,7 @@ public class InputHandlerDirectDragPan extends InputHandlerGeneric {
 
     public InputHandlerDirectDragPan(RemoteCanvasActivity activity, RemoteCanvas canvas,
                                      RemotePointer pointer, boolean debugLogging) {
-        super(activity, canvas, pointer, debugLogging);
+        super(activity, canvas, canvas, pointer, debugLogging);
     }
 
     /*

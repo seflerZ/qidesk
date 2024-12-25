@@ -47,6 +47,7 @@ import android.os.Parcelable;
 import android.os.PersistableBundle;
 import android.os.SystemClock;
 import android.os.Vibrator;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.Display;
 import android.view.Gravity;
@@ -168,6 +169,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     ToolbarHiderRunnable toolbarHider = new ToolbarHiderRunnable();
     private Vibrator myVibrator;
     private RemoteCanvas canvas;
+    private RemoteCanvas touchpad;
     private CanvasPresentation canvasPresentation;
     private MenuItem[] inputModeMenuItems;
     private MenuItem[] scalingModeMenuItems;
@@ -238,12 +240,24 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             canvasPresentation = new CanvasPresentation(getBaseContext(), choosedDisplay);
             canvasPresentation.show();
             canvas = canvasPresentation.getCanvas();
+
+            touchpad = (RemoteCanvas) findViewById(R.id.touchpad);
+
+            touchpad.setSystemUiVisibility(
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                            | View.SYSTEM_UI_FLAG_FULLSCREEN
+                            | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+
+            touchpad.setImageResource(R.drawable.t_tips);
+            touchpad.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
         } else {
             setContentView(R.layout.canvas_full);
             canvas = (RemoteCanvas) findViewById(R.id.canvas);
+            touchpad = canvas;
         }
-
-
 
         canvas.setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE
@@ -1441,7 +1455,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
                     } else if (id == R.id.itemInputDragPanZoomMouse) {
                         inputModeHandlers[i] = new InputHandlerDirectDragPan(this, canvas, canvas.getPointer(), App.debugLog);
                     } else if (id == R.id.itemInputTouchpad) {
-                        inputModeHandlers[i] = new InputHandlerTouchpad(this, canvas, canvas.getPointer(), App.debugLog);
+                        inputModeHandlers[i] = new InputHandlerTouchpad(this, canvas, touchpad, canvas.getPointer(), App.debugLog);
                     } else if (id == R.id.itemInputSingleHanded) {
                         inputModeHandlers[i] = new InputHandlerSingleHanded(this, canvas, canvas.getPointer(), App.debugLog);
                     } else {
@@ -1786,14 +1800,14 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     public void showKeyboard() {
         android.util.Log.i(TAG, "Showing keyboard and hiding action bar");
 
-        Utils.showKeyboard(this, canvas);
+        Utils.showKeyboard(this, touchpad);
         softKeyboardUp = true;
     }
 
     public void hideKeyboard() {
         android.util.Log.i(TAG, "Hiding keyboard and hiding action bar");
 
-        Utils.hideKeyboard(this, canvas);
+        Utils.hideKeyboard(this, touchpad);
         softKeyboardUp = false;
     }
 
@@ -1801,7 +1815,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         hideKeyboard();
         if (layoutKeys.getVisibility() == View.VISIBLE) {
             extraKeysHidden = true;
-            setExtraKeysVisibility(View.GONE, false);
+            setExtraKeysVisibility(View.GONE, true);
         }
     }
 
@@ -1809,7 +1823,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         showKeyboard();
         if (layoutKeys.getVisibility() == View.GONE) {
             extraKeysHidden = false;
-            setExtraKeysVisibility(View.VISIBLE, false);
+            setExtraKeysVisibility(View.VISIBLE, true);
         }
     }
 

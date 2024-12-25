@@ -36,9 +36,9 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
     private float cumulatedY = 0;
     private float cumulatedX = 0;
 
-    public InputHandlerTouchpad(RemoteCanvasActivity activity, RemoteCanvas canvas,
+    public InputHandlerTouchpad(RemoteCanvasActivity activity, RemoteCanvas canvas, RemoteCanvas touchpad,
                                 RemotePointer pointer, boolean debugLogging) {
-        super(activity, canvas, pointer, debugLogging);
+        super(activity, canvas, touchpad, pointer, debugLogging);
     }
 
     /*

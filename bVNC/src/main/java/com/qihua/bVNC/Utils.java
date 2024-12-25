@@ -597,7 +597,7 @@ public class Utils {
         if (view != null) {
             InputMethodManager imm = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
             if (imm != null) {
-                imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+                imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
             }
         }
     }
@@ -606,7 +606,7 @@ public class Utils {
         if (view != null) {
             InputMethodManager imm = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
             if (imm != null) {
-                imm.showSoftInput(view, 0);
+                imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
             }
         }
     }

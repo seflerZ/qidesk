@@ -33,7 +33,7 @@ public class InputHandlerDirectSwipePan extends InputHandlerGeneric {
 
     public InputHandlerDirectSwipePan(RemoteCanvasActivity activity, RemoteCanvas canvas,
                                       RemotePointer pointer, boolean debugLogging) {
-        super(activity, canvas, pointer, debugLogging);
+        super(activity, canvas, canvas, pointer, debugLogging);
     }
 
     /*
