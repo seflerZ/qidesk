@@ -480,9 +480,9 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         // Initialize and define actions for on-screen keys.
         initializeOnScreenKeys();
 
-        canvas.setOnKeyListener(this);
-        canvas.setFocusableInTouchMode(true);
-        canvas.setDrawingCacheEnabled(false);
+        touchpad.setOnKeyListener(this);
+        touchpad.setFocusableInTouchMode(true);
+        canvas.setDrawingCacheEnabled(true);
 
         // This code detects when the soft keyboard is up and sets an appropriate visibleHeight in vncCanvas.
         // When the keyboard is gone, it resets visibleHeight and pans zero distance to prevent us from being
@@ -1265,6 +1265,11 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             return;
         }
 
+        // do not rotate on external display
+        if (touchpad != canvas) {
+            return;
+        }
+
         // Its quite common to see NullPointerExceptions here when this function is called
         // at the point of disconnection. Hence, we catch and ignore the error.
         float oldScale = canvas.canvasZoomer.getZoomFactor();
@@ -1815,7 +1820,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         hideKeyboard();
         if (layoutKeys.getVisibility() == View.VISIBLE) {
             extraKeysHidden = true;
-            setExtraKeysVisibility(View.GONE, true);
+            setExtraKeysVisibility(View.GONE, false);
         }
     }
 
@@ -1823,7 +1828,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         showKeyboard();
         if (layoutKeys.getVisibility() == View.GONE) {
             extraKeysHidden = false;
-            setExtraKeysVisibility(View.VISIBLE, true);
+            setExtraKeysVisibility(View.VISIBLE, false);
         }
     }
 

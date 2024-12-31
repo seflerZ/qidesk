@@ -230,6 +230,10 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         float scale = canvas.getZoomFactor();
         int x = (int) (canvas.getAbsX() + e.getX() / scale);
         int y = (int) (canvas.getAbsY() + (e.getY() - 1.f * canvas.getTop()) / scale);
+        float ratioX = (float) canvas.getWidth() / touchpad.getWidth();
+        float ratioY = (float) canvas.getHeight() / touchpad.getHeight();
+        x = (int) (x * ratioX);
+        y = (int) (y * ratioY);
 
         switch (action) {
             // If a mouse button was pressed or mouse was moved.
