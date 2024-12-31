@@ -539,17 +539,17 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         // ever have r.top equal to zero. so a special case for them.
         Rect re = new Rect();
         getWindow().getDecorView().getWindowVisibleDisplayFrame(re);
-        if (r.top == 0 || re.top > 0) {
-            if (canvas.myDrawable != null) {
-                android.util.Log.d(TAG, "onGlobalLayout: Setting VisibleDesktopHeight to: " + (r.bottom - re.top));
-                canvas.setVisibleDesktopHeight(r.bottom - re.top);
-                canvas.relativePan(0, 0);
-            } else {
-                android.util.Log.d(TAG, "onGlobalLayout: canvas.myDrawable is null");
-            }
-        } else {
-            android.util.Log.d(TAG, "onGlobalLayout: Found r.top to be non-zero");
-        }
+//        if (r.top == 0 || re.top > 0) {
+//            if (canvas.myDrawable != null) {
+//                android.util.Log.d(TAG, "onGlobalLayout: Setting VisibleDesktopHeight to: " + (r.bottom - re.top));
+//                canvas.setVisibleDesktopHeight(r.bottom - re.top);
+//                canvas.relativePan(0, 0);
+//            } else {
+//                android.util.Log.d(TAG, "onGlobalLayout: canvas.myDrawable is null");
+//            }
+//        } else {
+//            android.util.Log.d(TAG, "onGlobalLayout: Found r.top to be non-zero");
+//        }
 
         // Enable/show the toolbar if the keyboard is gone, and disable/hide otherwise.
         // We detect the keyboard if more than 19% of the screen is covered.
@@ -1262,11 +1262,6 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         canvas.waitUntilInflated();
 
         if (canvas.canvasZoomer == null) {
-            return;
-        }
-
-        // do not rotate on external display
-        if (touchpad != canvas) {
             return;
         }
 
