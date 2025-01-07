@@ -122,8 +122,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     boolean inScrolling = false;
     boolean inScaling = false;
     boolean scalingJustFinished = false;
-    // What action was previously performed by a mouse or stylus.
-    int prevMouseOrStylusAction = 0;
+
     // What the display density is.
     float displayDensity = 0;
     // Indicates that the next onFling will be disregarded.
@@ -384,7 +383,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                 used = true;
         }
 
-        prevMouseOrStylusAction = action;
+        canvas.movePanToMakePointerVisible();
 
         return used;
     }
