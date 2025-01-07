@@ -20,10 +20,15 @@
 
 package com.qihua.bVNC.input;
 
+import android.content.Context;
+import android.hardware.input.InputManager;
+import android.os.Build;
 import android.os.SystemClock;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
+import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Toast;
 
 import androidx.core.view.InputDeviceCompat;
@@ -108,7 +113,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     // event and the maximum number to send at one time.
     long swipeSpeed = 1;
     // This is how far the swipe has to travel before a swipe event is generated.
-    float startSwipeDist = 2.f;
+    float startSwipeDist = 1.f;
     float baseSwipeDist = 0.f;
     // This is how far from the top and bottom edge to detect immersive swipe.
     float immersiveSwipeDistance = 65.f;
@@ -218,22 +223,71 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     }
 
     /**
+     * Computes the acceleration depending on the size of the supplied delta.
+     *
+     * @param delta
+     * @return
+     */
+    protected float computeAcceleration(float delta) {
+        float origSign = getSign(delta);
+        delta = Math.abs(delta);
+        boolean accelerated = pointer.isAccelerated();
+        if (delta <= 10 * canvas.getZoomFactor()) {
+            delta = delta * 0.85f;
+        } else if (accelerated && delta <= 15.0f * canvas.getZoomFactor()) {
+            delta = delta * 1f;
+        } else if (accelerated && delta <= 30.0f * canvas.getZoomFactor()) {
+            delta = delta * 1.5f;
+        } else if (accelerated && delta <= 40.0f * canvas.getZoomFactor()) {
+            delta = delta * 2.5f;
+        } else if (accelerated && delta <= 50.0f * canvas.getZoomFactor()) {
+            delta = delta * 3f;
+        } else if (accelerated) {
+            delta = delta * 3.5f;
+        }
+        return origSign * delta;
+    }
+
+    protected float computeAcceleration4mouse(float delta) {
+        float origSign = getSign(delta);
+        delta = Math.abs(delta);
+        boolean accelerated = pointer.isAccelerated();
+
+        if (accelerated && delta <= 60.0f * canvas.getZoomFactor()) {
+            delta = delta * 1.5f;
+        } else if (accelerated && delta <= 120.0f * canvas.getZoomFactor()) {
+            delta = delta * 2.0f;
+        } else {
+            delta = delta * 2.5f;
+        }
+
+        return origSign * delta;
+    }
+
+    /**
      * Handles actions performed by a mouse-like device.
      * @param e touch or generic motion event
      * @return
      */
-    protected boolean handleMouseActions(MotionEvent e) {
+    @Override
+    public boolean onPointerEvent(MotionEvent e) {
         boolean used = false;
         final int action = e.getActionMasked();
         final int meta = e.getMetaState();
         final int bstate = e.getButtonState();
-        float scale = canvas.getZoomFactor();
-        int x = (int) (canvas.getAbsX() + e.getX() / scale);
-        int y = (int) (canvas.getAbsY() + (e.getY() - 1.f * canvas.getTop()) / scale);
-        float ratioX = (float) canvas.getWidth() / touchpad.getWidth();
-        float ratioY = (float) canvas.getHeight() / touchpad.getHeight();
-        x = (int) (x * ratioX);
-        y = (int) (y * ratioY);
+
+        float diffX = e.getX();
+        float diffY = e.getY();
+
+        // position stabilize
+        if (Math.abs(diffX) / Math.abs(diffY) > 10) {
+            diffY = 0;
+        } else if (Math.abs(diffY) / Math.abs(diffX) > 10) {
+            diffX = 0;
+        }
+
+        int x = (int) (computeAcceleration4mouse(diffX) + pointer.pointerX);
+        int y = (int) (computeAcceleration4mouse(diffY) + pointer.pointerY);
 
         switch (action) {
             // If a mouse button was pressed or mouse was moved.
@@ -257,6 +311,9 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                         pointer.middleButtonDown(x, y, meta);
                         used = true;
                         break;
+                    default:
+                        // move only
+                        pointer.moveMouse(x, y, meta);
                 }
                 break;
             // If a mouse button was released.
@@ -328,6 +385,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         }
 
         prevMouseOrStylusAction = action;
+
         return used;
     }
 
@@ -478,7 +536,11 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
 //        if (android.os.Build.VERSION.SDK_INT >= 14) {
         // Handle and consume actions performed by a (e.g. USB or bluetooth) mouse.
-        if (e.getDeviceId() > 15 && handleMouseActions(e)) {
+        if (e.getDeviceId() > 15) {
+            if (e.getButtonState() == MotionEvent.BUTTON_PRIMARY) {
+                touchpad.startPointerCapture();
+            }
+
             return true;
         }
 //        }
@@ -592,7 +654,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                         }
                         break;
                     case MotionEvent.ACTION_UP:
-                        if (inertiaScrollingEnabled && !activity.isToolbarShowing() && !immersiveSwipe) {
+                        if (inertiaScrollingEnabled && !activity.isToolbarShowing() && !immersiveSwipe && !secondPointerWasDown && !thirdPointerWasDown) {
 //                            timeElapsed = System.currentTimeMillis() - inertiaStartTime;
 //                            interval = inertiaBaseInterval * 2;
 //
@@ -816,6 +878,27 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
      */
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent e) {
+        if (e.getDeviceId() > 15) {
+            if (keyCode == KeyEvent.KEYCODE_BACK) {
+                canvas.getKeyboard().onScreenAltOn();
+
+                canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_DPAD_LEFT, new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_LEFT));
+                canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_DPAD_LEFT, new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_LEFT));
+
+                canvas.getKeyboard().onScreenAltOff();
+
+                return true;
+            } else if (keyCode == KeyEvent.KEYCODE_FORWARD) {
+                canvas.getKeyboard().onScreenAltOn();
+
+                canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_DPAD_RIGHT, new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT));
+                canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_DPAD_RIGHT, new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_RIGHT));
+
+                canvas.getKeyboard().onScreenAltOff();
+                return true;
+            }
+        }
+
         if (keyCode == KeyEvent.KEYCODE_BACK) {
             // If the toolbar is already shown, disconnect
             if (activity.getSupportActionBar().isShowing()) {
@@ -824,6 +907,11 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                 canvas.disconnectWithoutMessage();
 
                 return true;
+            }
+
+            // release mouse capture
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                touchpad.releasePointerCapture();
             }
 
             activity.showToolbar();

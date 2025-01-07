@@ -53,6 +53,7 @@ import android.view.Display;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.PointerIcon;
+import android.view.View;
 import android.view.inputmethod.BaseInputConnection;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
@@ -63,6 +64,7 @@ import androidx.appcompat.widget.AppCompatImageView;
 import com.qihua.android.bc.BCFactory;
 import com.qihua.bVNC.dialogs.GetTextFragment;
 import com.qihua.bVNC.exceptions.AnonCipherUnsupportedException;
+import com.qihua.bVNC.input.InputHandler;
 import com.qihua.bVNC.input.InputHandlerTouchpad;
 import com.qihua.bVNC.input.RemoteCanvasHandler;
 import com.qihua.bVNC.input.RemoteKeyboard;
@@ -130,6 +132,11 @@ public class RemoteCanvas extends AppCompatImageView
      * Also shows the dialogs which show various connection failures.
      */
     public Handler handler;
+
+    private InputHandler inputHandler;
+
+    private boolean outDisplay = false;
+
     Database database;
     Map<String, String> vmNameToId = new HashMap<String, String>();
     // RFB Decoder
@@ -286,6 +293,19 @@ public class RemoteCanvas extends AppCompatImageView
 
         // Make this dialog cancellable only upon hitting the Back button and not touching outside.
 //        pd.setCanceledOnTouchOutside(false);
+    }
+
+    public void startPointerCapture() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            requestPointerCapture();
+        }
+
+        requestFocus();
+    }
+
+    @Override
+    public boolean onCapturedPointerEvent(MotionEvent event) {
+        return inputHandler.onPointerEvent(event);
     }
 
     void init(final Connection settings, final Handler handler, final Runnable setModes, final Runnable hideKeyboardAndExtraKeys, final String vvFileName) {
@@ -1918,7 +1938,7 @@ public class RemoteCanvas extends AppCompatImageView
 
     @Override
     public PointerIcon onResolvePointerIcon(MotionEvent event, int pointerIndex) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && !outDisplay) {
             return PointerIcon.getSystemIcon(getContext(), PointerIcon.TYPE_NULL);
         }
 
@@ -2011,5 +2031,13 @@ public class RemoteCanvas extends AppCompatImageView
                 android.util.Log.e(TAG, "Unknown dialog type.");
                 break;
         }
+    }
+
+    public void setInputHandler(InputHandler inputHandler) {
+        this.inputHandler = inputHandler;
+    }
+
+    public void setOutDisplay(boolean outDisplay) {
+        this.outDisplay = outDisplay;
     }
 }

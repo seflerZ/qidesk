@@ -597,7 +597,7 @@ public class Utils {
         if (view != null) {
             InputMethodManager imm = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
             if (imm != null) {
-                imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
+                imm.toggleSoftInput(InputMethodManager.SHOW_IMPLICIT, InputMethodManager.HIDE_IMPLICIT_ONLY);
             }
         }
     }
@@ -605,8 +605,8 @@ public class Utils {
     public static void showKeyboard(Context context, View view) {
         if (view != null) {
             InputMethodManager imm = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
-            if (imm != null) {
-                imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0);
+            if (imm != null && imm.isActive()) {
+                imm.toggleSoftInput(InputMethodManager.SHOW_IMPLICIT, InputMethodManager.HIDE_IMPLICIT_ONLY);
             }
         }
     }

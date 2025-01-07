@@ -45,6 +45,7 @@ import android.os.Handler;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.os.PersistableBundle;
+import android.os.StrictMode;
 import android.os.SystemClock;
 import android.os.Vibrator;
 import android.provider.Settings;
@@ -267,9 +268,12 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
                         | View.SYSTEM_UI_FLAG_FULLSCREEN
                         | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
 
-        if (android.os.Build.VERSION.SDK_INT >= 9) {
-            android.os.StrictMode.ThreadPolicy policy = new android.os.StrictMode.ThreadPolicy.Builder().permitAll().build();
-            android.os.StrictMode.setThreadPolicy(policy);
+        touchpad.setOutDisplay(canvas != touchpad);
+        canvas.setOutDisplay(canvas != touchpad);
+
+        if (Build.VERSION.SDK_INT >= 9) {
+            StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+            StrictMode.setThreadPolicy(policy);
         }
 
         myVibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
@@ -330,7 +334,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             canvas.movePanToMakePointerVisible();
         });
 
-        android.util.Log.d(TAG, "OnCreate complete");
+        Log.d(TAG, "OnCreate complete");
     }
 
     @SuppressLint("SourceLockedOrientationActivity")
@@ -353,6 +357,8 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         }
         ((RemoteCanvasHandler) handler).setConnection(connection);
         canvas.initializeCanvas(connection, setModes, hideKeyboardAndExtraKeys);
+
+        touchpad.setInputHandler(getInputHandlerById(R.id.itemInputTouchpad));
     }
 
     private void handleSerializedConnection(Intent i) {
@@ -595,7 +601,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
                 layoutArrowKeys.offsetLeftAndRight(diffArrowKeysPosition);
                 if (softKeyboardPositionChanged) {
                     android.util.Log.d(TAG, "onGlobalLayout: hiding on-screen buttons");
-//                    setExtraKeysVisibility(View.GONE, false);
+                    setExtraKeysVisibility(View.GONE, false);
                     canvas.invalidate();
                 }
             }
@@ -1131,16 +1137,16 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
      * Sets the visibility of the extra keys appropriately.
      */
     private void setExtraKeysVisibility(int visibility, boolean forceVisible) {
-        Configuration config = getResources().getConfiguration();
+//        Configuration config = getResources().getConfiguration();
         //Log.e(TAG, "Hardware kbd hidden: " + Integer.toString(config.hardKeyboardHidden));
         //Log.e(TAG, "Any keyboard hidden: " + Integer.toString(config.keyboardHidden));
         //Log.e(TAG, "Keyboard type: " + Integer.toString(config.keyboard));
 
-        boolean makeVisible = forceVisible;
-        if (config.hardKeyboardHidden == Configuration.HARDKEYBOARDHIDDEN_NO)
-            makeVisible = true;
+//        boolean makeVisible = forceVisible;
+//        if (config.hardKeyboardHidden == Configuration.HARDKEYBOARDHIDDEN_YES)
+//            makeVisible = true;
 
-        if (!extraKeysHidden && makeVisible &&
+        if (!extraKeysHidden && forceVisible &&
                 connection.getExtraKeysToggleType() == Constants.EXTRA_KEYS_ON) {
             layoutKeys.setVisibility(View.VISIBLE);
             layoutKeys.invalidate();

@@ -30,6 +30,8 @@ public interface InputHandler {
 
     boolean onTouchEvent(MotionEvent event);
 
+    boolean onPointerEvent(MotionEvent event);
+
     String getDescription();
 
     String getId();
