@@ -22,11 +22,8 @@ public class CanvasPresentation extends Presentation {
 
         setContentView(R.layout.canvas);
 
-        canvas = (RemoteCanvas) findViewById(R.id.canvas);
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            canvas.setDefaultFocusHighlightEnabled(false);
-        }
+        canvas = findViewById(R.id.canvas);
+//        canvas.setDefaultFocusHighlightEnabled(false);
     }
 
     public RemoteCanvas getCanvas() {

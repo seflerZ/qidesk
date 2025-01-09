@@ -232,7 +232,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         DisplayManager displayManager = (DisplayManager) getSystemService(DISPLAY_SERVICE);
         Display[] displays = displayManager.getDisplays();
 
-        if (displays.length > 1) {
+        if (displays.length > 1 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             setContentView(R.layout.control);
 
             // use external display in first place
@@ -242,7 +242,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             canvasPresentation.show();
             canvas = canvasPresentation.getCanvas();
 
-            touchpad = (RemoteCanvas) findViewById(R.id.touchpad);
+            touchpad = findViewById(R.id.touchpad);
 
             touchpad.setSystemUiVisibility(
                     View.SYSTEM_UI_FLAG_LAYOUT_STABLE
@@ -256,7 +256,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             touchpad.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
         } else {
             setContentView(R.layout.canvas_full);
-            canvas = (RemoteCanvas) findViewById(R.id.canvas);
+            canvas = findViewById(R.id.canvas);
             touchpad = canvas;
         }
 
@@ -271,10 +271,8 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         touchpad.setOutDisplay(canvas != touchpad);
         canvas.setOutDisplay(canvas != touchpad);
 
-        if (Build.VERSION.SDK_INT >= 9) {
-            StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
-            StrictMode.setThreadPolicy(policy);
-        }
+        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+        StrictMode.setThreadPolicy(policy);
 
         myVibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
 
@@ -1193,7 +1191,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             COLORMODEL cm = COLORMODEL.valueOf(connection.getColorModel());
             canvas.setColorModel(cm);
         } catch (IllegalArgumentException e) {
-            e.printStackTrace();
+            return;
         }
         canvas.setOnKeyListener(this);
         canvas.setFocusableInTouchMode(true);

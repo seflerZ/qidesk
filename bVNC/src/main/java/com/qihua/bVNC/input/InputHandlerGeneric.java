@@ -24,6 +24,7 @@ import android.content.Context;
 import android.hardware.input.InputManager;
 import android.os.Build;
 import android.os.SystemClock;
+import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
@@ -47,7 +48,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         implements InputHandler, ScaleGestureDetector.OnScaleGestureListener {
     private static final String TAG = "InputHandlerGeneric";
     protected final boolean debugLogging;
-    final int maxSwipeSpeed = 1;
+
     // If swipe events are registered once every baseSwipeTime miliseconds, then
     // swipeSpeed will be one. If more often, swipe-speed goes up, if less, down.
     final long baseSwipeTime = 200;
@@ -94,11 +95,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     // 0, 1, 2, 3 = up lef down right
     int lastScrollDirection = 0;
 
-    float immerInitY;
     float xCurrentFocus;
     float yCurrentFocus;
-    float xPreviousFocus;
-    float yPreviousFocus;
     // These variables record whether there was a two-finger swipe performed up or down.
     boolean inSwiping = false;
     boolean scrollUp = false;
@@ -116,7 +114,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     float startSwipeDist = 1.f;
     float baseSwipeDist = 0.f;
     // This is how far from the top and bottom edge to detect immersive swipe.
-    float immersiveSwipeDistance = 65.f;
+    float immersiveSwipeRatio = 0.1f;
     boolean immersiveSwipe = false;
     // Some variables indicating what kind of a gesture we're currently in or just finished.
     boolean inScrolling = false;
@@ -159,11 +157,11 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         distXQueue = new LinkedList<Float>();
         distYQueue = new LinkedList<Float>();
 
-        baseSwipeDist = baseSwipeDist * displayDensity;
-        startSwipeDist = startSwipeDist * displayDensity;
-        immersiveSwipeDistance = immersiveSwipeDistance * displayDensity;
-        GeneralUtils.debugLog(debugLogging, TAG, "displayDensity, baseSwipeDist, immersiveSwipeDistance: "
-                + displayDensity + " " + baseSwipeDist + " " + immersiveSwipeDistance);
+//        baseSwipeDist = baseSwipeDist / displayDensity;
+//        startSwipeDist = startSwipeDist / displayDensity;
+//        immersiveSwipeDistance = immersiveSwipeDistance / displayDensity;
+        GeneralUtils.debugLog(debugLogging, TAG, "displayDensity, baseSwipeDist, immersiveSwipeRatio: "
+                + displayDensity + " " + baseSwipeDist + " " + immersiveSwipeRatio);
 
         // for inertia scrolling
         inertiaThread = new Thread(new Runnable() {
@@ -506,9 +504,11 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
     private void detectImmersiveSwipe(float x, float y) {
         GeneralUtils.debugLog(debugLogging, TAG, "detectImmersiveSwipe");
-        if (Constants.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT &&
-                (x <= immersiveSwipeDistance || touchpad.getWidth() - x <= immersiveSwipeDistance
-                        || touchpad.getHeight() - y <= immersiveSwipeDistance)) {
+
+        if (x <= canvas.getWidth() * immersiveSwipeRatio
+                || touchpad.getWidth() - x <= canvas.getWidth() * immersiveSwipeRatio
+                || touchpad.getHeight() - y <= canvas.getImageHeight() * immersiveSwipeRatio
+                || y <= canvas.getImageHeight() * immersiveSwipeRatio) {
             inSwiping = true;
             immersiveSwipe = true;
         } else if (!singleHandedGesture) {
@@ -535,7 +535,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
 //        if (android.os.Build.VERSION.SDK_INT >= 14) {
         // Handle and consume actions performed by a (e.g. USB or bluetooth) mouse.
-        if (e.getDeviceId() > 15) {
+        if (e.isFromSource(InputDevice.SOURCE_MOUSE)) {
             if (e.getButtonState() == MotionEvent.BUTTON_PRIMARY) {
                 touchpad.startPointerCapture();
             }
@@ -570,8 +570,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
                         gestureX = e.getX(index);
                         gestureY = e.getY(index);
-
-                        immerInitY = dragY;
 
                         lastSpeedX = lastSpeedY = 0;
 
