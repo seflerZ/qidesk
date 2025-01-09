@@ -193,7 +193,9 @@ class ZoomScaling extends AbstractScaling {
         minimumScale = canvas.getMinimumScale();
 
         float lastZoomFactor = canvas.connection.getLastZoomFactor();
-        if (lastZoomFactor > 0 && canvas.connection.getUseLastPositionToolbar()) {
+
+        // Do not apply zooming in second display mode.
+        if (lastZoomFactor > 0 && canvas.connection.getUseLastPositionToolbar() && !canvas.isOutDisplay()) {
             scaling = lastZoomFactor;
         } else {
             scaling = minimumScale;

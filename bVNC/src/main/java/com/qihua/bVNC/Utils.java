@@ -606,7 +606,8 @@ public class Utils {
         if (view != null) {
             InputMethodManager imm = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
             if (imm != null && imm.isActive()) {
-                imm.showSoftInput(view.getRootView(), InputMethodManager.HIDE_IMPLICIT_ONLY);
+                view.requestFocus(0);
+                imm.showSoftInput(view, InputMethodManager.HIDE_IMPLICIT_ONLY);
             }
         }
     }

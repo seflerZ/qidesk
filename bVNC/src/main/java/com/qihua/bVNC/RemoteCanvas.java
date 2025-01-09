@@ -2040,4 +2040,8 @@ public class RemoteCanvas extends AppCompatImageView
     public void setOutDisplay(boolean outDisplay) {
         this.outDisplay = outDisplay;
     }
+
+    public boolean isOutDisplay() {
+        return this.outDisplay;
+    }
 }
