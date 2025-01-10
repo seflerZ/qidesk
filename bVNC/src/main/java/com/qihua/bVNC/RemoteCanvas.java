@@ -305,10 +305,6 @@ public class RemoteCanvas extends AppCompatImageView
 
     @Override
     public boolean onCapturedPointerEvent(MotionEvent event) {
-        if (event.getDeviceId() < 10) {
-            return true;
-        }
-        
         return inputHandler.onPointerEvent(event);
     }
 
@@ -375,11 +371,7 @@ public class RemoteCanvas extends AppCompatImageView
 
     public void disconnectWithoutMessage() {
         closeConnection();
-        handler.post(new Runnable() {
-            public void run() {
-                Utils.justFinish(getContext());
-            }
-        });
+        Utils.justFinish(getContext());
     }
 
     public void saveZoomFactor(float zoomFactor) {

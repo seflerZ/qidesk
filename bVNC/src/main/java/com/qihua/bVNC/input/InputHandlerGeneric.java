@@ -294,24 +294,25 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                     case MotionEvent.BUTTON_PRIMARY:
                         canvas.movePanToMakePointerVisible();
                         pointer.leftButtonDown(x, y, meta);
-                        used = true;
+
                         break;
                     case MotionEvent.BUTTON_SECONDARY:
                     case MotionEvent.BUTTON_STYLUS_PRIMARY:
                         canvas.movePanToMakePointerVisible();
                         pointer.rightButtonDown(x, y, meta);
-                        used = true;
+
                         break;
                     case MotionEvent.BUTTON_TERTIARY:
                     case MotionEvent.BUTTON_STYLUS_SECONDARY:
                         canvas.movePanToMakePointerVisible();
                         pointer.middleButtonDown(x, y, meta);
-                        used = true;
+
                         break;
                     default:
                         // move only
                         pointer.moveMouse(x, y, meta);
                 }
+                used = true;
                 break;
             // If a mouse button was released.
             case MotionEvent.ACTION_UP:

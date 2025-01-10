@@ -232,6 +232,12 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         DisplayManager displayManager = (DisplayManager) getSystemService(DISPLAY_SERVICE);
         Display[] displays = displayManager.getDisplays();
 
+        if (Build.VERSION.SDK_INT >= 28) {
+            WindowManager.LayoutParams params = getWindow().getAttributes();
+            params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+            getWindow().setAttributes(params);
+        }
+
         if (displays.length > 1 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             setContentView(R.layout.control);
 
