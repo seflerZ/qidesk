@@ -360,25 +360,25 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                 break;
             // If the mouse was moved OR as reported, some external mice trigger this when a
             // mouse button is pressed as well, so we check bstate here too.
-            case MotionEvent.ACTION_HOVER_MOVE:
-                canvas.movePanToMakePointerVisible();
-                switch (bstate) {
-                    case MotionEvent.BUTTON_PRIMARY:
-                        pointer.leftButtonDown(x, y, meta);
-                        break;
-                    case MotionEvent.BUTTON_SECONDARY:
-                    case MotionEvent.BUTTON_STYLUS_PRIMARY:
-                        pointer.rightButtonDown(x, y, meta);
-                        break;
-                    case MotionEvent.BUTTON_TERTIARY:
-                    case MotionEvent.BUTTON_STYLUS_SECONDARY:
-                        pointer.middleButtonDown(x, y, meta);
-                        break;
-                    default:
-                        pointer.moveMouseButtonUp(x, y, meta);
-                        break;
-                }
-                used = true;
+//            case MotionEvent.ACTION_HOVER_MOVE:
+//                canvas.movePanToMakePointerVisible();
+//                switch (bstate) {
+//                    case MotionEvent.BUTTON_PRIMARY:
+//                        pointer.leftButtonDown(x, y, meta);
+//                        break;
+//                    case MotionEvent.BUTTON_SECONDARY:
+//                    case MotionEvent.BUTTON_STYLUS_PRIMARY:
+//                        pointer.rightButtonDown(x, y, meta);
+//                        break;
+//                    case MotionEvent.BUTTON_TERTIARY:
+//                    case MotionEvent.BUTTON_STYLUS_SECONDARY:
+//                        pointer.middleButtonDown(x, y, meta);
+//                        break;
+//                    default:
+//                        pointer.moveMouseButtonUp(x, y, meta);
+//                        break;
+//                }
+//                used = true;
         }
 
         canvas.movePanToMakePointerVisible();
@@ -535,7 +535,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
 //        if (android.os.Build.VERSION.SDK_INT >= 14) {
         // Handle and consume actions performed by a (e.g. USB or bluetooth) mouse.
-        if (e.isFromSource(InputDevice.SOURCE_MOUSE)) {
+        if (e.getDeviceId() > 10) {
             if (e.getButtonState() == MotionEvent.BUTTON_PRIMARY) {
                 touchpad.startPointerCapture();
             }
