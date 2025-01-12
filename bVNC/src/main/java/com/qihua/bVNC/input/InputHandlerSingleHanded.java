@@ -265,7 +265,7 @@ public class InputHandlerSingleHanded extends InputHandlerDirectSwipePan {
                 if (needInitPan) {
                     needInitPan = false;
                     canvas.absolutePan((int) (canvas.getAbsX() + (xInitialFocus - canvas.getWidth() / 2.f) / zoomFactor),
-                            (int) (canvas.getAbsY() + (yInitialFocus - canvas.getHeight() / 2.f) / zoomFactor));
+                            (int) (canvas.getAbsY() + (yInitialFocus - canvas.getHeight() / 2.f) / zoomFactor), false);
                 }
                 canvas.canvasZoomer.changeZoom(activity, scaleFactor, xInitialFocus, yInitialFocus);
             }

@@ -1633,7 +1633,7 @@ public class RemoteCanvas extends AppCompatImageView
      * @param x
      * @param y
      */
-    public void absolutePan(int x, int y) {
+    public void absolutePan(int x, int y, boolean force) {
         //android.util.Log.d(TAG, "absolutePan: " + x + ", " + y);
 
         if (canvasZoomer != null) {
@@ -1641,10 +1641,14 @@ public class RemoteCanvas extends AppCompatImageView
             int vH = getVisibleDesktopHeight();
             int w = getImageWidth();
             int h = getImageHeight();
-            if (x + vW > w) x = w - vW;
-            if (y + vH > h) y = h - vH;
-            if (x < 0) x = 0;
-            if (y < 0) y = 0;
+
+            if (!force) {
+                if (x + vW > w) x = w - vW;
+                if (y + vH > h) y = h - vH;
+                if (x < 0) x = 0;
+                if (y < 0) y = 0;
+            }
+
             absoluteXPosition = x;
             absoluteYPosition = y;
             resetScroll();
