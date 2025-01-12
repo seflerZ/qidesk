@@ -242,9 +242,9 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             setContentView(R.layout.control);
 
             // use external display in first place
-            Display choosedDisplay = displays[displays.length - 1];
+            Display chosenDisplay = displays[displays.length - 1];
 
-            canvasPresentation = new CanvasPresentation(getBaseContext(), choosedDisplay);
+            canvasPresentation = new CanvasPresentation(getBaseContext(), chosenDisplay);
             canvasPresentation.show();
             canvas = canvasPresentation.getCanvas();
 
