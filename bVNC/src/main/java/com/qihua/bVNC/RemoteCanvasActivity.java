@@ -1177,21 +1177,21 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     protected void onPause() {
         super.onPause();
         Log.i(TAG, "onPause called.");
-        try {
-            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-            imm.hideSoftInputFromWindow(canvas.getWindowToken(), 0);
-        } catch (NullPointerException e) {
-        }
+//        try {
+//            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+//            imm.hideSoftInputFromWindow(canvas.getWindowToken(), 0);
+//        } catch (NullPointerException e) {
+//        }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         Log.i(TAG, "onResume called.");
-        try {
-            canvas.postInvalidateDelayed(2500);
-        } catch (NullPointerException e) {
-        }
+//        try {
+//            canvas.postInvalidateDelayed(2500);
+//        } catch (NullPointerException e) {
+//        }
     }
 
     /**
