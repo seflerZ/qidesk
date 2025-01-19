@@ -1904,5 +1904,13 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         }
     }
 
+    public void disconnectAndClose() {
+        if (canvasPresentation != null) {
+            canvasPresentation.dismiss();
+        }
 
+        canvas.disconnectWithoutMessage();
+
+        finish();
+    }
 }

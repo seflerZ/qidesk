@@ -899,27 +899,30 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
         if (keyCode == KeyEvent.KEYCODE_BACK) {
             // If the toolbar is already shown, disconnect
-            if (activity.getSupportActionBar().isShowing()) {
+            if (activity.getSupportActionBar() == null || activity.getSupportActionBar().isShowing()) {
                 // Save current zoom factor, but not on second display mode
                 if (!canvas.isOutDisplay()) {
                     canvas.saveZoomFactor(canvas.getZoomFactor());
                 }
 
-                canvas.disconnectWithoutMessage();
+                activity.disconnectAndClose();
 
                 return true;
             }
 
             // release mouse capture
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (canvas.isOutDisplay() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 touchpad.releasePointerCapture();
             }
 
-            activity.showToolbar();
+            if (!activity.getSupportActionBar().isShowing()) {
+                activity.showToolbar();
+            }
+
             return true;
         }
 
-        GeneralUtils.debugLog(debugLogging, TAG, "onKeyDown, e: " + e);
+//        GeneralUtils.debugLog(debugLogging, TAG, "onKeyDown, e: " + e);
         return canvas.getKeyboard().keyEvent(keyCode, e);
     }
 

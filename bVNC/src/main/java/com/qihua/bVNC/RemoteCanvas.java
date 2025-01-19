@@ -371,7 +371,7 @@ public class RemoteCanvas extends AppCompatImageView
 
     public void disconnectWithoutMessage() {
         closeConnection();
-        Utils.justFinish(getContext());
+//        Utils.justFinish(getContext());
     }
 
     public void saveZoomFactor(float zoomFactor) {
@@ -1441,8 +1441,8 @@ public class RemoteCanvas extends AppCompatImageView
             Log.d(TAG, "Saving screenshot to " + getContext().getFilesDir() + "/" + connection.getScreenshotFilename());
             Utils.writeScreenshotToFile(myDrawable, getContext().getFilesDir() + "/" + connection.getScreenshotFilename(), 720);
         }
-        disposeDrawable();
 
+//        disposeDrawable();
         onDestroy();
     }
 
