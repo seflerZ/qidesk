@@ -114,7 +114,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     float startSwipeDist = 1.f;
     float baseSwipeDist = 0.f;
     // This is how far from the top and bottom edge to detect immersive swipe.
-    float immersiveSwipeRatio = 0.1f;
+    float immersiveSwipeRatio = 0.09f;
     boolean immersiveSwipe = false;
     // Some variables indicating what kind of a gesture we're currently in or just finished.
     boolean inScrolling = false;
