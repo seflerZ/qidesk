@@ -170,22 +170,13 @@ class UltraCompactBitmapData extends AbstractBitmapData {
         private int fps = 0;
         private int avg = 0;
         private int max = 0;
-        private final boolean showFps = false;
+        private final static boolean showFps = false;
 
         @Override
         public void draw(Canvas canvas) {
             try {
-                if (showFps && System.currentTimeMillis() - last > 1000) {
-
-
-                    if (fps > max) {
-                        max = fps;
-                    }
-
-                    avg = (avg + fps)/ 2;
-
-                    fps = 0;
-                    last = System.currentTimeMillis();
+                if (showFps) {
+                    fps += 1;
                 }
 
                 synchronized (this) {
@@ -198,8 +189,15 @@ class UltraCompactBitmapData extends AbstractBitmapData {
                     }
                 }
 
-                if (showFps) {
-                    fps += 1;
+                if (showFps && System.currentTimeMillis() - last > 1000) {
+                    if (fps > max) {
+                        max = fps;
+                    }
+
+                    avg = (avg + fps)/ 2;
+
+                    fps = 0;
+                    last = System.currentTimeMillis();
                 }
             } catch (Throwable ignored) {
             }

@@ -296,7 +296,7 @@ public class RdpCommunicator extends RfbConnectable implements RdpKeyboardMapper
         bookmark.<ManualBookmark>get().setPort(rdpPort);
 
         BookmarkBase.DebugSettings debugSettings = bookmark.getDebugSettings();
-        debugSettings.setDebugLevel("INFO");
+        debugSettings.setDebugLevel("WARN");
         //debugSettings.setAsyncUpdate(false);
         //debugSettings.setAsyncInput(false);
         //debugSettings.setAsyncChannel(false);

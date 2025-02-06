@@ -31,12 +31,8 @@
 package com.qihua.bVNC;
 
 import android.app.Activity;
-import android.app.ProgressDialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -53,7 +49,6 @@ import android.view.Display;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.PointerIcon;
-import android.view.View;
 import android.view.inputmethod.BaseInputConnection;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
@@ -439,8 +434,8 @@ public class RemoteCanvas extends AppCompatImageView
         Thread t = new Thread() {
             public void run() {
                 try {
-                    sshConnection = new SSHConnection(connection, getContext(), handler);
-                    sshConnection.changeOrInitializeSshHostKey(false);
+//                    sshConnection = new SSHConnection(connection, getContext(), handler);
+//                    sshConnection.changeOrInitializeSshHostKey(false);
                     if (isSpice) {
                         startSpiceConnection();
                     } else if (isRdp) {
@@ -456,14 +451,10 @@ public class RemoteCanvas extends AppCompatImageView
         t.start();
 
         clipboardMonitor = new ClipboardMonitor(getContext(), this);
-        if (clipboardMonitor != null) {
-            clipboardMonitorTimer = new Timer();
-            if (clipboardMonitorTimer != null) {
-                try {
-                    clipboardMonitorTimer.schedule(clipboardMonitor, 0, 500);
-                } catch (NullPointerException e) {
-                }
-            }
+        clipboardMonitorTimer = new Timer();
+        try {
+            clipboardMonitorTimer.schedule(clipboardMonitor, 0, 500);
+        } catch (NullPointerException ignored) {
         }
 
         return pointer;
@@ -472,7 +463,7 @@ public class RemoteCanvas extends AppCompatImageView
     private void handleUncaughtException(Throwable e) {
         if (maintainConnection) {
             Log.e(TAG, e.toString());
-            e.printStackTrace();
+//            e.printStackTrace();
             // Ensure we dismiss the progress dialog before we finish
 //            if (pd.isShowing())
 //                pd.dismiss();
@@ -1255,7 +1246,7 @@ public class RemoteCanvas extends AppCompatImageView
             }
             handler.post(drawableSetter);
             handler.post(setModes);
-            myDrawable.syncScroll();
+//            myDrawable.syncScroll();
             if (decoder != null) {
                 decoder.setBitmapData(myDrawable);
             }
@@ -1679,7 +1670,7 @@ public class RemoteCanvas extends AppCompatImageView
      * Causes a redraw of the myDrawable to happen at the indicated coordinates.
      */
     public void reDraw(int x, int y, int w, int h) {
-        if (System.currentTimeMillis() - lastDraw < 5) {
+        if (System.currentTimeMillis() - lastDraw < 10) {
             return;
         }
 
