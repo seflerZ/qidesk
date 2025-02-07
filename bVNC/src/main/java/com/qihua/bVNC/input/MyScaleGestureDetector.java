@@ -26,6 +26,8 @@ import android.view.ViewConfiguration;
 
 import androidx.annotation.RequiresApi;
 
+import java.lang.reflect.Field;
+
 public class MyScaleGestureDetector extends ScaleGestureDetector {
     private static final String TAG = "MyScaleGestureDetector";
     private static final long TOUCH_STABILIZE_TIME = 128; // ms
@@ -79,9 +81,9 @@ public class MyScaleGestureDetector extends ScaleGestureDetector {
      *                 not be null.
      * @param handler  the handler to use for running deferred listener events.
      * @throws NullPointerException if {@code listener} is null.
-     * @see android.os.Handler#Handler()
+     * @see Handler#Handler()
      */
-    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+
     public MyScaleGestureDetector(Context context, OnScaleGestureListener listener,
                                   Handler handler) {
         super(context, listener, handler);
@@ -89,7 +91,7 @@ public class MyScaleGestureDetector extends ScaleGestureDetector {
         mListener = listener;
         final ViewConfiguration viewConfiguration = ViewConfiguration.get(context);
         mSpanSlop = viewConfiguration.getScaledTouchSlop();
-        mMinSpan = viewConfiguration.getScaledMinimumScalingSpan();
+        mMinSpan = 550;
         mHandler = handler;
         // Quick scale is enabled by default after JB_MR2
         final int targetSdkVersion = context.getApplicationInfo().targetSdkVersion;

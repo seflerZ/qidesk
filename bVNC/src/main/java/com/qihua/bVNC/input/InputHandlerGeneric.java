@@ -536,7 +536,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
 //        if (android.os.Build.VERSION.SDK_INT >= 14) {
         // Handle and consume actions performed by a (e.g. USB or bluetooth) mouse.
-        if (e.getDeviceId() > 10) {
+        if (e.getDeviceId() > 10 && touchpad != canvas) {
             if (e.getButtonState() == MotionEvent.BUTTON_PRIMARY) {
                 touchpad.startPointerCapture();
             }

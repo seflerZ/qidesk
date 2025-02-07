@@ -230,7 +230,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         Utils.showMenu(this);
 
         DisplayManager displayManager = (DisplayManager) getSystemService(DISPLAY_SERVICE);
-        Display[] displays = displayManager.getDisplays();
+        Display[] displays = displayManager.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION);
 
         if (Build.VERSION.SDK_INT >= 28) {
             WindowManager.LayoutParams params = getWindow().getAttributes();
@@ -238,11 +238,11 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             getWindow().setAttributes(params);
         }
 
-        if (displays.length > 1 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (displays.length >= 1 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             setContentView(R.layout.control);
 
-            // use external display in first place
-            Display chosenDisplay = displays[displays.length - 1];
+            // use external display in last place
+            Display choosedDisplay = displays[displays.length - 1];
 
             canvasPresentation = new CanvasPresentation(getBaseContext(), chosenDisplay);
             canvasPresentation.show();
