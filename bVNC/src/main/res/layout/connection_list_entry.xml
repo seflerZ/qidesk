@@ -3,7 +3,8 @@
     android:id="@+id/list_entry"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
+    android:gravity="center"
     android:padding="1dp"
     android:singleLine="true"
-    android:textColor="#FFBBBBBB"
+    android:textColor="#FFFFFFFF"
     android:textSize="20sp" />

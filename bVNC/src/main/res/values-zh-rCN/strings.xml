@@ -194,7 +194,7 @@
     <string name="connection_type_spice">SPICE</string>
     <string name="connection_type_spice_over_ssh">通过SSH的SPICE</string>
     <string name="connection_type_ultravnc">UltraVNC</string>
-    <string name="connection_type_vnc">基本VNC</string>
+    <string name="connection_type_vnc">VNC</string>
     <string name="connection_type_vnc_over_ssh">通过SSH的安全VNC</string>
     <string name="connection_type_vnc_over_ssl">通过AnonTLS的安全VNC</string>
     <string name="connection_type_vnc_over_stunnel">通过SSL隧道的安全VNC</string>
@@ -499,7 +499,6 @@ bVNC对应的功能如下：
     <string name="rdp_adv_window_contents">拖动时显示窗口内容</string>
     <string-array name="rdp_connection_type">
         <item>@string/connection_type_rdp</item>
-        <item>@string/connection_type_rdp_over_ssh</item>
     </string-array>
     <string name="rdp_descript_geom">远程桌面大小（WxH）</string>
     <string name="rdp_domain_hint">RDP域</string>
@@ -875,4 +874,5 @@ aSPICE对应的功能如下：
     <string name="hide_connection_thumbnails">隐藏缩略图</string>
     <string name="show_only_connection_nicknames">只显示昵称</string>
     <string name="warn_disconnect_will_reconnect">连接异常断开（用户从其他主机登录或网络中断），重连中。</string>
+    <string name="connection_type_nickname">连接备注</string>
 </resources>

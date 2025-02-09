@@ -16,28 +16,6 @@
             android:padding="5dip">
 
             <TableRow>
-
-                <TextView
-                    android:id="@+id/connectionTypeLabel"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/connection_type_caption"
-                    android:textAppearance="?android:attr/textAppearanceMedium" />
-            </TableRow>
-
-            <TableRow>
-
-                <Spinner
-                    android:id="@+id/connectionType"
-                    android:layout_width="fill_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:entries="@array/rdp_connection_type"
-                    android:textAppearance="?android:attr/textAppearanceMedium" />
-            </TableRow>
-
-            <TableRow>
-
                 <EditText
                     android:id="@+id/textNickname"
                     android:layout_width="fill_parent"
@@ -45,6 +23,28 @@
                     android:layout_weight="1"
                     android:hint="@string/nickname_caption_hint"
                     android:singleLine="true"
+                    android:textSize="25sp"
+                    android:paddingBottom="3sp"
+                    android:textAppearance="?android:attr/textAppearanceLarge" />
+            </TableRow>
+
+            <TableRow>
+
+                <TextView
+                    android:id="@+id/connectionTypeLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/connection_type_caption"
+                    android:textSize="20sp"
+                    android:textAppearance="?android:attr/textAppearanceLarge" />
+
+                <Spinner
+                    android:id="@+id/connectionType"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:entries="@array/rdp_connection_type"
+                    android:textSize="20sp"
                     android:textAppearance="?android:attr/textAppearanceMedium" />
             </TableRow>
 
@@ -193,7 +193,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/rdp_connection_settings"
-                    android:textAppearance="?android:attr/textAppearanceMedium" />
+                    android:textSize="20sp"
+                    android:textAppearance="?android:attr/textAppearanceLarge" />
             </TableRow>
 
             <TableRow>
