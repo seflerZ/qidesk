@@ -238,28 +238,36 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             getWindow().setAttributes(params);
         }
 
-        if (displays.length >= 1 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (displays.length >= 1) {
             setContentView(R.layout.control);
 
             // use external display in last place
             Display choosedDisplay = displays[displays.length - 1];
 
-            canvasPresentation = new CanvasPresentation(getBaseContext(), chosenDisplay);
-            canvasPresentation.show();
-            canvas = canvasPresentation.getCanvas();
+            try {
+                canvasPresentation = new CanvasPresentation(getBaseContext(), choosedDisplay);
+                canvasPresentation.show();
+                canvas = canvasPresentation.getCanvas();
 
-            touchpad = findViewById(R.id.touchpad);
+                touchpad = findViewById(R.id.touchpad);
 
-            touchpad.setSystemUiVisibility(
-                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                            | View.SYSTEM_UI_FLAG_FULLSCREEN
-                            | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+                touchpad.setSystemUiVisibility(
+                        View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                                | View.SYSTEM_UI_FLAG_FULLSCREEN
+                                | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
 
-            touchpad.setImageResource(R.drawable.t_tips);
-            touchpad.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+                touchpad.setImageResource(R.drawable.t_tips);
+                touchpad.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+            } catch (Throwable ignored) {
+                // fallback
+                canvasPresentation = null;
+                setContentView(R.layout.canvas_full);
+                canvas = findViewById(R.id.canvas);
+                touchpad = canvas;
+            }
         } else {
             setContentView(R.layout.canvas_full);
             canvas = findViewById(R.id.canvas);
