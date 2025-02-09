@@ -513,7 +513,7 @@ If you are looking for a quick performance boost, try setting the Color mode to 
     <string name="applies_to_new_connections_only">Applies to New Connections Only</string>
     <string name="pro_feature_mfa">It appears your server has multi-factor authentication enabled. Please support the project by purchasing the Pro version which has support for this feature. A link to the Pro version is available in the start dialog.</string>
 
-    <string name="rdp_address_caption_hint">RDP Server</string>
+    <string name="rdp_address_caption_hint">Server Address</string>
     <string name="rdp_adv_console_mode">Console Mode</string>
     <string name="rdp_adv_desktop_background">Show desktop background</string>
     <string name="rdp_adv_desktop_composition">Enable Desktop Composition</string>
@@ -644,9 +644,9 @@ When you add or edit a connection, you will see a connection configuration page.
    (a) Use D-Pad for arrows: If you prefer, you can use the D-Pad of your Bluetooth keyboard or arrows on your on-screen keyboard to send arrows to the RDP server.
    (b) Rotate D-Pad: Phones paired with a Bluetooth keyboard may need the keyboard's D-pad to be rotated anti-clockwise to send correct directions to the server.
    (c) Local mouse pointer: If the pointer is invisible, select this to force it to be drawn by the app."</string>
-    <string name="rdp_password_hint">RDP Password</string>
+    <string name="rdp_password_hint">Password</string>
     <string name="rdp_server_empty">RDP Server or port empty. Cannot connect!</string>
-    <string name="rdp_username_hint">RDP Username</string>
+    <string name="rdp_username_hint">Username</string>
 
     <string name="remote_sound_disabled">Sound Disabled</string>
     <string name="remote_sound_on_device">Sound On Device</string>
@@ -819,7 +819,7 @@ When you add or edit a connection, you will see a connection configuration page.
     <string name="vnc_connection_settings">VNC Connection Settings</string>
     <string name="show_advanced_settings">Show Advanced Settings</string>
     <string name="use_no_compression_for_local_connections">No compression (local connections, Hextile encoding)</string>
-    <string name="rdp_connection_settings">RDP Connection Settings</string>
+    <string name="rdp_connection_settings">Connection Settings</string>
     <string name="local_device_tweaks">Local Device Tweaks</string>
     <string name="spice_connection_settings">SPICE Connection Settings</string>
     <string name="ca_subject">Enter certificate subject name here. May not be needed if the cert common name (CN) matches the server hostname.</string>

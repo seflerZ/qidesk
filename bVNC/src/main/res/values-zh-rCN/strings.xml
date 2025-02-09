@@ -487,7 +487,7 @@ bVNC对应的功能如下：
     <string name="position_toolbar_last_used">记住上次工具栏及缩放状态</string>
     <string name="applies_to_new_connections_only">仅限适用到新建连接</string>
     <string name="pro_feature_mfa">看来您的服务器已启用多因素身份验证。请购买支持此功能的Pro版本。在开始对话框中有Pro版本的链接。</string>
-    <string name="rdp_address_caption_hint">RDP服务器</string>
+    <string name="rdp_address_caption_hint">服务器地址</string>
     <string name="rdp_adv_console_mode">控制台模式</string>
     <string name="rdp_adv_desktop_background">显示桌面背景</string>
     <string name="rdp_adv_desktop_composition">启用桌面合成</string>
@@ -501,7 +501,7 @@ bVNC对应的功能如下：
         <item>@string/connection_type_rdp</item>
     </string-array>
     <string name="rdp_descript_geom">远程桌面大小（WxH）</string>
-    <string name="rdp_domain_hint">RDP域</string>
+    <string name="rdp_domain_hint">RDP 域</string>
     <string name="rdp_geom_automatic">自动</string>
     <string name="rdp_geom_checkbox_enable">启用自定义分辨率</string>
     <string name="rdp_geom_custom">自定义</string>
@@ -631,9 +631,9 @@ aRDP对应预定的功能：
   （b）旋转D-Pad：与Bluetooth键盘配对的手机可能需要逆时针旋转键盘的D-pad，才能将正确的方向发送到服务器。
   （c）本地鼠标指针：如果鼠标指针隐藏的话，勾选此选项将使aRDP显示鼠标位置。"
   </string>
-    <string name="rdp_password_hint">RDP密码</string>
-    <string name="rdp_server_empty">RDP服务器或端口是空着。无法连接！</string>
-    <string name="rdp_username_hint">RDP用户名</string>
+    <string name="rdp_password_hint">密码</string>
+    <string name="rdp_server_empty">服务器或端口是空着。无法连接！</string>
+    <string name="rdp_username_hint">用户名</string>
     <string name="remote_sound_disabled">声音已禁用</string>
     <string name="remote_sound_on_device">设备上的声音</string>
     <string name="remote_sound_on_server">服务器上的声音</string>
@@ -811,7 +811,7 @@ aSPICE对应的功能如下：
     <string name="vnc_connection_settings">VNC连接设定</string>
     <string name="show_advanced_settings">显示详细设定</string>
     <string name="use_no_compression_for_local_connections">无压缩（本地连接，Hextile编码）</string>
-    <string name="rdp_connection_settings">RDP连接设定</string>
+    <string name="rdp_connection_settings">连接设定</string>
     <string name="local_device_tweaks">本地设备调整</string>
     <string name="spice_connection_settings">SPICE连接设定</string>
     <string name="ca_subject">在此输入证书主题名称。 如果证书公用名（CN）与服务器主机名匹配的话，就有可能不需要。</string>
