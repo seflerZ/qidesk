@@ -251,10 +251,10 @@ public class RemoteCanvas extends AppCompatImageView
         }
 
         clipboard = (ClipboardManager) getContext().getSystemService(Context.CLIPBOARD_SERVICE);
-        isVnc = Utils.isVnc(getContext());
-        isRdp = Utils.isRdp(getContext());
-        isSpice = Utils.isSpice(getContext());
-        isOpaque = Utils.isOpaque(getContext());
+//        isVnc = Utils.isVnc(getContext());
+//        isRdp = Utils.isRdp(getContext());
+//        isSpice = Utils.isSpice(getContext());
+//        isOpaque = Utils.isOpaque(getContext());
 
         Display display;
         if (context instanceof Activity) {
@@ -419,13 +419,18 @@ public class RemoteCanvas extends AppCompatImageView
         sshTunneled = (connection.getConnectionType() == Constants.CONN_TYPE_SSH);
         handler = new RemoteCanvasHandler(getContext(), this, connection);
 
+        isVnc = conn.getConnectionType() == Constants.CONN_TYPE_VNC;
+        isRdp = conn.getConnectionType() == Constants.CONN_TYPE_RDP;
+
         try {
             if (isSpice) {
                 initializeSpiceConnection();
             } else if (isRdp) {
                 initializeRdpConnection();
-            } else {
+            } else if (isVnc) {
                 initializeVncConnection();
+            } else {
+                throw new Exception("unknown connection type");
             }
         } catch (Throwable e) {
             handleUncaughtException(e);
@@ -440,8 +445,10 @@ public class RemoteCanvas extends AppCompatImageView
                         startSpiceConnection();
                     } else if (isRdp) {
                         startRdpConnection();
-                    } else {
+                    } else if (isVnc) {
                         startVncConnection();
+                    } else {
+                        throw new Exception("unknown connection type");
                     }
                 } catch (Throwable e) {
                     handleUncaughtException(e);
@@ -645,7 +652,6 @@ public class RemoteCanvas extends AppCompatImageView
             handler.sendEmptyMessage(RemoteClientLibConstants.GET_VNC_CREDENTIALS);
             return;
         } catch (Exception e) {
-            e.printStackTrace();
             throw new Exception(getContext().getString(R.string.error_vnc_unable_to_connect) +
                     Utils.messageAndStackTraceAsString(e));
         }
@@ -1214,7 +1220,7 @@ public class RemoteCanvas extends AppCompatImageView
             useFull = (connection.getForceFull() == BitmapImplHint.FULL);
         }
 
-        if (!isVnc) {
+        if (isRdp) {
             myDrawable = new UltraCompactBitmapData(rfbconn, this, isSpice | isOpaque | isRdp);
             android.util.Log.i(TAG, "Using UltraCompactBufferBitmapData.");
         } else if (!useFull) {

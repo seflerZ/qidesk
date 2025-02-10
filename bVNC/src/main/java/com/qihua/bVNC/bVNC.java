@@ -127,7 +127,7 @@ public class bVNC extends MainConfiguration {
                 selectedConnType = itemIndex;
                 selected.setConnectionType(selectedConnType);
                 selected.save(bVNC.this);
-                if (selectedConnType == Constants.CONN_TYPE_PLAIN ||
+                if (selectedConnType == Constants.CONN_TYPE_RDP ||
                         selectedConnType == Constants.CONN_TYPE_ANONTLS ||
                         selectedConnType == Constants.CONN_TYPE_STUNNEL) {
                     setVisibilityOfSshWidgets(View.GONE);
@@ -141,7 +141,7 @@ public class bVNC extends MainConfiguration {
                         ipText.setText("localhost");
                     ipText.setHint(R.string.address_caption_hint_tunneled);
                     textUsername.setHint(R.string.username_hint_optional);
-                } else if (selectedConnType == Constants.CONN_TYPE_ULTRAVNC) {
+                } else if (selectedConnType == Constants.CONN_TYPE_VNC) {
                     setVisibilityOfSshWidgets(View.GONE);
                     setVisibilityOfUltraVncWidgets(View.VISIBLE);
                     ipText.setHint(R.string.address_caption_hint);

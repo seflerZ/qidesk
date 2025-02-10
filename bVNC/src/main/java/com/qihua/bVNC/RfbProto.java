@@ -689,7 +689,7 @@ public class RfbProto extends RfbConnectable {
                     secType = currentSecType;
                     break;
                 }
-            } else if (connType == Constants.CONN_TYPE_ULTRAVNC) {
+            } else if (connType == Constants.CONN_TYPE_VNC) {
                 if (currentSecType == SecTypeNone || currentSecType == SecTypeVncAuth ||
                         currentSecType == SecTypeUltraVnc2 || currentSecType == SecTypeUltra34) {
                     secType = currentSecType;

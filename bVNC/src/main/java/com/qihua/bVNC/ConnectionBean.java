@@ -28,7 +28,6 @@ import android.util.Log;
 import android.widget.ImageView.ScaleType;
 
 import com.antlersoft.android.dbimpl.NewInstance;
-import com.qihua.bVNC.input.InputHandlerDirectSwipePan;
 import com.qihua.bVNC.input.InputHandlerTouchpad;
 import com.undatech.opaque.Connection;
 import com.undatech.remoteClientUi.R;
@@ -87,7 +86,7 @@ public class ConnectionBean extends AbstractConnectionBean implements Connection
         setPassword("");
         setKeepPassword(true);
         setNickname("");
-        setConnectionType(Constants.CONN_TYPE_PLAIN);
+        setConnectionType(Constants.CONN_TYPE_RDP);
         setSshServer("");
         setSshPort(Constants.DEFAULT_SSH_PORT);
         setSshUser("");

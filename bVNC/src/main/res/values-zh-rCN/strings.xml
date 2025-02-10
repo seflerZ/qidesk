@@ -499,6 +499,7 @@ bVNC对应的功能如下：
     <string name="rdp_adv_window_contents">拖动时显示窗口内容</string>
     <string-array name="rdp_connection_type">
         <item>@string/connection_type_rdp</item>
+        <item>@string/connection_type_vnc</item>
     </string-array>
     <string name="rdp_descript_geom">远程桌面大小（WxH）</string>
     <string name="rdp_domain_hint">RDP 域</string>

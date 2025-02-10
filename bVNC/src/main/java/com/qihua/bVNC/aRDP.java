@@ -144,6 +144,27 @@ public class aRDP extends MainConfiguration {
             }
         });
 
+        connectionType.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> ad, View view, int itemIndex, long id) {
+                selectedConnType = itemIndex;
+                selected.setConnectionType(selectedConnType);
+//                selected.save(MainConfiguration.this);
+//                updateViewFromSelected();
+
+                if (selectedConnType == Constants.CONN_TYPE_RDP) {
+                    setVisibilityOfSshWidgets(View.GONE);
+                    rdpDomain.setVisibility(View.VISIBLE);
+                } else if (selectedConnType == Constants.CONN_TYPE_VNC) {
+                    rdpDomain.setVisibility(View.GONE);
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> ad) {
+            }
+        });
+
         groupRemoteSoundType = (RadioGroup) findViewById(R.id.groupRemoteSoundType);
         checkboxEnableRecording = (CheckBox) findViewById(R.id.checkboxEnableRecording);
         checkboxConsoleMode = (CheckBox) findViewById(R.id.checkboxConsoleMode);

@@ -172,27 +172,6 @@ public abstract class MainConfiguration extends FragmentActivity {
         // Define what happens when somebody selects different connection types.
         connectionType = (Spinner) findViewById(R.id.connectionType);
 
-        connectionType.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> ad, View view, int itemIndex, long id) {
-                selectedConnType = itemIndex;
-                selected.setConnectionType(selectedConnType);
-//                selected.save(MainConfiguration.this);
-                if (selectedConnType == Constants.CONN_TYPE_PLAIN) {
-                    setVisibilityOfSshWidgets(View.GONE);
-                } else if (selectedConnType == Constants.CONN_TYPE_SSH) {
-                    setVisibilityOfSshWidgets(View.VISIBLE);
-                    if (ipText.getText().toString().equals(""))
-                        ipText.setText("localhost");
-                }
-                updateViewFromSelected();
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> ad) {
-            }
-        });
-
         ipText = (EditText) findViewById(R.id.textIP);
         checkboxKeepSshPass = (CheckBox) findViewById(R.id.checkboxKeepSshPass);
     }

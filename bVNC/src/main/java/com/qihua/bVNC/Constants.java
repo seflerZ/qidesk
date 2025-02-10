@@ -29,9 +29,9 @@ public class Constants {
 
     public static final int SDK_INT = android.os.Build.VERSION.SDK_INT;
 
-    public static final int CONN_TYPE_PLAIN = 0;
-    public static final int CONN_TYPE_SSH = 1;
-    public static final int CONN_TYPE_ULTRAVNC = 2;
+    public static final int CONN_TYPE_RDP = 0;
+    public static final int CONN_TYPE_SSH = 99;
+    public static final int CONN_TYPE_VNC = 1;
     public static final int CONN_TYPE_ANONTLS = 3;
     public static final int CONN_TYPE_VENCRYPT = 4;
     public static final int CONN_TYPE_STUNNEL = 5;

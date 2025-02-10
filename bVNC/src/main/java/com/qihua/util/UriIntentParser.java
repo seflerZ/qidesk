@@ -243,13 +243,13 @@ public class UriIntentParser {
             switch (secType) {
                 case Constants.SECTYPE_NONE:
                 case Constants.SECTYPE_VNC:
-                    connection.setConnectionType(Constants.CONN_TYPE_PLAIN);
+                    connection.setConnectionType(Constants.CONN_TYPE_RDP);
                     break;
                 case Constants.SECTYPE_INTEGRATED_SSH:
                     connection.setConnectionType(Constants.CONN_TYPE_SSH);
                     break;
                 case Constants.SECTYPE_ULTRA:
-                    connection.setConnectionType(Constants.CONN_TYPE_ULTRAVNC);
+                    connection.setConnectionType(Constants.CONN_TYPE_VNC);
                     break;
                 case Constants.SECTYPE_TLS:
                     connection.setConnectionType(Constants.CONN_TYPE_ANONTLS);
