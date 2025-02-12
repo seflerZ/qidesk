@@ -652,7 +652,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                         }
                         break;
                     case MotionEvent.ACTION_UP:
-                        if (inertiaScrollingEnabled && !activity.isToolbarShowing() && !immersiveSwipe && !secondPointerWasDown && !thirdPointerWasDown) {
+                        if (inertiaScrollingEnabled && !activity.isToolbarShowing() && !immersiveSwipe
+                                && !secondPointerWasDown && !thirdPointerWasDown && !dragMode) {
 //                            timeElapsed = System.currentTimeMillis() - inertiaStartTime;
 //                            interval = inertiaBaseInterval * 2;
 //
