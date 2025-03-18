@@ -44,6 +44,7 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.SystemClock;
 import android.provider.Settings;
 import android.text.ClipboardManager;
@@ -140,6 +141,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
      * Also shows the dialogs which show various connection failures.
      */
     public Handler handler;
+    public Handler renderHandler;
 
     private InputHandler inputHandler;
 
@@ -266,6 +268,10 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             }
         }
 
+        HandlerThread handlerThread = new HandlerThread("RenderThread");
+        handlerThread.start();
+        renderHandler = new Handler(handlerThread.getLooper());
+
         surfaceHolder = getHolder();
         surfaceHolder.addCallback(this);
 
@@ -333,43 +339,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         }
     }
 
-    private Paint paint;
-
-    private void startDrawing() {
-        // 初始化画笔
-        paint = new Paint();
-        paint.setColor(Color.RED);
-        paint.setStyle(Paint.Style.FILL);
-
-        int i=0;
-        handler.post(new Runnable() {
-            @Override
-            public void run() {
-                if (isRunning) {
-                    Canvas canvas = null;
-                    try {
-                        canvas = surfaceHolder.lockCanvas();
-                        synchronized (surfaceHolder) {
-                            canvas.drawColor(Color.BLACK);
-
-                            bitmapData.drawable.draw(canvas, scaler.getMatrix());
-                        }
-                    } finally {
-                        if (canvas != null) {
-                            surfaceHolder.unlockCanvasAndPost(canvas);
-                        }
-                    }
-                }
-
-                // 控制帧率
-                handler.postDelayed(this, 30);
-            }
-        });
-    }
-
     @Override
     public void surfaceCreated(@NonNull SurfaceHolder holder) {
-        startDrawing();
     }
 
     @Override
@@ -1793,23 +1764,39 @@ public class RemoteCanvas extends SurfaceView implements Viewable
      * Causes a redraw of the myDrawable to happen at the indicated coordinates.
      */
     public void reDraw(int x, int y, int w, int h) {
-        if (System.currentTimeMillis() - lastDraw < 8) {
-            return;
-        }
-
-        if (progressDialog != null && progressDialog.isShowing()) {
-            progressDialog.dismiss();
-        }
+//        if (System.currentTimeMillis() - lastDraw < 5) {
+//            return;
+//        }
 
         //android.util.Log.i(TAG, "reDraw called: " + x +", " + y + " + " + w + "x" + h);
-        float scale = getZoomFactor();
-        float shiftedX = x - shiftX;
-        float shiftedY = y - shiftY;
+//        float scale = getZoomFactor();
+//        float shiftedX = x - shiftX;
+//        float shiftedY = y - shiftY;
 
-        postInvalidate((int) ((shiftedX) * scale), (int) ((shiftedY) * scale),
-                (int) ((shiftedX + w) * scale), (int) ((shiftedY + h) * scale));
+        renderHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (!isRunning) {
+                    return;
+                }
 
-        lastDraw = System.currentTimeMillis();
+                Canvas canvas = null;
+                try {
+                    canvas = surfaceHolder.lockCanvas();
+                    synchronized (surfaceHolder) {
+                        canvas.setMatrix(scaler.getMatrix());
+                        canvas.drawColor(Color.BLACK);
+                        bitmapData.drawable.draw(canvas);
+                    }
+                } finally {
+                    if (canvas != null) {
+                        surfaceHolder.unlockCanvasAndPost(canvas);
+                    }
+                }
+            }
+        });
+
+//        lastDraw = System.currentTimeMillis();
     }
 
     /**

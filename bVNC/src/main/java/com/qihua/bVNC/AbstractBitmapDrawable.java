@@ -59,7 +59,7 @@ public class AbstractBitmapDrawable extends DrawableContainer {
         softCursorInit = false;
 
         _defaultPaint = new Paint();
-//        _defaultPaint.setFilterBitmap(true);
+        _defaultPaint.setFilterBitmap(true);
         _whitePaint = new Paint();
         _whitePaint.setColor(0xffffffff);
         _blackPaint = new Paint();
@@ -77,17 +77,6 @@ public class AbstractBitmapDrawable extends DrawableContainer {
         try {
             synchronized (this) {
                 canvas.drawBitmap(data.mbitmap, xoff, yoff, _defaultPaint);
-                canvas.drawBitmap(softCursor, cursorRect.left, cursorRect.top, _defaultPaint);
-            }
-        } catch (Throwable e) {
-        }
-    }
-
-    void draw(Canvas canvas, Matrix matrix) {
-
-        try {
-            synchronized (this) {
-                canvas.drawBitmap(data.mbitmap, matrix, _defaultPaint);
                 canvas.drawBitmap(softCursor, cursorRect.left, cursorRect.top, _defaultPaint);
             }
         } catch (Throwable e) {

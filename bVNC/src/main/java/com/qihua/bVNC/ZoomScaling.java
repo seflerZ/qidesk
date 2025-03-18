@@ -80,6 +80,7 @@ class ZoomScaling extends AbstractScaling {
 //        canvas.relativePan(0, 0);
 //        canvas.resetScroll();
 //        canvas.relativePan(0, 0);
+        canvas.reDraw(0, 0,0, 0);
     }
 
     /* (non-Javadoc)
