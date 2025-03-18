@@ -52,7 +52,7 @@ public class Panner implements Runnable {
     }
 
     public void start(float xv, float yv, VelocityUpdater update) {
-        activity.getCanvas().myDrawable.drawable._defaultPaint.setFilterBitmap(false);
+        activity.getCanvas().bitmapData.drawable._defaultPaint.setFilterBitmap(false);
 
         if (update == null)
             update = DefaultUpdater.instance;
@@ -79,12 +79,12 @@ public class Panner implements Runnable {
             if (updater.updateVelocity(velocity, interval)) {
                 handler.postDelayed(this, freq);
             } else {
-                canvas.myDrawable.drawable._defaultPaint.setFilterBitmap(true);
+                canvas.bitmapData.drawable._defaultPaint.setFilterBitmap(true);
                 canvas.invalidate();
                 stop();
             }
         } else {
-            canvas.myDrawable.drawable._defaultPaint.setFilterBitmap(true);
+            canvas.bitmapData.drawable._defaultPaint.setFilterBitmap(true);
             canvas.invalidate();
             stop();
         }

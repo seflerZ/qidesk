@@ -67,7 +67,7 @@ public class InputHandlerDirectDragPan extends InputHandlerGeneric {
             return;
 
         endDragModesAndScrolling();
-        if (canvas.canvasZoomer.isAbleToPan()) {
+        if (canvas.scaler.isAbleToPan()) {
             activity.sendShortVibration();
             canvas.displayShortToastMessage(activity.getString(R.string.panning));
             panMode = true;

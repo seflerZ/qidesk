@@ -75,7 +75,9 @@ class ZoomScaling extends AbstractScaling {
     private void resolveZoom(RemoteCanvas canvas) {
         resetMatrix();
         matrix.postScale(scaling, scaling);
-        canvas.setImageMatrix(matrix);
+//        canvas.setImageMatrix(matrix);
+//        canvas.resetScroll();
+//        canvas.relativePan(0, 0);
 //        canvas.resetScroll();
 //        canvas.relativePan(0, 0);
     }
@@ -117,9 +119,6 @@ class ZoomScaling extends AbstractScaling {
             scaling = minimumScale;
         }
         matrix.postScale(scaling, scaling);
-        //Log.v(TAG,String.format("before set matrix scrollx = %d scrolly = %d", activity.vncCanvas.getScrollX(), activity.vncCanvas.getScrollY()));
-        activity.getCanvas().setImageMatrix(matrix);
-        //Log.v(TAG,String.format("after set matrix scrollx = %d scrolly = %d", activity.vncCanvas.getScrollX(), activity.vncCanvas.getScrollY()));
         resolveZoom(activity.getCanvas());
     }
 
@@ -183,7 +182,7 @@ class ZoomScaling extends AbstractScaling {
     void setScaleTypeForActivity(RemoteCanvasActivity activity) {
         super.setScaleTypeForActivity(activity);
         RemoteCanvas canvas = activity.getCanvas();
-        if (canvas == null || canvas.myDrawable == null)
+        if (canvas == null || canvas.bitmapData == null)
             return;
 
         // top center align

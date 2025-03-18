@@ -20,6 +20,7 @@
 
 package com.qihua.bVNC;
 
+import android.graphics.Matrix;
 import android.widget.ImageView;
 
 import com.undatech.remoteClientUi.R;
@@ -79,6 +80,10 @@ public abstract class AbstractScaling {
         return 1.f;
     }
 
+    public Matrix getMatrix() {
+        return null;
+    }
+
     void zoomIn(RemoteCanvasActivity activity) {
     }
 
@@ -99,11 +104,11 @@ public abstract class AbstractScaling {
      */
     void setScaleTypeForActivity(RemoteCanvasActivity activity) {
         RemoteCanvas canvas = activity.getCanvas();
-        canvas.canvasZoomer = this;
+        canvas.setScaler(this);
         // This is a bit of a hack because Scaletype.FIT_CENTER is now obsolete, since fit-to-screen scaling is now
         // essentially zoom-scaling with minimumScale and zoom disabled. However, we still use
         // it to identify Fit-to-screen scale mode. Instead of setting scaleType here, we hard-code MATRIX.
-        canvas.setScaleType(ImageView.ScaleType.MATRIX);
+//        canvas.setScaleType(ImageView.ScaleType.MATRIX);
         activity.getConnection().setScaleMode(scaleType);
         if (activity.inputHandler == null || !isValidInputMode(activity.getModeIdFromHandler(activity.inputHandler))) {
             activity.inputHandler = activity.getInputHandlerById(getDefaultHandlerId());

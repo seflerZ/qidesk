@@ -99,7 +99,7 @@ class OneToOneScaling extends AbstractScaling {
     void setScaleTypeForActivity(RemoteCanvasActivity activity) {
         super.setScaleTypeForActivity(activity);
         RemoteCanvas canvas = activity.getCanvas();
-        if (canvas == null || canvas.myDrawable == null)
+        if (canvas == null || canvas.bitmapData == null)
             return;
         canvasXOffset = -canvas.getCenteredXOffset();
         canvasYOffset = -canvas.getCenteredYOffset();
@@ -107,7 +107,7 @@ class OneToOneScaling extends AbstractScaling {
         scaling = 1;
         resetMatrix();
         matrix.postScale(scaling, scaling);
-        canvas.setImageMatrix(matrix);
+//        canvas.setImageMatrix(matrix);
         resolveZoom(canvas);
         //activity.vncCanvas.pan(0, 0);
     }
