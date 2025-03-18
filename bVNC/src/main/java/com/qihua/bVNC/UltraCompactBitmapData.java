@@ -21,6 +21,7 @@ package com.qihua.bVNC;
 
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 
 import com.undatech.opaque.RfbConnectable;
@@ -179,7 +180,7 @@ class UltraCompactBitmapData extends AbstractBitmapData {
                     fps += 1;
                 }
 
-                canvas.drawBitmap(data.mbitmap, 0.0f, 0.0f, _defaultPaint);
+                canvas.drawBitmap(data.mbitmap, 0, 0, _defaultPaint);
                 canvas.drawBitmap(softCursor, cursorRect.left, cursorRect.top, _defaultPaint);
 
                 if (showFps) {

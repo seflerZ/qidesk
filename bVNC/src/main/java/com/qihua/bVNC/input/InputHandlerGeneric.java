@@ -717,7 +717,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                             endDragModesAndScrolling();
                         canvas.cursorBeingMoved = true;
                         // If we are manipulating the desktop, turn off bitmap filtering for faster response.
-                        canvas.myDrawable.paint.setFilterBitmap(false);
+                        canvas.bitmapData.paint.setFilterBitmap(false);
                         // Indicate where we start dragging from.
                         dragX = e.getX();
                         dragY = e.getY();
@@ -805,7 +805,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                             if (System.currentTimeMillis() - lastDragStartTime > 800 && canEnlarge
                                     && dragMode && (totalDragX < 100 && totalDragY < 100)
                                     && lastZoomFactor < 2.0f) {
-                                canvas.canvasZoomer.changeZoom(activity, 2.5f/canvas.getZoomFactor(), pointer.getX(), pointer.getY());
+                                canvas.scaler.changeZoom(activity, 2.5f/canvas.getZoomFactor(), pointer.getX(), pointer.getY());
                                 dragHelped = true;
                             }
 
@@ -901,7 +901,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
             if (!endDragModesAndScrolling()) {
                 if (dragHelped) {
-                    canvas.canvasZoomer.changeZoom(activity, lastZoomFactor / canvas.getZoomFactor(), pointer.getX(), pointer.getY());
+                    canvas.scaler.changeZoom(activity, lastZoomFactor / canvas.getZoomFactor(), pointer.getX(), pointer.getY());
                     dragHelped = false;
                 }
 
@@ -946,13 +946,13 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                 return false;
             }
 
-            if (canvas != null && canvas.canvasZoomer != null) {
+            if (canvas != null && canvas.scaler != null) {
                 if (!inScaling) {
                     inScaling = true;
                 }
 
                 GeneralUtils.debugLog(debugLogging, TAG, "Changing zoom level: " + detector.getScaleFactor());
-                canvas.canvasZoomer.changeZoom(activity, detector.getScaleFactor(), pointer.getX(), pointer.getY());
+                canvas.scaler.changeZoom(activity, detector.getScaleFactor(), pointer.getX(), pointer.getY());
             }
         }
 

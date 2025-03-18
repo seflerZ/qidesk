@@ -34,6 +34,10 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Matrix;
+import android.graphics.Paint;
 import android.graphics.RectF;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -52,6 +56,8 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.PointerIcon;
 import android.view.View;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 import android.view.inputmethod.BaseInputConnection;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
@@ -59,7 +65,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.widget.AppCompatImageView;
+import androidx.annotation.NonNull;
 
 import com.qihua.android.bc.BCFactory;
 import com.qihua.bVNC.dialogs.GetTextFragment;
@@ -103,11 +109,13 @@ import java.util.Timer;
 
 import javax.security.auth.login.LoginException;
 
-public class RemoteCanvas extends AppCompatImageView
-        implements Viewable, GetTextFragment.OnFragmentDismissedListener {
+public class RemoteCanvas extends SurfaceView implements Viewable
+        , SurfaceHolder.Callback, GetTextFragment.OnFragmentDismissedListener{
     private final static String TAG = "RemoteCanvas";
 
-    public AbstractScaling canvasZoomer;
+    private SurfaceHolder surfaceHolder;
+
+    public AbstractScaling scaler;
 
     // Variable indicating that we are currently scrolling in simulated touchpad mode.
     public boolean cursorBeingMoved = false;
@@ -120,7 +128,7 @@ public class RemoteCanvas extends AppCompatImageView
     public RfbProto rfb = null;
     public SpiceCommunicator spicecomm = null;
     public boolean maintainConnection = true;
-    public AbstractBitmapData myDrawable;
+    public AbstractBitmapData bitmapData;
     // Progress dialog shown at connection time.
     public AlertDialog progressDialog;
     public boolean serverJustCutText = false;
@@ -194,6 +202,8 @@ public class RemoteCanvas extends AppCompatImageView
      */
     boolean isNvStream = false;
 
+    boolean isRunning = false;
+
     /*
      * This flag indicates whether this is the Opaque client.
      */
@@ -220,20 +230,7 @@ public class RemoteCanvas extends AppCompatImageView
     private RdpCommunicator rdpcomm = null;
     // Internal bitmap data
     private int capacity;
-    /**
-     * This runnable sets the drawable (contained in myDrawable) for the VncCanvas (ImageView).
-     */
-    private Runnable drawableSetter = new Runnable() {
-        public void run() {
-            android.util.Log.d(TAG, "drawableSetter.run");
-            if (myDrawable != null) {
-                android.util.Log.d(TAG, "drawableSetter myDrawable not null");
-                myDrawable.setImageDrawable(RemoteCanvas.this);
-            } else {
-                android.util.Log.e(TAG, "drawableSetter myDrawable is null");
-            }
-        }
-    };
+
     private Runnable showMessage = new Runnable() {
         public void run() {
             Toast.makeText(getContext(), screenMessage, Toast.LENGTH_SHORT).show();
@@ -269,6 +266,10 @@ public class RemoteCanvas extends AppCompatImageView
             }
         }
 
+        surfaceHolder = getHolder();
+        surfaceHolder.addCallback(this);
+
+        // TODO resolve deprecated
         displayWidth = display.getWidth();
         displayHeight = display.getHeight();
         DisplayMetrics metrics = new DisplayMetrics();
@@ -314,6 +315,70 @@ public class RemoteCanvas extends AppCompatImageView
     @Override
     public boolean onCapturedPointerEvent(MotionEvent event) {
         return inputHandler.onPointerEvent(event);
+    }
+
+    private void drawBitmap(int x, int y, Bitmap bitmap) {
+        Canvas canvas = null;
+        try {
+            canvas = surfaceHolder.lockCanvas();
+            if (canvas != null) {
+                synchronized (surfaceHolder) {
+                    canvas.drawBitmap(bitmap, x, y, null);
+                }
+            }
+        } finally {
+            if (canvas != null) {
+                surfaceHolder.unlockCanvasAndPost(canvas);
+            }
+        }
+    }
+
+    private Paint paint;
+
+    private void startDrawing() {
+        // 初始化画笔
+        paint = new Paint();
+        paint.setColor(Color.RED);
+        paint.setStyle(Paint.Style.FILL);
+
+        int i=0;
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (isRunning) {
+                    Canvas canvas = null;
+                    try {
+                        canvas = surfaceHolder.lockCanvas();
+                        synchronized (surfaceHolder) {
+                            canvas.drawColor(Color.BLACK);
+
+                            bitmapData.drawable.draw(canvas, scaler.getMatrix());
+                        }
+                    } finally {
+                        if (canvas != null) {
+                            surfaceHolder.unlockCanvasAndPost(canvas);
+                        }
+                    }
+                }
+
+                // 控制帧率
+                handler.postDelayed(this, 30);
+            }
+        });
+    }
+
+    @Override
+    public void surfaceCreated(@NonNull SurfaceHolder holder) {
+        startDrawing();
+    }
+
+    @Override
+    public void surfaceChanged(@NonNull SurfaceHolder holder, int format, int width, int height) {
+    }
+
+    @Override
+    public void surfaceDestroyed(@NonNull SurfaceHolder holder) {
+        isRunning = false;
     }
 
     void init(final Connection settings, final Handler handler, final Runnable setModes, final Runnable hideKeyboardAndExtraKeys, final String vvFileName) {
@@ -525,7 +590,7 @@ public class RemoteCanvas extends AppCompatImageView
                 connection.getRdpResType() == Constants.RDP_GEOM_SELECT_CUSTOM) {
             w = connection.getRdpWidth();
         }
-        android.util.Log.d(TAG, "Width requested: " + w);
+        Log.d(TAG, "Width requested: " + w);
         return w;
     }
 
@@ -539,7 +604,7 @@ public class RemoteCanvas extends AppCompatImageView
                 connection.getRdpResType() == Constants.RDP_GEOM_SELECT_CUSTOM) {
             h = connection.getRdpHeight();
         }
-        android.util.Log.d(TAG, "Height requested: " + h);
+        Log.d(TAG, "Height requested: " + h);
         return h;
     }
 
@@ -585,7 +650,7 @@ public class RemoteCanvas extends AppCompatImageView
      * Initializes an RDP connection.
      */
     private void initializeRdpConnection() throws Exception {
-        android.util.Log.i(TAG, "initializeRdpConnection: Initializing RDP connection.");
+        Log.i(TAG, "initializeRdpConnection: Initializing RDP connection.");
 
         rdpcomm = new RdpCommunicator(getContext(), handler, this,
                 connection.getUserName(), connection.getRdpDomain(), connection.getPassword(),
@@ -603,7 +668,7 @@ public class RemoteCanvas extends AppCompatImageView
      * Starts an RDP connection using the FreeRDP library.
      */
     private void startRdpConnection() throws Exception {
-        android.util.Log.i(TAG, "startRdpConnection: Starting RDP connection.");
+        Log.i(TAG, "startRdpConnection: Starting RDP connection.");
 
         // Get the address and port (based on whether an SSH tunnel is being established or not).
         String address = getAddress();
@@ -696,7 +761,6 @@ public class RemoteCanvas extends AppCompatImageView
                 progressDialog.setMessage(getContext().getString(R.string.info_progress_dialog_downloading)));
 
         sendUnixAuth();
-        handler.post(drawableSetter);
 
         try {
             rfb.processProtocol();
@@ -721,7 +785,7 @@ public class RemoteCanvas extends AppCompatImageView
                 try {
                     // Obtain user's password if necessary.
                     if (connection.getPassword().equals("")) {
-                        android.util.Log.i(TAG, "Displaying a dialog to obtain user's password.");
+                        Log.i(TAG, "Displaying a dialog to obtain user's password.");
                         handler.sendEmptyMessage(RemoteClientLibConstants.GET_PASSWORD);
                         synchronized (spicecomm) {
                             spicecomm.wait();
@@ -751,7 +815,7 @@ public class RemoteCanvas extends AppCompatImageView
                                 connection.save(getContext());
                             } else {
                                 while (connection.getVmname().equals("")) {
-                                    android.util.Log.i(TAG, "Displaying a dialog with VMs to the user.");
+                                    Log.i(TAG, "Displaying a dialog with VMs to the user.");
                                     // Populate the data structure that is used to convert VM names to IDs.
                                     for (String s : vmNames) {
                                         vmNameToId.put(s, s);
@@ -800,7 +864,7 @@ public class RemoteCanvas extends AppCompatImageView
     // TODO: Switch away from writing out a file to initiating a connection directly.
     String retrieveVvFileFromPve(final String hostname, final ProxmoxClient api, final String vmId,
                                  final String node, final String virt) {
-        android.util.Log.i(TAG, String.format("Trying to connect to PVE host: " + hostname));
+        Log.i(TAG, String.format("Trying to connect to PVE host: " + hostname));
         final String tempVvFile = getContext().getFilesDir() + "/tempfile.vv";
         FileUtils.deleteFile(tempVvFile);
 
@@ -820,25 +884,25 @@ public class RemoteCanvas extends AppCompatImageView
                     if (spiceData != null) {
                         spiceData.outputToFile(tempVvFile, hostname);
                     } else {
-                        android.util.Log.e(TAG, "PVE returned null data for display.");
+                        Log.e(TAG, "PVE returned null data for display.");
                         handler.sendEmptyMessage(RemoteClientLibConstants.PVE_NULL_DATA);
                     }
                 } catch (LoginException e) {
-                    android.util.Log.e(TAG, "Failed to login to PVE.");
+                    Log.e(TAG, "Failed to login to PVE.");
                     handler.sendEmptyMessage(RemoteClientLibConstants.PVE_FAILED_TO_AUTHENTICATE);
                 } catch (JSONException e) {
-                    android.util.Log.e(TAG, "Failed to parse json from PVE.");
+                    Log.e(TAG, "Failed to parse json from PVE.");
                     handler.sendEmptyMessage(RemoteClientLibConstants.PVE_FAILED_TO_PARSE_JSON);
                 } catch (NumberFormatException e) {
-                    android.util.Log.e(TAG, "Error converting PVE ID to integer.");
+                    Log.e(TAG, "Error converting PVE ID to integer.");
                     handler.sendEmptyMessage(RemoteClientLibConstants.PVE_VMID_NOT_NUMERIC);
                 } catch (IOException e) {
-                    android.util.Log.e(TAG, "IO Error communicating with PVE API: " + e.getMessage());
+                    Log.e(TAG, "IO Error communicating with PVE API: " + e.getMessage());
                     handler.sendMessage(RemoteCanvasHandler.getMessageString(RemoteClientLibConstants.PVE_API_IO_ERROR,
                             "error", e.getMessage()));
                     e.printStackTrace();
                 } catch (HttpException e) {
-                    android.util.Log.e(TAG, "PVE API returned error code: " + e.getMessage());
+                    Log.e(TAG, "PVE API returned error code: " + e.getMessage());
                     handler.sendMessage(RemoteCanvasHandler.getMessageString(RemoteClientLibConstants.PVE_API_UNEXPECTED_CODE,
                             "error", e.getMessage()));
                 }
@@ -897,7 +961,7 @@ public class RemoteCanvas extends AppCompatImageView
                 try {
                     // Obtain user's password if necessary.
                     if (connection.getPassword().equals("")) {
-                        android.util.Log.i(TAG, "Displaying a dialog to obtain user's password.");
+                        Log.i(TAG, "Displaying a dialog to obtain user's password.");
                         handler.sendEmptyMessage(RemoteClientLibConstants.GET_PASSWORD);
                         synchronized (spicecomm) {
                             spicecomm.wait();
@@ -933,7 +997,7 @@ public class RemoteCanvas extends AppCompatImageView
 
                     // If selected realm has TFA enabled, then ask for the code
                     if (realms.get(realm).getTfa() != null) {
-                        android.util.Log.i(TAG, "Displaying a dialog to obtain OTP/TFA.");
+                        Log.i(TAG, "Displaying a dialog to obtain OTP/TFA.");
                         handler.sendEmptyMessage(RemoteClientLibConstants.GET_OTP_CODE);
                         synchronized (spicecomm) {
                             spicecomm.wait();
@@ -947,7 +1011,7 @@ public class RemoteCanvas extends AppCompatImageView
                     Map<String, PveResource> nameToResources = api.getResources();
 
                     if (nameToResources.isEmpty()) {
-                        android.util.Log.e(TAG, "No available VMs found for user in PVE cluster");
+                        Log.e(TAG, "No available VMs found for user in PVE cluster");
                         disconnectAndShowMessage(R.string.error_no_vm_found_for_user, R.string.error_dialog_title);
                         return;
                     }
@@ -964,7 +1028,7 @@ public class RemoteCanvas extends AppCompatImageView
 
                     // If there is just one VM, pick it and ignore what is saved in settings.
                     if (nameToResources.size() == 1) {
-                        android.util.Log.e(TAG, "A single VM was found, so picking it.");
+                        Log.e(TAG, "A single VM was found, so picking it.");
                         String key = (String) nameToResources.keySet().toArray()[0];
                         PveResource a = nameToResources.get(key);
                         node = a.getNode();
@@ -973,7 +1037,7 @@ public class RemoteCanvas extends AppCompatImageView
                         connection.save(getContext());
                     } else {
                         while (connection.getVmname().isEmpty()) {
-                            android.util.Log.i(TAG, "PVE: Displaying a dialog with VMs to the user.");
+                            Log.i(TAG, "PVE: Displaying a dialog with VMs to the user.");
                             // Populate the data structure that is used to convert VM names to IDs.
                             for (String s : nameToResources.keySet()) {
                                 vmNameToId.put(nameToResources.get(s).getName() + " (" + s + ")", s);
@@ -992,7 +1056,7 @@ public class RemoteCanvas extends AppCompatImageView
                             node = nameToResources.get(connection.getVmname()).getNode();
                             virt = nameToResources.get(connection.getVmname()).getType();
                         } else {
-                            android.util.Log.e(TAG, "No VM with the following ID was found: " + connection.getVmname());
+                            Log.e(TAG, "No VM with the following ID was found: " + connection.getVmname());
                             disconnectAndShowMessage(R.string.error_no_such_vm_found_for_user, R.string.error_dialog_title);
                             return;
                         }
@@ -1007,18 +1071,18 @@ public class RemoteCanvas extends AppCompatImageView
                         }
                     }
                 } catch (LoginException e) {
-                    android.util.Log.e(TAG, "Failed to login to PVE.");
+                    Log.e(TAG, "Failed to login to PVE.");
                     handler.sendEmptyMessage(RemoteClientLibConstants.PVE_FAILED_TO_AUTHENTICATE);
                 } catch (JSONException e) {
-                    android.util.Log.e(TAG, "Failed to parse json from PVE.");
+                    Log.e(TAG, "Failed to parse json from PVE.");
                     handler.sendEmptyMessage(RemoteClientLibConstants.PVE_FAILED_TO_PARSE_JSON);
                 } catch (IOException e) {
-                    android.util.Log.e(TAG, "IO Error communicating with PVE API: " + e.getMessage());
+                    Log.e(TAG, "IO Error communicating with PVE API: " + e.getMessage());
                     handler.sendMessage(RemoteCanvasHandler.getMessageString(RemoteClientLibConstants.PVE_API_IO_ERROR,
                             "error", e.getMessage()));
                     e.printStackTrace();
                 } catch (HttpException e) {
-                    android.util.Log.e(TAG, "PVE API returned error code: " + e.getMessage());
+                    Log.e(TAG, "PVE API returned error code: " + e.getMessage());
                     handler.sendMessage(RemoteCanvasHandler.getMessageString(RemoteClientLibConstants.PVE_API_UNEXPECTED_CODE,
                             "error", e.getMessage()));
                 } catch (Throwable e) {
@@ -1141,7 +1205,7 @@ public class RemoteCanvas extends AppCompatImageView
     }
 
     void showMessage(final String error) {
-        android.util.Log.d(TAG, "showMessage");
+        Log.d(TAG, "showMessage");
         screenMessage = error;
         handler.removeCallbacks(showDialogMessage);
         handler.post(showDialogMessage);
@@ -1237,28 +1301,28 @@ public class RemoteCanvas extends AppCompatImageView
         }
 
         if (isRdp) {
-            myDrawable = new UltraCompactBitmapData(rfbconn, this, isSpice | isOpaque | isRdp);
-            android.util.Log.i(TAG, "Using UltraCompactBufferBitmapData.");
+            bitmapData = new UltraCompactBitmapData(rfbconn, this, isSpice | isOpaque | isRdp);
+            Log.i(TAG, "Using UltraCompactBufferBitmapData.");
         } else if (!useFull) {
-            myDrawable = new LargeBitmapData(rfbconn, this, dx, dy, capacity);
-            android.util.Log.i(TAG, "Using LargeBitmapData.");
+            bitmapData = new LargeBitmapData(rfbconn, this, dx, dy, capacity);
+            Log.i(TAG, "Using LargeBitmapData.");
         } else {
             try {
                 // TODO: Remove this if Android 4.2 receives a fix for a bug which causes it to stop drawing
                 // the bitmap in CompactBitmapData when under load (say playing a video over VNC).
                 if (!compact) {
-                    myDrawable = new FullBufferBitmapData(rfbconn, this, capacity);
-                    android.util.Log.i(TAG, "Using FullBufferBitmapData.");
+                    bitmapData = new FullBufferBitmapData(rfbconn, this, capacity);
+                    Log.i(TAG, "Using FullBufferBitmapData.");
                 } else {
-                    myDrawable = new CompactBitmapData(rfbconn, this, isSpice | isOpaque);
-                    android.util.Log.i(TAG, "Using CompactBufferBitmapData.");
+                    bitmapData = new CompactBitmapData(rfbconn, this, isSpice | isOpaque);
+                    Log.i(TAG, "Using CompactBufferBitmapData.");
                 }
             } catch (Throwable e) { // If despite our efforts we fail to allocate memory, use LBBM.
                 disposeDrawable();
 
                 useFull = false;
-                myDrawable = new LargeBitmapData(rfbconn, this, dx, dy, capacity);
-                android.util.Log.i(TAG, "Using LargeBitmapData.");
+                bitmapData = new LargeBitmapData(rfbconn, this, dx, dy, capacity);
+                Log.i(TAG, "Using LargeBitmapData.");
             }
         }
 
@@ -1266,12 +1330,14 @@ public class RemoteCanvas extends AppCompatImageView
             if (needsLocalCursor()) {
                 initializeSoftCursor();
             }
-            handler.post(drawableSetter);
+
             handler.post(setModes);
 //            myDrawable.syncScroll();
             if (decoder != null) {
-                decoder.setBitmapData(myDrawable);
+                decoder.setBitmapData(bitmapData);
             }
+
+            isRunning = true;
         } catch (NullPointerException e) {
             e.printStackTrace();
         }
@@ -1293,9 +1359,9 @@ public class RemoteCanvas extends AppCompatImageView
      * Disposes of the old drawable which holds the remote desktop data.
      */
     private void disposeDrawable() {
-        if (myDrawable != null)
-            myDrawable.dispose();
-        myDrawable = null;
+        if (bitmapData != null)
+            bitmapData.dispose();
+        bitmapData = null;
 //        System.gc();
     }
 
@@ -1305,7 +1371,7 @@ public class RemoteCanvas extends AppCompatImageView
      */
     public void updateFBSize() {
         try {
-            myDrawable.frameBufferSizeChanged();
+            bitmapData.frameBufferSizeChanged();
         } catch (Throwable e) {
             boolean useLBBM = false;
 
@@ -1317,7 +1383,7 @@ public class RemoteCanvas extends AppCompatImageView
                 if (compact == true) {
                     compact = false;
                     try {
-                        myDrawable = new FullBufferBitmapData(rfbconn, this, capacity);
+                        bitmapData = new FullBufferBitmapData(rfbconn, this, capacity);
                     } catch (Throwable e2) {
                         useLBBM = true;
                     }
@@ -1329,16 +1395,16 @@ public class RemoteCanvas extends AppCompatImageView
                     disposeDrawable();
 
                     useFull = false;
-                    myDrawable = new LargeBitmapData(rfbconn, this, getWidth(), getHeight(), capacity);
+                    bitmapData = new LargeBitmapData(rfbconn, this, getWidth(), getHeight(), capacity);
                 }
                 if (decoder != null) {
-                    decoder.setBitmapData(myDrawable);
+                    decoder.setBitmapData(bitmapData);
                 }
             }
         }
-        handler.post(drawableSetter);
+
         handler.post(setModes);
-        myDrawable.syncScroll();
+        bitmapData.syncScroll();
     }
 
     /**
@@ -1367,7 +1433,7 @@ public class RemoteCanvas extends AppCompatImageView
      * Lets the drawable know that an update from the remote server has arrived.
      */
     public void doneWaiting() {
-        myDrawable.doneWaiting();
+        bitmapData.doneWaiting();
     }
 
     /**
@@ -1375,7 +1441,7 @@ public class RemoteCanvas extends AppCompatImageView
      * drawable's scroll position (used only in LargeBitmapData)
      */
     public void syncScroll() {
-        myDrawable.syncScroll();
+        bitmapData.syncScroll();
     }
 
     /*
@@ -1402,7 +1468,7 @@ public class RemoteCanvas extends AppCompatImageView
      * Requests a remote desktop update at the specified rectangle.
      */
     public void writeFramebufferUpdateRequest(int x, int y, int w, int h, boolean incremental) throws IOException {
-        myDrawable.prepareFullUpdateRequest(incremental);
+        bitmapData.prepareFullUpdateRequest(incremental);
         rfbconn.writeFramebufferUpdateRequest(x, y, w, h, incremental);
     }
 
@@ -1410,9 +1476,9 @@ public class RemoteCanvas extends AppCompatImageView
      * Requests an update of the entire remote desktop.
      */
     public void writeFullUpdateRequest(boolean incremental) {
-        myDrawable.prepareFullUpdateRequest(incremental);
-        rfbconn.writeFramebufferUpdateRequest(myDrawable.getXoffset(), myDrawable.getYoffset(),
-                myDrawable.bmWidth(), myDrawable.bmHeight(), incremental);
+        bitmapData.prepareFullUpdateRequest(incremental);
+        rfbconn.writeFramebufferUpdateRequest(bitmapData.getXoffset(), bitmapData.getYoffset(),
+                bitmapData.bmWidth(), bitmapData.bmHeight(), incremental);
     }
 
     /**
@@ -1452,7 +1518,7 @@ public class RemoteCanvas extends AppCompatImageView
 
         if (connection != null) {
             Log.d(TAG, "Saving screenshot to " + getContext().getFilesDir() + "/" + connection.getScreenshotFilename());
-            Utils.writeScreenshotToFile(myDrawable, getContext().getFilesDir() + "/" + connection.getScreenshotFilename(), 720);
+            Utils.writeScreenshotToFile(bitmapData, getContext().getFilesDir() + "/" + connection.getScreenshotFilename(), 720);
         }
 
 //        disposeDrawable();
@@ -1480,8 +1546,7 @@ public class RemoteCanvas extends AppCompatImageView
         clipboard = null;
         setModes = null;
         decoder = null;
-        canvasZoomer = null;
-        drawableSetter = null;
+        scaler = null;
         screenMessage = null;
         desktopInfo = null;
 
@@ -1532,7 +1597,7 @@ public class RemoteCanvas extends AppCompatImageView
         boolean panned = false;
 
         // We only pan if the current scaling is able to pan.
-        if (canvasZoomer != null && !canvasZoomer.isAbleToPan())
+        if (scaler != null && !scaler.isAbleToPan())
             return;
 
         // Coordinates in screen's resolution
@@ -1620,10 +1685,10 @@ public class RemoteCanvas extends AppCompatImageView
      * @return True if the pan changed the view (did not move view out of bounds); false otherwise
      */
     public boolean relativePan(float dX, float dY) {
-        android.util.Log.d(TAG, "relativePan: " + dX + ", " + dY);
+        Log.d(TAG, "relativePan: " + dX + ", " + dY);
 
         // We only pan if the current scaling is able to pan.
-        if (canvasZoomer != null && !canvasZoomer.isAbleToPan())
+        if (scaler != null && !scaler.isAbleToPan())
             return false;
 
 //        double sX = dX;
@@ -1649,7 +1714,7 @@ public class RemoteCanvas extends AppCompatImageView
         android.util.Log.d(TAG, "relativePan: " + dX + ", " + dY);
 
         // We only pan if the current scaling is able to pan.
-        if (canvasZoomer != null && !canvasZoomer.isAbleToPan())
+        if (scaler != null && !scaler.isAbleToPan())
             return false;
 
 //        double sX = dX;
@@ -1680,7 +1745,7 @@ public class RemoteCanvas extends AppCompatImageView
     public void absolutePan(int x, int y, boolean force) {
         //android.util.Log.d(TAG, "absolutePan: " + x + ", " + y);
 
-        if (canvasZoomer != null) {
+        if (scaler != null) {
             int vW = getVisibleDesktopWidth();
             int vH = getVisibleDesktopHeight();
             int w = getImageWidth();
@@ -1710,16 +1775,16 @@ public class RemoteCanvas extends AppCompatImageView
     @Override
     protected void onScrollChanged(int l, int t, int oldl, int oldt) {
         super.onScrollChanged(l, t, oldl, oldt);
-        if (myDrawable != null) {
-            myDrawable.scrollChanged(absoluteXPosition, absoluteYPosition);
+        if (bitmapData != null) {
+            bitmapData.scrollChanged(absoluteXPosition, absoluteYPosition);
         }
     }
 
     @Override
     public Bitmap getBitmap() {
         Bitmap bitmap = null;
-        if (myDrawable != null) {
-            bitmap = myDrawable.mbitmap;
+        if (bitmapData != null) {
+            bitmap = bitmapData.mbitmap;
         }
         return bitmap;
     }
@@ -1788,10 +1853,10 @@ public class RemoteCanvas extends AppCompatImageView
      * Invalidates (to redraw) the location of the remote pointer.
      */
     public void invalidateMousePosition() {
-        if (myDrawable != null) {
+        if (bitmapData != null) {
             // add little offset for the cursor image
-            myDrawable.moveCursorRect(pointer.getX() - pointer.getHotspotX(), pointer.getY() - pointer.getHotspotY());
-            RectF r = myDrawable.getCursorRect();
+            bitmapData.moveCursorRect(pointer.getX() - pointer.getHotspotX(), pointer.getY() - pointer.getHotspotY());
+            RectF r = bitmapData.getCursorRect();
             reDraw(r.left , r.top , r.width(), r.height());
         }
     }
@@ -1812,7 +1877,7 @@ public class RemoteCanvas extends AppCompatImageView
 
     @Override
     public boolean isAbleToPan() {
-        return canvasZoomer.isAbleToPan();
+        return scaler.isAbleToPan();
     }
 
     @Override
@@ -1834,16 +1899,16 @@ public class RemoteCanvas extends AppCompatImageView
      * @param y
      */
     synchronized void softCursorMove(int x, int y) {
-        if (myDrawable.isNotInitSoftCursor() && connection.getUseLocalCursor() != Constants.CURSOR_FORCE_DISABLE) {
+        if (bitmapData.isNotInitSoftCursor() && connection.getUseLocalCursor() != Constants.CURSOR_FORCE_DISABLE) {
             initializeSoftCursor();
         }
 
         if (!cursorBeingMoved || pointer.isRelativeEvents()) {
             pointer.setX(x);
             pointer.setY(y);
-            RectF prevR = new RectF(myDrawable.getCursorRect());
+            RectF prevR = new RectF(bitmapData.getCursorRect());
             // Move the cursor.
-            myDrawable.moveCursorRect(x, y);
+            bitmapData.moveCursorRect(x, y);
             // Show the cursor.
 //            RectF r = myDrawable.getCursorRect();
 //            reDraw(r.left, r.top, r.width(), r.height());
@@ -1858,16 +1923,16 @@ public class RemoteCanvas extends AppCompatImageView
     }
 
     public void setSoftCursorPixels(int[] pixels, int width, int height, int xPos, int yPos) {
-        myDrawable.setCursorRect(pointer.getX() - xPos, pointer.getY() - yPos, width, height, 0, 0);
-        myDrawable.setSoftCursor(pixels);
+        bitmapData.setCursorRect(pointer.getX() - xPos, pointer.getY() - yPos, width, height, 0, 0);
+        bitmapData.setSoftCursor(pixels);
 
         pointer.setHotspotX(xPos);
         pointer.setHotspotY(yPos);
     }
 
     public void setSoftCursorBitmap(Bitmap bitmap, int width, int height, int xPos, int yPos) {
-        myDrawable.setCursorRect(pointer.getX() - xPos, pointer.getY() - yPos, width, height, 0, 0);
-        myDrawable.setSoftCursor(bitmap);
+        bitmapData.setCursorRect(pointer.getX() - xPos, pointer.getY() - yPos, width, height, 0, 0);
+        bitmapData.setSoftCursor(bitmap);
 
         pointer.setHotspotX(xPos);
         pointer.setHotspotY(yPos);
@@ -1875,12 +1940,12 @@ public class RemoteCanvas extends AppCompatImageView
 
     @Override
     public InputConnection onCreateInputConnection(EditorInfo outAttrs) {
-        android.util.Log.d(TAG, "onCreateInputConnection called");
+        Log.d(TAG, "onCreateInputConnection called");
         BaseInputConnection bic = new BaseInputConnection(this, false);
         outAttrs.actionLabel = null;
         outAttrs.inputType = getKeyboardVariation();
         String currentIme = Settings.Secure.getString(getContext().getContentResolver(), Settings.Secure.DEFAULT_INPUT_METHOD);
-        android.util.Log.d(TAG, "currentIme: " + currentIme);
+        Log.d(TAG, "currentIme: " + currentIme);
         outAttrs.imeOptions |= EditorInfo.IME_FLAG_NO_FULLSCREEN;
         return bic;
     }
@@ -1909,9 +1974,9 @@ public class RemoteCanvas extends AppCompatImageView
     }
 
     public float getZoomFactor() {
-        if (canvasZoomer == null)
+        if (scaler == null)
             return 1;
-        return canvasZoomer.getZoomFactor();
+        return scaler.getZoomFactor();
     }
 
     public int getVisibleDesktopWidth() {
@@ -1950,8 +2015,8 @@ public class RemoteCanvas extends AppCompatImageView
     }
 
     public float getMinimumScale() {
-        if (myDrawable != null) {
-            return myDrawable.getMinimumScale();
+        if (bitmapData != null) {
+            return bitmapData.getMinimumScale();
         } else
             return 1.f;
     }
@@ -2015,9 +2080,11 @@ public class RemoteCanvas extends AppCompatImageView
      */
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        Log.d(TAG, "onSizeChanged: " + w + "x" + h);
         if (w > 0 && h > 0) {
             synchronized (this) {
-                this.notify();
+                this.notify(); // 唤醒等待布局的线程
             }
         }
     }
@@ -2038,7 +2105,7 @@ public class RemoteCanvas extends AppCompatImageView
 
         switch (dialogId) {
             case GetTextFragment.DIALOG_ID_GET_VNC_CREDENTIALS:
-                android.util.Log.i(TAG, "Text obtained from DIALOG_ID_GET_VNC_USERNAME.");
+                Log.i(TAG, "Text obtained from DIALOG_ID_GET_VNC_USERNAME.");
                 connection.setUserName(obtainedString[0]);
                 connection.setPassword(obtainedString[1]);
                 connection.setKeepPassword(save);
@@ -2046,14 +2113,14 @@ public class RemoteCanvas extends AppCompatImageView
                 handler.sendEmptyMessage(RemoteClientLibConstants.REINIT_SESSION);
                 break;
             case GetTextFragment.DIALOG_ID_GET_VNC_PASSWORD:
-                android.util.Log.i(TAG, "Text obtained from DIALOG_ID_GET_VNC_PASSWORD.");
+                Log.i(TAG, "Text obtained from DIALOG_ID_GET_VNC_PASSWORD.");
                 connection.setPassword(obtainedString[0]);
                 connection.setKeepPassword(save);
                 connection.save(getContext());
                 handler.sendEmptyMessage(RemoteClientLibConstants.REINIT_SESSION);
                 break;
             case GetTextFragment.DIALOG_ID_GET_RDP_CREDENTIALS:
-                android.util.Log.i(TAG, "Text obtained from DIALOG_ID_GET_VNC_PASSWORD.");
+                Log.i(TAG, "Text obtained from DIALOG_ID_GET_VNC_PASSWORD.");
                 connection.setUserName(obtainedString[0]);
                 connection.setRdpDomain(obtainedString[1]);
                 connection.setPassword(obtainedString[2]);
@@ -2062,14 +2129,14 @@ public class RemoteCanvas extends AppCompatImageView
                 handler.sendEmptyMessage(RemoteClientLibConstants.REINIT_SESSION);
                 break;
             case GetTextFragment.DIALOG_ID_GET_SPICE_PASSWORD:
-                android.util.Log.i(TAG, "Text obtained from DIALOG_ID_GET_SPICE_PASSWORD.");
+                Log.i(TAG, "Text obtained from DIALOG_ID_GET_SPICE_PASSWORD.");
                 connection.setPassword(obtainedString[0]);
                 connection.setKeepPassword(save);
                 connection.save(getContext());
                 handler.sendEmptyMessage(RemoteClientLibConstants.REINIT_SESSION);
                 break;
             case GetTextFragment.DIALOG_ID_GET_OPAQUE_CREDENTIALS:
-                android.util.Log.i(TAG, "Text obtained from DIALOG_ID_GET_OPAQUE_CREDENTIALS");
+                Log.i(TAG, "Text obtained from DIALOG_ID_GET_OPAQUE_CREDENTIALS");
                 connection.setUserName(obtainedString[0]);
                 connection.setPassword(obtainedString[1]);
                 connection.setKeepPassword(save);
@@ -2077,7 +2144,7 @@ public class RemoteCanvas extends AppCompatImageView
                 handler.sendEmptyMessage(RemoteClientLibConstants.REINIT_SESSION);
                 break;
             case GetTextFragment.DIALOG_ID_GET_OPAQUE_PASSWORD:
-                android.util.Log.i(TAG, "Text obtained from DIALOG_ID_GET_OPAQUE_PASSWORD");
+                Log.i(TAG, "Text obtained from DIALOG_ID_GET_OPAQUE_PASSWORD");
                 connection.setPassword(obtainedString[0]);
                 connection.setKeepPassword(save);
                 connection.save(getContext());
@@ -2086,14 +2153,14 @@ public class RemoteCanvas extends AppCompatImageView
                 }
                 break;
             case GetTextFragment.DIALOG_ID_GET_OPAQUE_OTP_CODE:
-                android.util.Log.i(TAG, "Text obtained from DIALOG_ID_GET_OPAQUE_OTP_CODE");
+                Log.i(TAG, "Text obtained from DIALOG_ID_GET_OPAQUE_OTP_CODE");
                 connection.setOtpCode(obtainedString[0]);
                 synchronized (spicecomm) {
                     spicecomm.notify();
                 }
                 break;
             default:
-                android.util.Log.e(TAG, "Unknown dialog type.");
+                Log.e(TAG, "Unknown dialog type.");
                 break;
         }
     }
@@ -2108,6 +2175,10 @@ public class RemoteCanvas extends AppCompatImageView
 
     public boolean isOutDisplay() {
         return this.outDisplay;
+    }
+
+    public void setScaler(AbstractScaling scaler) {
+        this.scaler = scaler;
     }
 
     /*

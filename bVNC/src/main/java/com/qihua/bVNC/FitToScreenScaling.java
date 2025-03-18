@@ -100,20 +100,20 @@ class FitToScreenScaling extends AbstractScaling {
     void setScaleTypeForActivity(RemoteCanvasActivity activity) {
         super.setScaleTypeForActivity(activity);
         RemoteCanvas canvas = activity.getCanvas();
-        if (canvas == null || canvas.myDrawable == null)
+        if (canvas == null || canvas.bitmapData == null)
             return;
         canvasXOffset = -canvas.getCenteredXOffset();
         canvasYOffset = -canvas.getCenteredYOffset();
         canvas.computeShiftFromFullToView();
-        minimumScale = canvas.myDrawable.getMinimumScale();
+        minimumScale = canvas.bitmapData.getMinimumScale();
         scaling = minimumScale;
         resetMatrix();
         matrix.postScale(scaling, scaling);
-        canvas.setImageMatrix(matrix);
+//        canvas.setImageMatrix(matrix);
 
         canvas.absoluteXPosition = 0;
         canvas.absoluteYPosition = 0;
-        if (!canvas.myDrawable.widthRatioLessThanHeightRatio()) {
+        if (!canvas.bitmapData.widthRatioLessThanHeightRatio()) {
             canvas.absoluteXPosition = -(int) (((canvas.getWidth() - canvas.rfbconn.framebufferWidth() * minimumScale) / 2) / minimumScale);
         } else {
             canvas.absoluteYPosition = -(int) (((canvas.getHeight() - canvas.rfbconn.framebufferHeight() * minimumScale) / 2) / minimumScale);

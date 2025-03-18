@@ -254,12 +254,12 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 
                 boolean isChinese = Utils.isChineseLocal(getApplicationContext());
                 if (isChinese) {
-                    touchpad.setImageResource(R.drawable.t_tips);
+//                    touchpad.setImageResource(R.drawable.t_tips);
                 } else {
-                    touchpad.setImageResource(R.drawable.t_tips_en);
+//                    touchpad.setImageResource(R.drawable.t_tips_en);
                 }
 
-                touchpad.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+//                touchpad.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
             } catch (Throwable ignored) {
                 // fallback
                 canvasPresentation = null;
@@ -1155,7 +1155,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         Log.d(TAG, "correctAfterRotation");
         canvas.waitUntilInflated();
 
-        if (canvas.canvasZoomer == null) {
+        if (canvas.scaler == null) {
             return;
         }
 
@@ -1164,7 +1164,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 //        float oldScale = canvas.canvasZoomer.getZoomFactor();
 //        int x = canvas.absoluteXPosition;
 //        int y = canvas.absoluteYPosition;
-        canvas.canvasZoomer.correctAfterRotation(RemoteCanvasActivity.this);
+        canvas.scaler.correctAfterRotation(RemoteCanvasActivity.this);
 //        float newScale = canvas.canvasZoomer.getZoomFactor();
 //        canvas.canvasZoomer.changeZoom(this, oldScale / newScale, 0, 0);
         canvas.movePanToMakePointerVisible();
@@ -1285,22 +1285,22 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         try {
             for (MenuItem item : scalingModeMenuItems) {
                 // If the entire framebuffer is NOT contained in the bitmap, fit-to-screen is meaningless.
-                if (item.getItemId() == R.id.itemFitToScreen) {
-                    if (canvas != null && canvas.myDrawable != null &&
-                            (canvas.myDrawable.bitmapheight != canvas.myDrawable.framebufferheight ||
-                                    canvas.myDrawable.bitmapwidth != canvas.myDrawable.framebufferwidth)) {
-                        item.setEnabled(false);
-                    } else {
-                        item.setEnabled(true);
-                    }
-                } else {
-                    item.setEnabled(true);
-                }
-
-                AbstractScaling scaling = AbstractScaling.getById(item.getItemId());
-                if (scaling.scaleType == connection.getScaleMode()) {
-                    item.setChecked(true);
-                }
+//                if (item.getItemId() == R.id.itemFitToScreen) {
+//                    if (canvas != null && canvas.bitmapData != null &&
+//                            (canvas.bitmapData.bitmapheight != canvas.bitmapData.framebufferheight ||
+//                                    canvas.bitmapData.bitmapwidth != canvas.bitmapData.framebufferwidth)) {
+//                        item.setEnabled(false);
+//                    } else {
+//                        item.setEnabled(true);
+//                    }
+//                } else {
+//                    item.setEnabled(true);
+//                }
+//
+//                AbstractScaling scaling = AbstractScaling.getById(item.getItemId());
+//                if (scaling.scaleType == connection.getScaleMode()) {
+//                    item.setChecked(true);
+//                }
             }
         } catch (NullPointerException e) {
         }
@@ -1312,7 +1312,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     void updateInputMenu() {
         try {
             for (MenuItem item : inputModeMenuItems) {
-                item.setEnabled(canvas.canvasZoomer.isValidInputMode(item.getItemId()));
+                item.setEnabled(canvas.scaler.isValidInputMode(item.getItemId()));
                 if (getInputHandlerById(item.getItemId()) == inputHandler)
                     item.setChecked(true);
             }
@@ -1692,7 +1692,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             }
 
             // Because the zoom action is relative, we should divide the current zoom factor
-            canvas.canvasZoomer.changeZoom(this, zoomRatio / canvas.canvasZoomer.getZoomFactor(), (float) canvas.getWidth() / 2, 0);
+            canvas.scaler.changeZoom(this, zoomRatio / canvas.scaler.getZoomFactor(), (float) canvas.getWidth() / 2, 0);
         });
     }
 

@@ -22,6 +22,7 @@ package com.qihua.bVNC;
 
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.widget.ImageView;
@@ -165,16 +166,6 @@ abstract public class AbstractBitmapData {
      */
     abstract AbstractBitmapDrawable createDrawable();
 
-
-    /**
-     * Sets the canvas's drawable
-     * @param v ImageView displaying bitmap data
-     */
-    void setImageDrawable(ImageView v) {
-        v.setImageDrawable(drawable);
-    }
-
-
     /**
      * Call in UI thread; tell ImageView we've changed
      * @param v ImageView displaying bitmap data
@@ -185,9 +176,6 @@ abstract public class AbstractBitmapData {
 
     /**
      * Copy a rectangle from one part of the bitmap to another
-     * @param src Rectangle in full-frame coordinates to be copied
-     * @param dest Destination rectangle in full-frame coordinates
-     * @param paint Paint specifier
      */
     public abstract void copyRect(int sx, int sy, int dx, int dy, int w, int h);
 
