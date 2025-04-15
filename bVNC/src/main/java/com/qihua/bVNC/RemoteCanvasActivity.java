@@ -327,20 +327,23 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 
             rootView.getWindowVisibleDisplayFrame(r);
             getWindow().getDecorView().getWindowVisibleDisplayFrame(re);
-            float visibleDesktopHeight = canvas.pointer.getY() * canvas.getZoomFactor();
 
-            float panDistance = (visibleDesktopHeight + keyBoardHeight - canvas.getHeight()) / canvas.getZoomFactor() + 200;
+            // the absoluteYPosition is in image's coordinate system. if positive, the image on the screen will move upward
+            float pointerYPos = (canvas.pointer.getY() - canvas.absoluteYPosition) * canvas.getZoomFactor();
+
+            float panDistance = (pointerYPos + keyBoardHeight - canvas.getHeight()) / canvas.getZoomFactor() + 150;
             if (isShow && panDistance > 0) {
                 // this pan be force because the extra panning added above may exceed the visible desktop height(in image's resolution)
-                canvas.absolutePan(canvas.getAbsX(), (int) (panDistance), true);
                 lastPanDist = panDistance;
+                canvas.relativePan(0, panDistance, true);
             }
 
             if (!isShow && lastPanDist > 0) {
-                canvas.absolutePan(canvas.getAbsX(), (int) (-lastPanDist), false);
+                canvas.relativePan(0, -lastPanDist, false);
+                lastPanDist = 0;
             }
 
-            canvas.setVisibleDesktopHeight(r.bottom - re.top);
+//            canvas.setVisibleDesktopHeight(r.bottom - re.top);
         });
 
         gestureOverlayView = findViewById(R.id.gestureOverlay);

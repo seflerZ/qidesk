@@ -76,8 +76,8 @@ class ZoomScaling extends AbstractScaling {
         resetMatrix();
         matrix.postScale(scaling, scaling);
         canvas.setImageMatrix(matrix);
-        canvas.resetScroll();
-        canvas.relativePan(0, 0);
+//        canvas.resetScroll();
+//        canvas.relativePan(0, 0);
     }
 
     /* (non-Javadoc)
@@ -196,12 +196,11 @@ class ZoomScaling extends AbstractScaling {
         // Do not apply zooming in second display mode.
         if (lastZoomFactor > 0 && canvas.connection.getUseLastPositionToolbar() && !canvas.isOutDisplay()) {
             scaling = lastZoomFactor;
-            correctAfterRotation(activity);
         } else {
             scaling = minimumScale;
         }
 
-        resolveZoom(canvas);
+        correctAfterRotation(activity);
     }
 
     @Override

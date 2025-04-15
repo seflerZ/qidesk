@@ -1622,21 +1622,46 @@ public class RemoteCanvas extends AppCompatImageView
         if (canvasZoomer != null && !canvasZoomer.isAbleToPan())
             return false;
 
-        double sX = dX;
-        double sY = dY;
+//        double sX = dX;
+//        double sY = dY;
 
         // Prevent panning right or below desktop image except for provision for on-screen
         // buttons and curved screens
 //        if (absoluteXPosition + getVisibleDesktopWidth() + sX > getImageWidth())
 //            sX = getImageWidth() - getVisibleDesktopWidth() - absoluteXPosition;
-//        if (absoluteYPosition + getVisibleDesktopHeight() + sY > getImageHeight() + buttonAndCurveOffset)
-//            sY = getImageHeight() - getVisibleDesktopHeight() - absoluteYPosition + buttonAndCurveOffset;
+//        if (absoluteYPosition + getVisibleDesktopHeight() + sY > getImageHeight())
+//            sY = getImageHeight() - getVisibleDesktopHeight() - absoluteYPosition;
 
-        absoluteXPosition += sX;
-        absoluteYPosition += sY;
-        if (sX != 0.0 || sY != 0.0) {
-            //scrollBy((int)sX, (int)sY);
-            resetScroll();
+//        absoluteXPosition += sX;
+//        absoluteYPosition += sY;
+        if (dX != 0.0 || dY != 0.0) {
+            absolutePan((int) (absoluteXPosition + dX), (int) (absoluteYPosition + dY), false);
+            return true;
+        }
+        return false;
+    }
+
+    public boolean relativePan(float dX, float dY, boolean force) {
+        android.util.Log.d(TAG, "relativePan: " + dX + ", " + dY);
+
+        // We only pan if the current scaling is able to pan.
+        if (canvasZoomer != null && !canvasZoomer.isAbleToPan())
+            return false;
+
+//        double sX = dX;
+//        double sY = dY;
+
+        // Prevent panning right or below desktop image except for provision for on-screen
+        // buttons and curved screens
+//        if (absoluteXPosition + getVisibleDesktopWidth() + sX > getImageWidth())
+//            sX = getImageWidth() - getVisibleDesktopWidth() - absoluteXPosition;
+//        if (absoluteYPosition + getVisibleDesktopHeight() + sY > getImageHeight())
+//            sY = getImageHeight() - getVisibleDesktopHeight() - absoluteYPosition;
+
+//        absoluteXPosition += sX;
+//        absoluteYPosition += sY;
+        if (dX != 0.0 || dY != 0.0) {
+            absolutePan((int) (absoluteXPosition + dX), (int) (absoluteYPosition + dY), force);
             return true;
         }
         return false;
@@ -1657,8 +1682,13 @@ public class RemoteCanvas extends AppCompatImageView
             int w = getImageWidth();
             int h = getImageHeight();
 
+            int bWidth = (int) ((getWidth() - w * getMinimumScale()) / 2);
+            if (bWidth <= 0) {
+                bWidth = 0;
+            }
+
             if (!force) {
-                if (x + vW > w) x = w - vW;
+                if (x + vW > w + bWidth) x = w + bWidth - vW;
                 if (y + vH > h) y = h - vH;
                 if (x < 0) x = 0;
                 if (y < 0) y = 0;
