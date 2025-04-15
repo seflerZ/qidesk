@@ -114,7 +114,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     // This is how far the swipe has to travel before a swipe event is generated.
     float startSwipeDist = 5f;
     boolean canSwipeToMove = false;
-    float baseSwipeDist = 5f;
+    float baseSwipeDist = 3f;
     // This is how far from the top and bottom edge to detect immersive swipe.
     float immersiveSwipeRatio = 0.09f;
     boolean immersiveSwipe = false;
@@ -446,8 +446,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         totalDragX = 0;
         totalDragY = 0;
 
-        // Will handle the double click if the drag not performed in endDragModesAndScrolling()
-
         dragMode = true;
 
         activity.sendShortVibration();
@@ -730,22 +728,24 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                             GeneralUtils.debugLog(debugLogging, TAG, "onTouchEvent: ACTION_MOVE panMode");
                             break;
                         } else if (dragMode || rightDragMode || middleDragMode) {
-                            if (dragMode && totalDragY == 0 && totalDragX == 0) {
-                                pointer.leftButtonDown(getX(e), getY(e), meta);
-                            } else if (rightDragMode && totalDragY == 0 && totalDragX == 0) {
-                                pointer.rightButtonDown(getX(e), getY(e), meta);
-                            } else if (middleDragMode && totalDragY == 0 && totalDragX == 0){
-                                pointer.middleButtonDown(getX(e), getY(e), meta);
+                            if (totalDragY == 0 && totalDragX == 0) {
+                                if (dragMode) {
+                                    pointer.leftButtonDown(getX(e), getY(e), meta);
+                                } else if (rightDragMode) {
+                                    pointer.rightButtonDown(getX(e), getY(e), meta);
+                                } else if (middleDragMode) {
+                                    pointer.middleButtonDown(getX(e), getY(e), meta);
+                                }
                             }
 
                             // do not enlarge if the cursor moved away
-                            if (Math.abs(totalDragX) > 50 || Math.abs(totalDragY) > 50) {
+                            if (totalDragX > 50 || totalDragY > 50) {
                                 canEnlarge = false;
                             }
 
                             // If try to drag with long time, enlarge the screen for drag helper. This is very helpful in selecting texts in small screen.
-                            if (System.currentTimeMillis() - lastDragStartTime > 600 && canEnlarge
-                                    && dragMode && (Math.abs(totalDragX) < 150 && Math.abs(totalDragY) < 150)
+                            if (System.currentTimeMillis() - lastDragStartTime > 800 && canEnlarge
+                                    && dragMode && (totalDragX < 150 && totalDragY < 150)
                                     && lastZoomFactor < 2.0f) {
                                 canvas.canvasZoomer.changeZoom(activity, 2.5f/canvas.getZoomFactor(), pointer.getX(), pointer.getY());
                                 dragHelped = true;
@@ -826,16 +826,22 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             canEnlarge = true;
 
             if (!endDragModesAndScrolling()) {
-                pointer.releaseButton(getX(e), getY(e), meta);
-
                 if (dragHelped) {
                     canvas.canvasZoomer.changeZoom(activity, lastZoomFactor / canvas.getZoomFactor(), pointer.getX(), pointer.getY());
                     dragHelped = false;
                 }
-            }
 
-            // clean mouse button states
-            pointer.releaseButton(getX(e), getY(e), meta);
+                // release the drag button down
+                pointer.releaseButton(getX(e), getY(e), meta);
+
+                // if the double tap performed without any movement, perform a additional click
+                // to form a double click. note that the first click is performed during the drag
+                if (totalDragX < 5 && totalDragY < 5) {
+                    pointer.leftButtonDown(getX(e), getY(e), meta);
+                    SystemClock.sleep(50);
+                    pointer.releaseButton(getX(e), getY(e), meta);
+                }
+            }
         }
 
         return gestureDetector.onTouchEvent(e);

@@ -145,8 +145,8 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             }
 
             // get the relative moving distance compared to one step
-            float ratioY = distanceY;
-            float ratioX = distanceX;
+            float ratioY = distanceY * displayDensity / 2;
+            float ratioX = distanceX * displayDensity / 2;
 
             // The direction is just up side down.
             int newY = (int) -(ratioY);
@@ -283,7 +283,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             float distanceX = e.getX() - dragX;
             dragX = e.getX();
 
-            totalDragX += distanceX;
+            totalDragX += Math.abs(distanceX);
             // Compute the absolute new X coordinate.
             return Math.round(p.getX() + distanceX);
         }
@@ -301,7 +301,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             float distanceY = e.getY() - dragY;
             dragY = e.getY();
 
-            totalDragY += distanceY;
+            totalDragY += Math.abs(distanceY);
             // Compute the absolute new Y coordinate.
             return Math.round(p.getY() + distanceY);
         }

@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class MyGestureDectector
 {
 
-    private static final int TAP_TIMEOUT = 200;
+    private static final int TAP_TIMEOUT = 150;
     private static final int DOUBLE_TAP_TIMEOUT = 1200;
     // Distance a touch can wander before we think the user is the first touch in a sequence of
     // double tap
@@ -262,6 +262,8 @@ public class MyGestureDectector
                     {
                         // This is a second tap
                         mIsDoubleTapping = true;
+                        // replace tap with double tap
+                        mHandler.removeMessages(TAP);
                         // Give a callback with the first tap of the double-tap
                         handled |= mDoubleTapListener.onDoubleTap(mCurrentDownEvent);
                         // Give a callback with down event of the double-tap
@@ -347,18 +349,18 @@ public class MyGestureDectector
                 mIgnoreNextMove.set(false);
                 mStillDown = false;
                 MotionEvent currentUpEvent = MotionEvent.obtain(ev);
-                if (mIsDoubleTapping && mAlwaysInTapRegion)
-                {
-                    // Finally, give the second tap event
-                    mHandler.sendEmptyMessageDelayed(TAP, 0);
-                }
-                else if (mInLongPress)
+//                if (mIsDoubleTapping && mAlwaysInTapRegion)
+//                {
+//                    // Finally, give the second tap event
+//                    mHandler.sendEmptyMessageDelayed(TAP, 10);
+//                }
+                if (mInLongPress)
                 {
                     mHandler.removeMessages(TAP);
                     mListener.onLongPressUp(ev);
                     mInLongPress = false;
                 }
-                else if (mAlwaysInTapRegion)
+                else if (mAlwaysInTapRegion && !mIsDoubleTapping)
                 {
                     mHandler.sendEmptyMessageDelayed(TAP, TAP_TIMEOUT);
                 }
@@ -402,10 +404,10 @@ public class MyGestureDectector
     private boolean isConsideredDoubleTap(MotionEvent firstDown, MotionEvent firstUp,
                                           MotionEvent secondDown)
     {
-//        if (!mAlwaysInBiggerTapRegion)
-//        {
-//            return false;
-//        }
+        if (!mAlwaysInBiggerTapRegion)
+        {
+            return false;
+        }
 
         if (secondDown.getEventTime() - firstUp.getEventTime() > DOUBLE_TAP_TIMEOUT)
         {
