@@ -417,7 +417,12 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
         activity.readSpecialKeysState();
 
-        if (dragMode || detectImmersiveRange(e.getX(), e.getY())) {
+        if (dragMode) {
+            return true;
+        }
+
+        if (detectImmersiveRange(e.getX(), e.getY())) {
+            activity.toggleKeyboard();
             return true;
         }
 
@@ -547,6 +552,22 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         return Constants.SDK_INT >= Build.VERSION_CODES.KITKAT &&
                 (x <= immersiveXDistance || touchpad.getWidth() - x <= immersiveXDistance
                         || y <= immersiveYDistance || touchpad.getHeight() - y <= immersiveYDistance);
+    }
+
+    private boolean detectLeftRange(float x, float y) {
+        float bottomXDistance = Math.max(touchpad.getWidth() * immersiveSwipeRatio, 20);
+        float bottomYDistance = touchpad.getHeight() / 2f;
+
+        return Constants.SDK_INT >= Build.VERSION_CODES.KITKAT &&
+                (x <= bottomXDistance || touchpad.getWidth() - x <= bottomXDistance) && y > bottomYDistance;
+    }
+
+    private boolean detectRightRange(float x, float y) {
+        float bottomXDistance = Math.max(touchpad.getWidth() * immersiveSwipeRatio, 20);
+        float bottomYDistance = touchpad.getHeight() / 2f;
+
+        return Constants.SDK_INT >= Build.VERSION_CODES.KITKAT &&
+                (x <= bottomXDistance || touchpad.getWidth() - x <= bottomXDistance) && y < bottomYDistance;
     }
 
     private void detectImmersiveSwipe(float x, float y) {

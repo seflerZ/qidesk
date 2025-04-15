@@ -1616,7 +1616,6 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         if (gestureOverlayView != null && canvas.connection.getEnableGesture() && !longPressType.equals("gesture")) {
             gestureOverlayView.setVisibility(View.VISIBLE);
         }
-
     }
 
 //    @Override
@@ -1631,6 +1630,21 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 //    }
 
     public void toggleKeyboard(MenuItem menuItem) {
+        handler.post(() -> {
+            // show gesture overlay
+            if (gestureOverlayView != null && canvas.connection.getEnableGesture()) {
+                gestureOverlayView.setVisibility(View.GONE);
+            }
+
+            if (softKeyboardUp) {
+                hideKeyboardAndExtraKeys();
+            } else {
+                showKeyboardAndExtraKeys();
+            }
+        });
+    }
+
+    public void toggleKeyboard() {
         handler.post(() -> {
             // show gesture overlay
             if (gestureOverlayView != null && canvas.connection.getEnableGesture()) {
@@ -1750,6 +1764,18 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     public void onBackPressed() {
         if (inputHandler != null) {
             inputHandler.onKeyDown(KeyEvent.KEYCODE_BACK, new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK));
+        }
+    }
+
+    public void toggleGestureLayer() {
+        if (gestureOverlayView == null || !canvas.connection.getEnableGesture()) {
+            return;
+        }
+
+        if (gestureOverlayView.getVisibility() == View.VISIBLE) {
+            gestureOverlayView.setVisibility(View.GONE);
+        } else {
+            gestureOverlayView.setVisibility(View.VISIBLE);
         }
     }
 
