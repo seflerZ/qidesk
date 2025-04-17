@@ -120,112 +120,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             scrollRight = false;
             scrollLeft = false;
 
-            if (distanceY > 0) {
-                lastScrollDirection = 2;
-                scrollDown = true;
-            } else if (distanceY < 0) {
-                lastScrollDirection = 0;
-                scrollUp = true;
-            }
-
-            if (distanceX > 0) {
-                lastScrollDirection = 3;
-                scrollRight = true;
-            } else if (distanceX < 0) {
-                lastScrollDirection = 1;
-                scrollLeft = true;
-            }
-
-            if (cumulatedY * distanceY < 0) {
-                cumulatedY = 0;
-            }
-
-            if (cumulatedX * distanceX < 0) {
-                cumulatedX = 0;
-            }
-
-            // get the relative moving distance compared to one step
-            float ratioY = distanceY * displayDensity / 2;
-            float ratioX = distanceX * displayDensity / 2;
-
-            // The direction is just up side down.
-            int newY = (int) -(ratioY);
-            int newX = (int) (ratioX);
-            int delta = 0;
-
-            if (Math.abs(distanceY) >= Math.abs(distanceX)) {
-                scrollRight = false;
-                scrollLeft = false;
-            } else {
-                scrollUp = false;
-                scrollDown = false;
-            }
-
-            if (scrollUp || scrollDown) {
-                if (distanceY < 0 && newY == 0) {
-                    delta = 0;
-                } else if (distanceY > 0 && newY == 0) {
-                    delta = 0;
-                } else {
-                    delta = newY;
-                }
-
-                if (delta == 0) {
-                    return true;
-                }
-
-                if (delta > 255) {
-                    delta = 255;
-                } else if (delta < -255) {
-                    delta = -255;
-                }
-
-                if (delta < 0) {
-                    // use positive number to represent the component directly for
-                    // the least two bytes
-                    delta = 256 + delta;
-                }
-
-                lastDelta = delta;
-
-                // Set the coordinates to where the swipe began (i.e. where scaling started).
-                sendScrollEvents(getX(e2), getY(e2), delta, meta);
-
-                swipeSpeed = 1;
-            }
-
-            if (scrollRight || scrollLeft) {
-                if (distanceX < 0 && newX == 0) {
-                    delta = 0;
-                } else if (distanceX > 0 && newX == 0) {
-                    delta = 0;
-                } else {
-                    delta = newX;
-                }
-
-                if (delta == 0) {
-                    return true;
-                }
-
-                if (delta > 255) {
-                    delta = 255;
-                } else if (delta < -255) {
-                    delta = -255;
-                }
-
-                if (delta < 0) {
-                    // use positive number to represent the component directly for
-                    // the least two bytes
-                    delta = 256 + delta;
-                }
-
-                lastDelta = delta;
-
-                // Set the coordinates to where the swipe began (i.e. where scaling started).
-                sendScrollEvents(getX(e2), getY(e2), delta, meta);
-
-                swipeSpeed = 1;
-            }
+            if (doScroll(getX(e2), getY(e2), distanceX, distanceY, meta)) return true;
 
             return true;
         }
@@ -257,6 +152,113 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             canvas.movePanToMakePointerVisible();
 
             return true;
+        }
+
+        return false;
+    }
+
+    public boolean doScroll(int x, int y, float distanceX, float distanceY, int meta) {
+        if (distanceY > 0) {
+            scrollDown = true;
+        } else if (distanceY < 0) {
+            scrollUp = true;
+        }
+
+        if (distanceX > 0) {
+            scrollRight = true;
+        } else if (distanceX < 0) {
+            scrollLeft = true;
+        }
+
+        if (cumulatedY * distanceY < 0) {
+            cumulatedY = 0;
+        }
+
+        if (cumulatedX * distanceX < 0) {
+            cumulatedX = 0;
+        }
+
+        // get the relative moving distance compared to one step
+        float ratioY = distanceY * displayDensity / 2;
+        float ratioX = distanceX * displayDensity / 2;
+
+        // The direction is just up side down.
+        int newY = (int) -(ratioY);
+        int newX = (int) (ratioX);
+        int delta = 0;
+
+        if (Math.abs(distanceY) >= Math.abs(distanceX)) {
+            scrollRight = false;
+            scrollLeft = false;
+        } else {
+            scrollUp = false;
+            scrollDown = false;
+        }
+
+        if (scrollUp || scrollDown) {
+            if (distanceY < 0 && newY == 0) {
+                delta = 0;
+            } else if (distanceY > 0 && newY == 0) {
+                delta = 0;
+            } else {
+                delta = newY;
+            }
+
+            if (delta == 0) {
+                return true;
+            }
+
+            if (delta > 255) {
+                delta = 255;
+            } else if (delta < -255) {
+                delta = -255;
+            }
+
+            if (delta < 0) {
+                // use positive number to represent the component directly for
+                // the least two bytes
+                delta = 256 + delta;
+            }
+
+            lastDelta = delta;
+
+            // Set the coordinates to where the swipe began (i.e. where scaling started).
+            sendScrollEvents(x, y, delta, meta);
+
+            swipeSpeed = 1;
+        }
+
+        if (scrollRight || scrollLeft) {
+            if (distanceX < 0 && newX == 0) {
+                delta = 0;
+            } else if (distanceX > 0 && newX == 0) {
+                delta = 0;
+            } else {
+                delta = newX;
+            }
+
+            if (delta == 0) {
+                return true;
+            }
+
+            if (delta > 255) {
+                delta = 255;
+            } else if (delta < -255) {
+                delta = -255;
+            }
+
+            if (delta < 0) {
+                // use positive number to represent the component directly for
+                // the least two bytes
+                delta = 256 + delta;
+            }
+
+            lastDelta = delta;
+
+            // Set the coordinates to where the swipe began (i.e. where scaling started).
+            sendScrollEvents(x, y, delta, meta);
+
+            swipeSpeed = 1;
         }
 
         return false;

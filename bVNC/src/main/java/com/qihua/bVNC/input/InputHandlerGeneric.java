@@ -93,13 +93,11 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
     int lastDelta = 0;
 
-    // 0, 1, 2, 3 = up lef down right
-    int lastScrollDirection = 0;
-
     float xCurrentFocus;
     float yCurrentFocus;
     // These variables record whether there was a two-finger swipe performed up or down.
     boolean inSwiping = false;
+    boolean inertiaSwiping = false;
     boolean scrollUp = false;
     boolean scrollDown = false;
     boolean scrollLeft = false;
@@ -179,24 +177,33 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 //                + displayDensity + " " + baseSwipeDist + " " + immersiveSwipeRatio);
 
         // for inertia scrolling
-        inertiaThread = new Thread(new Runnable() {
-            @Override
-            public void run(){
-                while (true) {
-                    try {
-                        inertiaSemaphore.acquire();
-                    } catch (Exception ignored) {
-                        // stop immediately
-                        continue;
+        inertiaThread = new Thread(() -> {
+            while (true) {
+                try {
+                    inertiaSemaphore.acquire();
+                } catch (Exception ignored) {
+                    // stop immediately
+                    continue;
+                }
+
+                if (lastSpeedX == 0 && lastSpeedY == 0) {
+                    continue;
+                }
+
+                int speedX = (int) lastSpeedX;
+                int speedY = (int) lastSpeedY;
+
+                if (inertiaSwiping) {
+                    while ((speedX != 0 || speedY != 0) && !inertiaThread.isInterrupted()) {
+                        doScroll(pointer.getX(), pointer.getY(), -speedX, -speedY, inertiaMetaState);
+//                        pointer.moveMouse(pointer.getX() + speedX, pointer.getY() + speedY, inertiaMetaState);
+
+                        speedX = (int) (speedX * 0.85);
+                        speedY = (int) (speedY * 0.85);
+
+                        SystemClock.sleep(inertiaBaseInterval);
                     }
-
-                    if (lastSpeedX == 0 && lastSpeedY == 0) {
-                        continue;
-                    }
-
-                    int speedX = (int) lastSpeedX;
-                    int speedY = (int) lastSpeedY;
-
+                } else {
                     while ((speedX != 0 || speedY != 0) && !inertiaThread.isInterrupted()) {
                         pointer.moveMouse(pointer.getX() + speedX, pointer.getY() + speedY, inertiaMetaState);
                         canvas.movePanToMakePointerVisible();
@@ -206,9 +213,9 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
                         SystemClock.sleep(inertiaBaseInterval);
                     }
-
-                    canvas.movePanToMakePointerVisible();
                 }
+
+                inertiaSwiping = false;
             }
         });
 
@@ -223,6 +230,10 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     protected int getX(MotionEvent e) {
         float scale = canvas.getZoomFactor();
         return (int) (canvas.getAbsX() + e.getX() / scale);
+    }
+
+    protected boolean doScroll(int x, int y, float distanceX, float distanceY, int meta) {
+        return true;
     }
 
     /**
@@ -525,6 +536,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         inSwiping = false;
         inScrolling = false;
         immersiveSwipe = false;
+
         if (dragMode || rightDragMode || middleDragMode) {
             nonDragGesture = false;
             dragMode = false;
@@ -779,15 +791,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                         }
                         break;
                     case MotionEvent.ACTION_UP:
-                        if (inertiaScrollingEnabled && !immersiveSwipe && !dragMode && !inSwiping) {
-                            if (activity.isToolbarShowing() && canvas.connection.getEnableGesture()) {
-
-                            } else {
-                                inertiaMetaState = e.getMetaState();
-                                inertiaSemaphore.release();
-                            }
-                        }
-
                         edgeLeft.setVisibility(View.GONE);
                         edgeRight.setVisibility(View.GONE);
                         edgeTop.setVisibility(View.GONE);
@@ -812,6 +815,10 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                         secondPointerWasDown = true;
                         // Permit right-clicking again.
                         thirdPointerWasDown = false;
+                        break;
+                    case MotionEvent.ACTION_POINTER_UP:
+
+
                         break;
                 }
                 break;
@@ -845,6 +852,22 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             }
 
             canEnlarge = true;
+
+            // for single finger movement
+            if (inertiaScrollingEnabled && !dragMode && !inSwiping) {
+                if (activity.isToolbarShowing() && canvas.connection.getEnableGesture()) {
+
+                } else {
+                    inertiaMetaState = e.getMetaState();
+                    inertiaSemaphore.release();
+                }
+            }
+
+            // for two finger inertia scrolling
+            if (inertiaScrollingEnabled && inSwiping) {
+                inertiaSwiping = true;
+                inertiaSemaphore.release();
+            }
 
             if (!endDragModesAndScrolling()) {
                 if (dragHelped) {
