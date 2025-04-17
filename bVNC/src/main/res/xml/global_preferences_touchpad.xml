@@ -2,6 +2,12 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <PreferenceCategory android:title="@string/touchpad_control_pref">
+        <SeekBarPreference
+            android:defaultValue="25"
+            android:key="touchpadCursorSpeed"
+            android:max="40"
+            android:min="10"
+            android:title="@string/touchpad_cursor_speed" />
         <ListPreference
             android:defaultValue="@string/pref_longpress_type_right_value"
             android:entries="@array/pref_touchpad_long_press_label"

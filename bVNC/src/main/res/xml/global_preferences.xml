@@ -12,6 +12,7 @@
         android:defaultValue="false"
         android:key="forceLandscape"
         android:title="@string/landscape_force" />
+
 <!--    <SwitchPreferenceCompat-->
 <!--        android:defaultValue="false"-->
 <!--        android:key="leftHandedModeTag"-->

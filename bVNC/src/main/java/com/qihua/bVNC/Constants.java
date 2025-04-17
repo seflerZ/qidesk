@@ -190,6 +190,7 @@ public class Constants {
     public static final String doNotShowDesktopThumbnails = "doNotShowDesktopThumbnails";
     public static final String showOnlyConnectionNicknames = "showOnlyConnectionNicknames";
     public static final String touchpadLongPressAction = "touchpadLongPressAction";
+    public static final String touchpadCursorSpeed = "touchpadCursorSpeed";
     public static final String touchpadEdgeWheel = "touchpadEdgeWheel";
     public static final String softwareKeyboardType = "softwareKeyboardType";
     public static final String ACTION_USB_PERMISSION = "com.qihua.aSPICE.USB_PERMISSION";
