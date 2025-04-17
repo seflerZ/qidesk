@@ -12,6 +12,7 @@
             android:defaultValue="true"
             android:key="touchpadEdgeWheel"
             app:defaultValue="true"
-            android:title="@string/touchpad_edge_wheel" />
+            android:title="@string/touchpad_edge_wheel"
+            android:summary="@string/touchpad_edge_wheel_hint"/>
     </PreferenceCategory>
 </PreferenceScreen>
