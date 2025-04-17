@@ -722,15 +722,15 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                         break;
                     case MotionEvent.ACTION_MOVE:
                         long timeElapsed = System.currentTimeMillis() - inertiaStartTime;
-                        long interval = inertiaBaseInterval * 3;
+                        long interval = inertiaBaseInterval * 2;
 
                         if (timeElapsed > interval) {
                             if (lastX != 0) {
-                                lastSpeedX = (1000 * (e.getX() - lastX)) / (timeElapsed * inertiaBaseInterval * (canvas.getZoomFactor() * 0.8f));
+                                lastSpeedX = ((e.getX() - lastX) / timeElapsed) * inertiaBaseInterval * (canvas.getZoomFactor() * 0.8f);
                             }
 
                             if (lastY != 0) {
-                                lastSpeedY = (1000 * (e.getY() - lastY)) / (timeElapsed * inertiaBaseInterval * (canvas.getZoomFactor() * 0.8f));
+                                lastSpeedY = ((e.getY() - lastY) / timeElapsed) * inertiaBaseInterval * (canvas.getZoomFactor() * 0.8f);
                             }
 
                             inertiaStartTime = System.currentTimeMillis();
@@ -766,7 +766,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
                             // If try to drag with long time, enlarge the screen for drag helper. This is very helpful in selecting texts in small screen.
                             if (System.currentTimeMillis() - lastDragStartTime > 800 && canEnlarge
-                                    && dragMode && (totalDragX < 150 && totalDragY < 150)
+                                    && dragMode && (totalDragX < 100 && totalDragY < 100)
                                     && lastZoomFactor < 2.0f) {
                                 canvas.canvasZoomer.changeZoom(activity, 2.5f/canvas.getZoomFactor(), pointer.getX(), pointer.getY());
                                 dragHelped = true;
@@ -779,7 +779,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                         }
                         break;
                     case MotionEvent.ACTION_UP:
-                        if (inertiaScrollingEnabled && !immersiveSwipe && !dragMode) {
+                        if (inertiaScrollingEnabled && !immersiveSwipe && !dragMode && !inSwiping) {
                             if (activity.isToolbarShowing() && canvas.connection.getEnableGesture()) {
 
                             } else {
