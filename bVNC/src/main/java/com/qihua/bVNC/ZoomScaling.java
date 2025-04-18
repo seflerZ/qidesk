@@ -160,7 +160,7 @@ class ZoomScaling extends AbstractScaling {
 
         // Only if we have actually scaled do we pan and potentially set mouse position.
 //        if (oldScale != newScale) {
-            canvas.relativePan((int) (newXPan - xPan), (int) (newYPan - yPan));
+            canvas.relativePan((int) (newXPan - xPan), (int) (newYPan - yPan), true);
 //        }
     }
 
