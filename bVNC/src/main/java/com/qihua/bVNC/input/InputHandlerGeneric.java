@@ -76,7 +76,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     protected boolean secondPointerWasDown = false;
     protected long inertiaStartTime = 0;
     protected Thread inertiaThread;
-    protected long inertiaBaseInterval = 16;
+    protected long inertiaBaseInterval = 10;
     protected boolean inertiaScrollingEnabled = true;
     protected int inertiaMetaState = 0;
     protected Semaphore inertiaSemaphore = new Semaphore(0);
@@ -162,7 +162,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
         this.panRepeater = new PanRepeater(canvas, canvas.handler);
 
-        displayDensity = canvas.getDisplayDensity();
+        displayDensity = touchpad.getDisplayDensity();
 
         distXQueue = new LinkedList<>();
         distYQueue = new LinkedList<>();
@@ -198,8 +198,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                         doScroll(pointer.getX(), pointer.getY(), -speedX, -speedY, inertiaMetaState);
 //                        pointer.moveMouse(pointer.getX() + speedX, pointer.getY() + speedY, inertiaMetaState);
 
-                        speedX = (int) (speedX * 0.85);
-                        speedY = (int) (speedY * 0.85);
+                        speedX = (int) (speedX * 0.9);
+                        speedY = (int) (speedY * 0.9);
 
                         SystemClock.sleep(inertiaBaseInterval);
                     }
@@ -208,8 +208,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                         pointer.moveMouse(pointer.getX() + speedX, pointer.getY() + speedY, inertiaMetaState);
                         canvas.movePanToMakePointerVisible();
 
-                        speedX = (int) (speedX * 0.85);
-                        speedY = (int) (speedY * 0.85);
+                        speedX = (int) (speedX * 0.9);
+                        speedY = (int) (speedY * 0.9);
 
                         SystemClock.sleep(inertiaBaseInterval);
                     }

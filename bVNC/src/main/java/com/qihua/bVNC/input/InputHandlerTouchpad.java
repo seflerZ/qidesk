@@ -113,6 +113,11 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             inSwiping = true;
         }
 
+        // Make distanceX/Y display density independent.
+        float sensitivity = pointer.getSensitivity();
+        distanceX = sensitivity * distanceX / displayDensity;
+        distanceY = sensitivity * distanceY / displayDensity;
+
         // If in swiping mode, indicate a swipe at regular intervals.
         if (inSwiping || immersiveSwipe) {
             scrollDown = false;
@@ -126,11 +131,6 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         }
 
         if (e1 != null && !twoFingers) {
-            // Make distanceX/Y display density independent.
-            float sensitivity = pointer.getSensitivity();
-            distanceX = sensitivity * distanceX / displayDensity;
-            distanceY = sensitivity * distanceY / displayDensity;
-
             if (distanceX > 0 && distanceX < 1) {
                 distanceX = (float) Math.floor(distanceX);
             } else if (distanceX > -1 && distanceX < 0) {
