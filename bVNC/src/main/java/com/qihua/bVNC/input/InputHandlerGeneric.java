@@ -31,6 +31,7 @@ import android.widget.FrameLayout;
 
 import androidx.core.view.InputDeviceCompat;
 
+import com.freerdp.freerdpcore.domain.ManualBookmark;
 import com.qihua.bVNC.Constants;
 import com.qihua.bVNC.RemoteCanvas;
 import com.qihua.bVNC.RemoteCanvasActivity;
@@ -738,11 +739,13 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
                         if (timeElapsed > interval) {
                             if (lastX != 0) {
-                                lastSpeedX = ((e.getX() - lastX) / timeElapsed) * inertiaBaseInterval;
+                                lastSpeedX = ((e.getX() - lastX) / timeElapsed) * inertiaBaseInterval / canvas.getZoomFactor();
+                                lastSpeedX = lastSpeedX * Utils.querySharedPreferenceInt(activity, Constants.touchpadCursorSpeed, 1) / 10;
                             }
 
                             if (lastY != 0) {
-                                lastSpeedY = ((e.getY() - lastY) / timeElapsed) * inertiaBaseInterval;
+                                lastSpeedY = ((e.getY() - lastY) / timeElapsed) * inertiaBaseInterval / canvas.getZoomFactor();
+                                lastSpeedY = lastSpeedY * Utils.querySharedPreferenceInt(activity, Constants.touchpadCursorSpeed, 1) / 10;
                             }
 
                             inertiaStartTime = System.currentTimeMillis();
