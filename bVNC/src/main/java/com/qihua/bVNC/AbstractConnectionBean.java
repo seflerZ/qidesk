@@ -13,7 +13,7 @@ import java.util.Map;
 public abstract class AbstractConnectionBean extends com.antlersoft.android.dbimpl.IdImplementationBase implements IConnectionBean {
 
     public static final String GEN_TABLE_NAME = "CONNECTION_BEAN";
-    public static final int GEN_COUNT = 85;
+    public static final int GEN_COUNT = 86;
 
     // Field constants
     public static final String GEN_FIELD__ID = "_id";
@@ -191,6 +191,9 @@ public abstract class AbstractConnectionBean extends com.antlersoft.android.dbim
     public static final String GEN_FIELD_ENABLE_GESTURE = "ENABLE_GESTURE";
     public static final int GEN_ID_ENABLE_GESTURE = 84;
 
+    public static final String GEN_FIELD_ZOOM_LEVEL = "ZOOM_LEVEL";
+    public static final int GEN_ID_ZOOM_LEVEL = 85;
+
     // SQL Command for creating the table
     public static String GEN_CREATE = "CREATE TABLE CONNECTION_BEAN (" +
             "_id INTEGER PRIMARY KEY AUTOINCREMENT," +
@@ -277,6 +280,7 @@ public abstract class AbstractConnectionBean extends com.antlersoft.android.dbim
             "PREFERSENDINGUNICODE INTEGER," +
             "LASTZOOMFACTOR FLOAT," +
             "ENABLE_GESTURE INTEGER," +
+            "ZOOM_LEVEL INTEGER," +
             "PRIORITY INTEGER" +
             ")";
 
@@ -358,6 +362,7 @@ public abstract class AbstractConnectionBean extends com.antlersoft.android.dbim
     private float gen_lastZoomFactor;
     private boolean gen_viewOnly;
     private boolean gen_enableGesture;
+    private int gen_zoomLevel;
     private java.lang.String gen_layoutMap;
 
     private java.lang.String gen_filename;
@@ -1050,6 +1055,14 @@ public abstract class AbstractConnectionBean extends com.antlersoft.android.dbim
         gen_lastZoomFactor = arg_lastZoomFactor;
     }
 
+    public void setZoomLevel(int arg_zoomLevel) {
+        gen_zoomLevel = arg_zoomLevel;
+    }
+
+    public int getZoomLevel() {
+        return gen_zoomLevel;
+    }
+
     public int getPriority() {
         return gen_priority;
     }
@@ -1149,6 +1162,8 @@ public abstract class AbstractConnectionBean extends com.antlersoft.android.dbim
         values.put(GEN_FIELD_PRIORITY, this.gen_priority);
 
         values.put(GEN_FIELD_ENABLE_GESTURE, this.gen_enableGesture);
+
+        values.put(GEN_FIELD_ZOOM_LEVEL, this.gen_zoomLevel);
 
         return values;
     }
@@ -1279,6 +1294,7 @@ public abstract class AbstractConnectionBean extends com.antlersoft.android.dbim
         result[82] = cursor.getColumnIndex(GEN_FIELD_LASTZOOMFACTOR);
         result[83] = cursor.getColumnIndex(GEN_FIELD_PRIORITY);
         result[84] = cursor.getColumnIndex(GEN_FIELD_ENABLE_GESTURE);
+        result[85] = cursor.getColumnIndex(GEN_FIELD_ZOOM_LEVEL);
 
         return result;
     }
@@ -1544,6 +1560,9 @@ public abstract class AbstractConnectionBean extends com.antlersoft.android.dbim
         if (columnIndices[GEN_ID_ENABLE_GESTURE] >= 0 && !cursor.isNull(columnIndices[GEN_ID_ENABLE_GESTURE])) {
             gen_enableGesture = cursor.getInt(columnIndices[GEN_ID_ENABLE_GESTURE]) > 0;
         }
+        if (columnIndices[GEN_ID_ZOOM_LEVEL] >= 0 && !cursor.isNull(columnIndices[GEN_ID_ZOOM_LEVEL])) {
+            gen_zoomLevel = cursor.getInt(columnIndices[GEN_ID_ZOOM_LEVEL]);
+        }
     }
 
     /**
@@ -1639,6 +1658,7 @@ public abstract class AbstractConnectionBean extends com.antlersoft.android.dbim
         gen_priority = (values.getInt(GEN_FIELD_PRIORITY));
 
         gen_enableGesture = (values.getInt(GEN_FIELD_ENABLE_GESTURE) > 0);
+        gen_zoomLevel = (values.getInt(GEN_FIELD_ZOOM_LEVEL));
     }
 
     @Override
@@ -1732,6 +1752,7 @@ public abstract class AbstractConnectionBean extends com.antlersoft.android.dbim
         gen_priority = (values.getAsInteger(GEN_FIELD_PRIORITY));
 
         gen_enableGesture = values.getAsBoolean(GEN_FIELD_ENABLE_GESTURE);
+        gen_zoomLevel = values.getAsInteger(GEN_FIELD_ZOOM_LEVEL);
     }
 
     public void Gen_populatePersistBundle(android.content.ContentValues values) {
@@ -1824,5 +1845,6 @@ public abstract class AbstractConnectionBean extends com.antlersoft.android.dbim
         gen_priority = (values.getAsInteger(GEN_FIELD_PRIORITY));
 
         gen_enableGesture = values.getAsBoolean(GEN_FIELD_ENABLE_GESTURE);
+        gen_zoomLevel = values.getAsInteger(GEN_FIELD_ZOOM_LEVEL);
     }
 }

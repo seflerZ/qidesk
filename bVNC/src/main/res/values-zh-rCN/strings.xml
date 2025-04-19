@@ -477,6 +477,7 @@ bVNC对应的功能如下：
     <string name="rdp_domain_hint">RDP 域（可选）</string>
     <string name="rdp_geom_automatic">自动</string>
     <string name="rdp_geom_checkbox_enable">启用自定义分辨率</string>
+    <string name="rdp_geom_zoom_level">缩放级别</string>
     <string name="rdp_geom_custom">自定义</string>
     <string name="rdp_geom_description_hint">服务器需要支持ExtendedDesktopSize</string>
     <string name="rdp_geom_disabled">无效</string>
@@ -489,6 +490,20 @@ bVNC对应的功能如下：
         <item>@string/rdp_geom_native_portrait</item>
         <item>@string/rdp_geom_custom</item>
     </string-array>
+
+    <string name="rdp_zoom_level_none">无缩放</string>
+    <string name="rdp_zoom_level_middle">中缩放(125%)</string>
+    <string name="rdp_zoom_level_large">大缩放(140%)</string>
+    <string name="rdp_zoom_level_larger">较大缩放(160%)</string>
+    <string name="rdp_zoom_level_huge">超大缩放(200%)</string>
+    <string-array name="rdp_zoom_level">
+        <item>@string/rdp_zoom_level_none</item>
+        <item>@string/rdp_zoom_level_middle</item>
+        <item>@string/rdp_zoom_level_large</item>
+        <item>@string/rdp_zoom_level_larger</item>
+        <item>@string/rdp_zoom_level_huge</item>
+    </string-array>
+
     <string-array name="vnc_geometry">
         <item>@string/rdp_geom_disabled</item>
         <item>@string/rdp_geom_automatic</item>

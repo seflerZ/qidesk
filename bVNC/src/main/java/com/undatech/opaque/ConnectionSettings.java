@@ -1398,4 +1398,8 @@ public class ConnectionSettings implements Connection, Serializable {
     public void setEnableGfxH264(boolean enableGfxH264) {
     }
 
+    @Override
+    public int getZoomLevel() {
+        return 100;
+    }
 }

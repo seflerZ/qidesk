@@ -619,7 +619,7 @@ public class RemoteCanvas extends AppCompatImageView
                 connection.getRedirectSdCard(), connection.getConsoleMode(),
                 connection.getRemoteSoundType(), connection.getEnableRecording(),
                 connection.getRemoteFx(), connection.getEnableGfx(), connection.getEnableGfxH264(),
-                connection.getRdpColor());
+                connection.getRdpColor(), connection.getZoomLevel());
         rdpcomm.connect();
     }
 
@@ -2118,5 +2118,9 @@ public class RemoteCanvas extends AppCompatImageView
 
     public AlertDialog getProgressDialog() {
         return progressDialog;
+    }
+
+    public float getZoomLevelFactor() {
+        return connection.getZoomLevel() / 100;
     }
 }

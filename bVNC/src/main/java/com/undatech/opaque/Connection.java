@@ -443,4 +443,6 @@ public interface Connection {
     int getPriority();
 
     void setPriority(int priority);
+
+    int getZoomLevel();
 }

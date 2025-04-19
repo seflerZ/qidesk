@@ -387,6 +387,23 @@
                     android:textAppearance="?android:attr/textAppearanceMedium" />
             </LinearLayout>
 
+            <LinearLayout
+                android:id="@+id/geometryGroupZoom"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="5dp" >
+
+                <Spinner
+                    android:id="@+id/spinnerRdpZoomLevel"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:entries="@array/rdp_zoom_level"
+                    android:textAppearance="?android:attr/textAppearanceMedium" />
+
+            </LinearLayout>
+
             <CheckBox
                 android:id="@+id/checkboxPreferSendingUnicode"
                 android:layout_width="wrap_content"

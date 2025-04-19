@@ -115,8 +115,8 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
 
         // Make distanceX/Y display density independent.
         float sensitivity = pointer.getSensitivity();
-        distanceX = sensitivity * distanceX / displayDensity;
-        distanceY = sensitivity * distanceY / displayDensity;
+        distanceX = sensitivity * (distanceX / displayDensity) * canvas.getZoomLevelFactor();
+        distanceY = sensitivity * (distanceY / displayDensity) * canvas.getZoomLevelFactor();
 
         // If in swiping mode, indicate a swipe at regular intervals.
         if (inSwiping || immersiveSwipe) {

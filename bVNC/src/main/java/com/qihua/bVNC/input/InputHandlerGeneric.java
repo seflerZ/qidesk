@@ -738,11 +738,11 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
                         if (timeElapsed > interval) {
                             if (lastX != 0) {
-                                lastSpeedX = ((e.getX() - lastX) / timeElapsed) * inertiaBaseInterval * (canvas.getZoomFactor() * 0.8f);
+                                lastSpeedX = ((e.getX() - lastX) / timeElapsed) * inertiaBaseInterval;
                             }
 
                             if (lastY != 0) {
-                                lastSpeedY = ((e.getY() - lastY) / timeElapsed) * inertiaBaseInterval * (canvas.getZoomFactor() * 0.8f);
+                                lastSpeedY = ((e.getY() - lastY) / timeElapsed) * inertiaBaseInterval;
                             }
 
                             inertiaStartTime = System.currentTimeMillis();

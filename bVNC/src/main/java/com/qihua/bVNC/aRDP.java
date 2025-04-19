@@ -58,6 +58,8 @@ public class aRDP extends MainConfiguration {
     private ToggleButton toggleAdvancedSettings;
     //private Spinner colorSpinner;
     private Spinner spinnerRdpGeometry;
+
+    private Spinner spinnerRdpZoomLevel;
     private EditText textUsername;
     private EditText rdpDomain;
     private EditText rdpWidth;
@@ -134,6 +136,7 @@ public class aRDP extends MainConfiguration {
 
         // The geometry type and dimensions boxes.
         spinnerRdpGeometry = (Spinner) findViewById(R.id.spinnerRdpGeometry);
+        spinnerRdpZoomLevel = (Spinner) findViewById(R.id.spinnerRdpZoomLevel);
         rdpWidth = (EditText) findViewById(R.id.rdpWidth);
         rdpHeight = (EditText) findViewById(R.id.rdpHeight);
         spinnerRdpGeometry.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -141,6 +144,38 @@ public class aRDP extends MainConfiguration {
             public void onItemSelected(AdapterView<?> arg0, View view, int itemIndex, long id) {
                 selected.setRdpResType(itemIndex);
                 setRemoteWidthAndHeight();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> arg0) {
+            }
+        });
+
+        spinnerRdpZoomLevel.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> arg0, View view, int itemIndex, long id) {
+                int level;
+                switch (itemIndex) {
+                    case 0:
+                        level = 100;
+                        break;
+                    case 1:
+                        level = 125;
+                        break;
+                    case 2:
+                        level = 140;
+                        break;
+                    case 3:
+                        level = 160;
+                        break;
+                    case 4:
+                        level = 200;
+                        break;
+                    default:
+                        level = 100;
+                }
+
+                selected.setZoomLevel(level);
             }
 
             @Override
@@ -232,6 +267,7 @@ public class aRDP extends MainConfiguration {
         rdpDomain.setText(selected.getRdpDomain());
         spinnerRdpColor.setSelection(rdpColorArray.indexOf(String.valueOf(selected.getRdpColor())));
         spinnerRdpGeometry.setSelection(selected.getRdpResType());
+        spinnerRdpZoomLevel.setSelection(convert2ZoomIndex(selected.getZoomLevel()));
         rdpWidth.setText(Integer.toString(selected.getRdpWidth()));
         rdpHeight.setText(Integer.toString(selected.getRdpHeight()));
         setRemoteWidthAndHeight();
@@ -266,6 +302,30 @@ public class aRDP extends MainConfiguration {
                 break;
             }
         }*/
+    }
+
+    private int convert2ZoomIndex(int zoomLevel) {
+        if (zoomLevel == 100) {
+            return 0;
+        }
+
+        if (zoomLevel == 125) {
+            return 1;
+        }
+
+        if (zoomLevel == 140) {
+            return 2;
+        }
+
+        if (zoomLevel == 160) {
+            return 3;
+        }
+
+        if (zoomLevel == 200) {
+            return 4;
+        }
+
+        return 0;
     }
 
     protected void updateSelectedFromView() {

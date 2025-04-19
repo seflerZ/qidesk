@@ -1059,4 +1059,9 @@ public class NewConnection implements Connection {
     public void setPriority(int priority) {
 
     }
+
+    @Override
+    public int getZoomLevel() {
+        return 100;
+    }
 }
