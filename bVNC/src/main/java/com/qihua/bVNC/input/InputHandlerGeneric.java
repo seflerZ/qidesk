@@ -559,6 +559,10 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     }
 
     private boolean detectImmersiveRange(float x, float y) {
+        if (!immersiveSwipeEnabled || canvas.isOutDisplay()) {
+            return false;
+        }
+
         float immersiveXDistance = Math.max(touchpad.getWidth() * immersiveSwipeRatio, 20);
         float immersiveYDistance = Math.max(touchpad.getHeight() * immersiveSwipeRatio, 20);
 
@@ -584,8 +588,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     }
 
     private void detectImmersiveSwipe(float x, float y) {
-        // if global switch off, disable it
-        if (!immersiveSwipeEnabled) {
+        // if global switch off or external display mode, disable it
+        if (!immersiveSwipeEnabled || canvas.isOutDisplay()) {
             return;
         }
 
@@ -714,6 +718,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                         gestureY = e.getY();
 
                         lastSpeedX = lastSpeedY = 0;
+
+                        inertiaSwiping = false;
 
                         if (inertiaThread != null) {
                             inertiaThread.interrupt();
