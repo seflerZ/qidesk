@@ -593,7 +593,7 @@ public class RemoteCanvas extends AppCompatImageView
         rfbconn = rdpcomm;
         pointer = new RemoteRdpPointer(rfbconn, this, handler, App.debugLog);
         keyboard = new RemoteRdpKeyboard(rdpcomm, this, handler, App.debugLog,
-                connection.getPreferSendingUnicode());
+                false);
 
         // in order to support fractional sensitivity, we use the integer divide 10 to make it a float.
         pointer.setSensitivity(Utils.querySharedPreferenceInt(getContext(), Constants.touchpadCursorSpeed, 10) / 10);
