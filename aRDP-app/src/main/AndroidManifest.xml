@@ -31,7 +31,7 @@
         android:banner="@drawable/banner_ardp"
         android:icon="@drawable/app_icon"
         android:label="@string/ardp_app_name"
-        android:theme="@android:style/Theme.DeviceDefault"
+        android:theme="@style/Theme.AppCompat"
         android:hardwareAccelerated="true"
         tools:replace="android:label,android:theme">
         <activity
@@ -40,7 +40,7 @@
             android:exported="true"
             android:label="@string/ardp_app_name"
             android:resizeableActivity="true"
-            android:theme="@android:style/Theme.DeviceDefault">
+            android:theme="@style/Theme.AppCompat">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -61,7 +61,7 @@
             android:name="com.qihua.bVNC.aRDP"
             android:configChanges="orientation|keyboardHidden"
             android:resizeableActivity="true"
-            android:theme="@android:style/Theme.DeviceDefault"
+            android:theme="@style/Theme.AppCompat"
             android:windowSoftInputMode="stateHidden|adjustResize" />
         <activity
             android:name="com.qihua.bVNC.RemoteCanvasActivity"
@@ -120,7 +120,7 @@
             android:exported="true"
             android:label="@string/shortcut_label_rdp"
             android:resizeableActivity="true"
-            android:theme="@android:style/Theme.DeviceDefault"
+            android:theme="@style/Theme.AppCompat"
             android:windowSoftInputMode="stateHidden|adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.CREATE_SHORTCUT" />

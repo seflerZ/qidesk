@@ -25,6 +25,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.FragmentActivity;
 
 import com.qihua.pubkeygenerator.GeneratePubkeyActivity;
@@ -36,7 +37,7 @@ import net.sqlcipher.database.SQLiteDatabase;
 import java.util.ArrayList;
 import java.util.Collections;
 
-public abstract class MainConfiguration extends FragmentActivity {
+public abstract class MainConfiguration extends AppCompatActivity {
     private final static String TAG = "MainConfiguration";
 
     protected ConnectionBean selected;

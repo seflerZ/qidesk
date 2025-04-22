@@ -4,7 +4,7 @@
     <string name="audio_initialized">音频初始化</string>
     <string name="action_import_settings">导入设定</string>
     <string name="action_new_connection">创建新连接</string>
-    <string name="action_edit_default_settings">编辑默认设置</string>
+    <string name="action_edit_default_settings">编辑全局设置</string>
     <string name="action_export_settings">导出设定</string>
     <string name="action_delete_connection">删除连接设定</string>
     <string name="opaque_app_name">Opaque</string>
