@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class MyGestureDectector
 {
 
-    private static final int TAP_TIMEOUT = 150;
+    private static final int TAP_TIMEOUT = 120;
     private static final int DOUBLE_TAP_TIMEOUT = 1200;
     // Distance a touch can wander before we think the user is the first touch in a sequence of
     // double tap
@@ -47,7 +47,7 @@ public class MyGestureDectector
     private int mTouchSlopSquare;
     private int mLargeTouchSlopSquare;
     private int mDoubleTapSlopSquare;
-    private int mLongpressTimeout = 800;
+    private int mLongpressTimeout = 680;
     private long lastTapTime = 0;
     private OnDoubleTapListener mDoubleTapListener;
     private boolean mStillDown;
@@ -165,7 +165,7 @@ public class MyGestureDectector
             largeTouchSlop = (int)(density * LARGE_TOUCH_SLOP + 0.5f);
             doubleTapSlop = (int) (configuration.getScaledDoubleTapSlop());
         }
-        mTouchSlopSquare = 5;
+        mTouchSlopSquare = 10;
         mLargeTouchSlopSquare = largeTouchSlop;
         mDoubleTapSlopSquare = 5000;
     }

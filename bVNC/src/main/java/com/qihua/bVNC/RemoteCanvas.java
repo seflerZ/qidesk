@@ -613,9 +613,10 @@ public class RemoteCanvas extends AppCompatImageView
         int remoteHeight = getRemoteHeight(getWidth(), getHeight());
 
         rdpcomm.setConnectionParameters(address, rdpPort, connection.getNickname(), remoteWidth,
-                remoteHeight, connection.getDesktopBackground(), connection.getFontSmoothing(),
-                connection.getDesktopComposition(), connection.getWindowContents(),
-                connection.getMenuAnimation(), connection.getVisualStyles(),
+                // currently we don't support customize performance flags
+                remoteHeight, true, true,
+                false, false,
+                false, true,
                 connection.getRedirectSdCard(), connection.getConsoleMode(),
                 connection.getRemoteSoundType(), connection.getEnableRecording(),
                 connection.getRemoteFx(), connection.getEnableGfx(), connection.getEnableGfxH264(),

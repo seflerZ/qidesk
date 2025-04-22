@@ -440,6 +440,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
         int metaState = e.getMetaState() | canvas.getKeyboard().getMetaState();
         pointer.leftButtonDown(getX(e), getY(e), metaState);
+        activity.sendShortVibration();
         SystemClock.sleep(50);
         pointer.releaseButton(getX(e), getY(e), 0);
 //        canvas.movePanToMakePointerVisible();
@@ -464,8 +465,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         totalDragY = 0;
 
         dragMode = true;
-
-        activity.sendShortVibration();
 
         // These are for drag helper
         lastZoomFactor = canvas.getZoomFactor();
@@ -778,6 +777,12 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                                 } else if (middleDragMode) {
                                     pointer.middleButtonDown(getX(e), getY(e), meta);
                                 }
+
+                                activity.sendShortVibration();
+
+                                // make it nonzero to prevent being trigger again
+                                totalDragX = 0.1f;
+                                totalDragY = 0.1f;
                             }
 
                             // do not enlarge if the cursor moved away
@@ -854,6 +859,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         if (action == MotionEvent.ACTION_UP) {
             if (!inSwiping && !inScaling && secondPointerWasDown) {
                 pointer.rightButtonDown(getX(e), getY(e), meta);
+                activity.sendShortVibration();
                 SystemClock.sleep(50);
                 pointer.releaseButton(getX(e), getY(e), meta);
 
@@ -891,6 +897,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                 // to form a double click. note that the first click is performed during the drag
                 if (totalDragX < 5 && totalDragY < 5) {
                     pointer.leftButtonDown(getX(e), getY(e), meta);
+                    activity.sendShortVibration();
                     SystemClock.sleep(50);
                     pointer.releaseButton(getX(e), getY(e), meta);
                 }
