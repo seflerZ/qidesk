@@ -1016,6 +1016,13 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                 activity.showToolbar();
             }
 
+            String longPressType = Utils.querySharedPreferenceString(activity.getApplicationContext(), Constants.touchpadLongPressAction, "left");
+            // Hide gesture overlay if triggered by long press
+            if ("gesture".equals(longPressType)) {
+                GestureOverlayView gestureOverlay = activity.findViewById(R.id.gestureOverlay);
+                gestureOverlay.setVisibility(View.GONE);
+            }
+
             return true;
         }
 

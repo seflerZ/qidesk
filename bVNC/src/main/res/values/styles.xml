@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <style name="QiHua" parent="Theme.AppCompat">
+<!--        <item name="colorAccent">@color/theme</item>-->
+    </style>
+
+    <style name="QiHuaActionBar" parent="Widget.AppCompat.ActionBar">
+
+    </style>
+
     <!-- Application theme. -->
     <style name="AppTheme" parent="Theme.AppCompat.NoActionBar">
         <!-- All customizations that are NOT specific to a particular API-level can go here. -->

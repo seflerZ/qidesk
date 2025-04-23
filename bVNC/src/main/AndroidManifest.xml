@@ -55,12 +55,8 @@
             android:resource="@dimen/app_minimumsize_h" />
 
         <activity
-            android:name=".presentation.ShortcutsActivity"
-            tools:node="remove" />
-
-        <activity
             android:name="com.qihua.bVNC.GlobalPreferencesActivity"
-            android:theme="@style/Theme.AppCompat" />
+            android:theme="@style/QiHua" />
 
         <meta-data
             android:name="com.samsung.android.keepalive.density"
