@@ -435,7 +435,7 @@ bVNC对应的功能如下：
 
     <string name="mouse_follow_pan">鼠标跟随平移</string>
 
-    <string name="new_connection">新连接</string>
+    <string name="new_connection">新建连接</string>
     <string name="new_list_button">新一览表</string>
     <string name="nickname_caption">昵称</string>
     <string name="nickname_caption_hint">标题（可选）</string>

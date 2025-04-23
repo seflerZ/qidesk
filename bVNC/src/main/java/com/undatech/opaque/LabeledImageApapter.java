@@ -113,19 +113,22 @@ public class LabeledImageApapter extends BaseAdapter {
         }
 
         TextView textView = (TextView) gridView.findViewById(R.id.grid_item_text);
-        if ("".equals(label)) {
-            textView.setText(defaultLabel);
+
+        if (label.equals("$NEW$")) {
+            textView.setText(context.getString(R.string.new_connection));
         } else {
-            if (c.getPriority() > 10000) {
-                textView.setText(String.format("★ %s", label));
+            if ("".equals(label)) {
+                textView.setText(defaultLabel);
             } else {
-                textView.setText(label);
+                if (c.getPriority() > 10000) {
+                    textView.setText(String.format("★ %s", label));
+                } else {
+                    textView.setText(label);
+                }
             }
         }
 
-        if (label.equals("$NEW$")) {
-            textView.setVisibility(View.GONE);
-        }
+
 
         String screenshotFilePath = context.getFilesDir() + "/" + c.getScreenshotFilename();
         AppCompatImageView imageView = gridView.findViewById(R.id.grid_item_image);

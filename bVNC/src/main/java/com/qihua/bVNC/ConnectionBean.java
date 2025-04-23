@@ -227,10 +227,10 @@ public class ConnectionBean extends AbstractConnectionBean implements Connection
 
     @Override
     public String getLabel() {
-        String nickname = "";
         if (!"".equals(this.getNickname())) {
-            nickname = this.getNickname() + "\n";
+            return this.getNickname();
         }
+
         String address = "";
         if (!showOnlyConnectionNicknames) {
             address = this.getAddress() + ":" + this.getPort();
@@ -242,7 +242,7 @@ public class ConnectionBean extends AbstractConnectionBean implements Connection
                         this.getSshPort() + "\n" + address;
             }
         }
-        return nickname + address;
+        return address;
     }
 
     @Override
