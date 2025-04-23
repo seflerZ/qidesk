@@ -583,10 +583,10 @@ Thank you for supporting QihuaRemote. This software is developed by SeflerZ(sefl
 &lt;br&gt;&lt;br&gt;
         &lt;h2&gt;1. Infomation we will use&lt;/h2&gt;
 We do not store any data on the server, such as your remote device password, server address, etc.
-        &lt;br&gt;&lt;br&gt;
+        &lt;br&gt;
         we might collect some anonymous logs to help debug or analyze our product.
         &lt;br&gt;
-        If you're using this software in China, please read about the privacy policy of this product by switch local language to Chinese.
+        If you are using this software in China, please read about the privacy policy of this product by switch local language to Chinese.
     </string>
     <string name="rdp_intro_title">aRDP: Intuitive, secure RDP client</string>
     <string name="rdp_connection_screen_help_text" tools:ignore="TypographyOther">"
