@@ -579,12 +579,14 @@ If you are looking for a quick performance boost, try setting the Color mode to 
         <item>@string/rdp_geom_custom</item>
     </string-array>
     <string name="rdp_intro_text">
-Thank you for supporting QihuaRDP. This is free software developed by SeflerZ(sefler@126.com) and general free software contributors with &lt;em&gt;absolutely no warranty&lt;/em&gt;.
+Thank you for supporting QihuaRemote. This software is developed by SeflerZ(sefler@126.com) and with &lt;em&gt;absolutely no warranty&lt;/em&gt;.
 &lt;br&gt;&lt;br&gt;
         &lt;h2&gt;1. Infomation we will use&lt;/h2&gt;
 We do not store any data on the server, such as your remote device password, server address, etc.
         &lt;br&gt;&lt;br&gt;
         we might collect some anonymous logs to help debug or analyze our product.
+        &lt;br&gt;
+        If you're using this software in China, please read about the privacy policy of this product by switch local language to Chinese.
     </string>
     <string name="rdp_intro_title">aRDP: Intuitive, secure RDP client</string>
     <string name="rdp_connection_screen_help_text" tools:ignore="TypographyOther">"

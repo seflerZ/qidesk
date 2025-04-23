@@ -39,7 +39,10 @@ import android.widget.TextView;
 import com.qihua.bVNC.Constants;
 import com.qihua.bVNC.Database;
 import com.qihua.bVNC.Utils;
+import com.umeng.commonsdk.UMConfigure;
 import com.undatech.remoteClientUi.R;
+
+import kotlin.UNumbersKt;
 
 /**
  * @author Michael A. MacDonald
@@ -69,6 +72,9 @@ public class IntroTextDialog extends Dialog {
             dialog.show();
             return true;
         }
+
+        // At this time, user has granted permission to collect anonymous user data, start the SDK now
+        UMConfigure.init(context, "68086a69bc47b67d83466552", "DEFAULT", UMConfigure.DEVICE_TYPE_PHONE, "");
 
         return false;
     }
