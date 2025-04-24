@@ -60,11 +60,12 @@ dependencies {
     implementation 'com.google.android.gms:play-services-base:18.0.1'
     implementation 'com.alibaba:fastjson:2.0.56'
     implementation "com.google.android.material:material:1.4.0"
+    implementation 'androidx.cardview:cardview:1.0.0'
 
 
     // 友盟统计SDK
     implementation  'com.umeng.umsdk:common:9.4.7'// 必选
-    implementation  'com.umeng.umsdk:asms:1.4.0'// 必选
+    implementation  'com.umeng.umsdk:asms:1.4.0'
 }
 repositories {
     google()

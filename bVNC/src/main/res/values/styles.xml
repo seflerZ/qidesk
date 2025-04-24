@@ -1,11 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="QiHua" parent="Theme.AppCompat">
-<!--        <item name="colorAccent">@color/theme</item>-->
+    <style name="QiHua" parent="Theme.AppCompat.DayNight">
+<!--        <item name="titleTextColor">@color/white</item>-->
+        <item name="colorAccent">@color/accent</item>
+        <item name="actionBarStyle">@style/QiHuaActionBar</item>
     </style>
 
     <style name="QiHuaActionBar" parent="Widget.AppCompat.ActionBar">
-
+<!--        <item name="dividerHorizontal">@color/theme</item>-->
+<!--        <item name="showDividers">end</item>-->
+<!--        <item name="background">@drawable/divider_shape</item>-->
     </style>
 
     <!-- Application theme. -->

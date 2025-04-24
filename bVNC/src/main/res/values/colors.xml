@@ -4,7 +4,10 @@
     <color name="grey_overlay">#25FFFFFF</color>
     <color name="gesture_overlay">#55000000</color>
     <color name="white_overlay">#55ffffff</color>
+    <color name="theme_3">#FFFFCD33</color>
+    <color name="theme_2">#FFFF8B1A</color>
     <color name="theme">#FFE66100</color>
+    <color name="accent">#FFD86000</color>
     <color name="notification">#ffafafaf</color>
     <color name="white">#FFFFFFFF</color>
 

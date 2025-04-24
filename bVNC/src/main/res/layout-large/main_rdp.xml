@@ -23,7 +23,6 @@
                     android:layout_weight="1"
                     android:hint="@string/nickname_caption_hint"
                     android:singleLine="true"
-                    android:textSize="30sp"
                     android:paddingBottom="3sp"
                     android:textAppearance="?android:attr/textAppearanceLarge" />
             </TableRow>

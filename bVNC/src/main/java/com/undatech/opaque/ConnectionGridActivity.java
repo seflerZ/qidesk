@@ -132,7 +132,8 @@ public class ConnectionGridActivity extends AppCompatActivity implements GetText
             public boolean onItemLongClick(AdapterView<?> parent, View v, int position, long id) {
                 AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(ConnectionGridActivity.this);
                 String gridItemText = (String) ((TextView) v.findViewById(R.id.grid_item_text)).getText();
-                if (gridItemText.equals("$NEW$")) {
+                String viewID = (String) ((TextView) v.findViewById(R.id.grid_item_id)).getText();
+                if (viewID.equals("$NC")) {
                     return true;
                 }
 
@@ -178,6 +179,7 @@ public class ConnectionGridActivity extends AppCompatActivity implements GetText
                 createAndSetLabeledImageAdapterAndNumberOfColumns();
             }
         });
+
         database = ((App) getApplication()).getDatabase();
         if (getPassword == null) {
             getPassword = GetTextFragment.newInstance(GetTextFragment.DIALOG_ID_GET_MASTER_PASSWORD,

@@ -134,7 +134,7 @@ public class LabeledImageApapter extends BaseAdapter {
         String screenshotFilePath = context.getFilesDir() + "/" + c.getScreenshotFilename();
         AppCompatImageView imageView = gridView.findViewById(R.id.grid_item_image);
         if (doNotShowDesktopThumbnails) {
-            imageView.setImageResource(R.drawable.icons8_rdp_connection);
+            imageView.setImageResource(R.drawable.rdp_connection);
             imageView.setScaleType(ImageView.ScaleType.CENTER);
         } else {
             boolean screenshotExists = new File(screenshotFilePath).exists();
@@ -148,7 +148,7 @@ public class LabeledImageApapter extends BaseAdapter {
                     imageView.setImageResource(R.drawable.ic_add_connection_48);
                     imageView.setScaleType(ImageView.ScaleType.CENTER);
                 } else {
-                    imageView.setImageResource(R.drawable.icons8_rdp_connection);
+                    imageView.setImageResource(R.drawable.rdp_connection);
                     imageView.setScaleType(ImageView.ScaleType.CENTER);
                 }
             }

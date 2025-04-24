@@ -27,13 +27,14 @@
             android:id="@+id/search"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="40dp"
+            android:layout_marginTop="32dp"
             android:layout_marginStart="2dp"
             android:layout_marginEnd="2dp"
             android:layout_weight="0.90"
             android:hint="@string/search_connections"
             android:paddingBottom="10dp"
             android:textAlignment="center"
+            android:shadowColor="@color/theme"
             android:gravity="center"
             android:textAppearance="?android:attr/textAppearanceMedium" />
 

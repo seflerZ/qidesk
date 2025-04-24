@@ -1,0 +1,8 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item> <!-- 控制分割线高度 -->
+        <shape android:shape="rectangle">
+            <solid android:color="@color/notification"/> <!-- 你的分割线颜色 -->
+        </shape>
+    </item>
+</layer-list>
+
