@@ -23,10 +23,10 @@
 <!--        android:key="moreDebugLoggingTag"-->
 <!--        android:title="@string/more_debug_logging" />-->
 
-    <SwitchPreferenceCompat
-        android:defaultValue="false"
-        android:key="doNotShowDesktopThumbnails"
-        android:title="@string/hide_connection_thumbnails" />
+<!--    <SwitchPreferenceCompat-->
+<!--        android:defaultValue="false"-->
+<!--        android:key="doNotShowDesktopThumbnails"-->
+<!--        android:title="@string/hide_connection_thumbnails" />-->
 
 <!--    <SwitchPreferenceCompat-->
 <!--        android:defaultValue="false"-->

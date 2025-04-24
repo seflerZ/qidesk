@@ -855,7 +855,7 @@ aSPICE对应的功能如下：
     <string name="rdp_adv_gfxh264">RDP Gfx H264</string>
     <string name="more_debug_logging">更多调试记录</string>
     <string name="prefer_sending_unicode">Unicode输入(仅限Windows)</string>
-    <string name="hide_connection_thumbnails">隐藏缩略图</string>
+    <string name="hide_connection_thumbnails">不保存缩略图</string>
     <string name="show_only_connection_nicknames">只显示昵称</string>
     <string name="warn_disconnect_will_reconnect">连接异常断开（用户从其他主机登录或网络中断），重连中。</string>
     <string name="show_privacy_policy">查看隐私政策</string>
@@ -882,6 +882,7 @@ aSPICE对应的功能如下：
     <string name="touchpad_longpress_action">触摸板长按效果</string>
     <string name="touchpad_control_pref">触摸板个性化设置</string>
     <string name="touchpad_edge_wheel">将屏幕边缘当作鼠标滚轮使用</string>
+    <string name="touchpad_touch_feedback">启用触摸反馈</string>
     <string name="touchpad_edge_wheel_hint">滑动以滚动, 单击可唤出软键盘。外接显示器时自动禁用。</string>
     <string name="touchpad_cursor_speed">光标移动速度</string>
 

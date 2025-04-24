@@ -88,11 +88,12 @@ public class LabeledImageApapter extends BaseAdapter {
 
         GridView gView = (GridView) ((Activity) context).findViewById(R.id.gridView);
 
-        if (doNotShowDesktopThumbnails) {
-            numCols = 1;
-        } else {
+//        if (doNotShowDesktopThumbnails) {
+//            numCols = 1;
+//            gView.setNumColumns(1);
+//        } else {
             numCols = gView.getNumColumns();
-        }
+//        }
 
         int width = gView.getWidth() / numCols;
         int height = width;
@@ -133,8 +134,8 @@ public class LabeledImageApapter extends BaseAdapter {
         String screenshotFilePath = context.getFilesDir() + "/" + c.getScreenshotFilename();
         AppCompatImageView imageView = gridView.findViewById(R.id.grid_item_image);
         if (doNotShowDesktopThumbnails) {
-            imageView.setVisibility(View.GONE);
-            lp.height = GridView.LayoutParams.WRAP_CONTENT;
+            imageView.setImageResource(R.drawable.icons8_rdp_connection);
+            imageView.setScaleType(ImageView.ScaleType.CENTER);
         } else {
             boolean screenshotExists = new File(screenshotFilePath).exists();
             if (screenshotExists) {

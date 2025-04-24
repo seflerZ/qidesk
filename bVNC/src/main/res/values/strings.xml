@@ -864,7 +864,7 @@ Below that is where you configure your connection.
     <string name="rdp_adv_gfxh264">RDP Gfx H264</string>
     <string name="more_debug_logging">More Debug Logging</string>
     <string name="prefer_sending_unicode">Unicode input (Windows only)</string>
-    <string name="hide_connection_thumbnails">Hide Connection Thumbnails</string>
+    <string name="hide_connection_thumbnails">Do not save Connection Thumbnails</string>
     <string name="show_only_connection_nicknames">Show Only Connection Nicknames</string>
     <string name="love_our_work">Love our work?</string>
     <string name="rate_app">Rate ⭐⭐⭐⭐⭐</string>
@@ -898,6 +898,7 @@ Below that is where you configure your connection.
 
     <string name="touchpad_control_pref">Touchpad customization</string>
     <string name="touchpad_edge_wheel">Use screen edge as touchpad scrolling</string>
+    <string name="touchpad_touch_feedback">Enable touch feedback</string>
     <string name="touchpad_edge_wheel_hint">Swipe to scroll and click to call soft keyboard. Disable automatically when connected to external monitor.</string>
     <string name="touchpad_cursor_speed">Cursor speed</string>
 

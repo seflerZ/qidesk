@@ -55,5 +55,5 @@
         android:layout_height="fill_parent"
         android:gravity="top|center"
         android:numColumns="2"
-        android:stretchMode="columnWidth"></GridView>
+        android:stretchMode="columnWidth" />
 </LinearLayout>

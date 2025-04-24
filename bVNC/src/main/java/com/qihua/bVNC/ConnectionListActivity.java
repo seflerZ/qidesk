@@ -107,13 +107,13 @@ public class ConnectionListActivity extends ListActivity {
         if (connection.Gen_read(database.getReadableDatabase(), id)) {
             Log.d(TAG, "Got a readable database");
             // create shortcut if requested
-            Context context = getApplicationContext();
-            ShortcutIconResource icon = Intent.ShortcutIconResource.fromContext(this, R.drawable.icon);
-            if (Utils.isRdp(context)) {
-                icon = Intent.ShortcutIconResource.fromContext(this, R.drawable.app_icon);
-            } else if (Utils.isSpice(context)) {
-                icon = Intent.ShortcutIconResource.fromContext(this, R.drawable.icon_aspice);
-            }
+//            Context context = getApplicationContext();
+            ShortcutIconResource icon = Intent.ShortcutIconResource.fromContext(this, R.drawable.app_icon);
+//            if (Utils.isRdp(context)) {
+//                icon
+//            } else if (Utils.isSpice(context)) {
+//                icon = Intent.ShortcutIconResource.fromContext(this, R.drawable.icon_aspice);
+//            }
 
             Intent intent = new Intent();
 

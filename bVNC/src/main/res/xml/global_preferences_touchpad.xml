@@ -20,5 +20,10 @@
             app:defaultValue="true"
             android:title="@string/touchpad_edge_wheel"
             android:summary="@string/touchpad_edge_wheel_hint"/>
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:key="touchpadFeedback"
+            app:defaultValue="true"
+            android:title="@string/touchpad_edge_wheel"/>
     </PreferenceCategory>
 </PreferenceScreen>
