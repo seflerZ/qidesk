@@ -2,7 +2,7 @@
 <resources>
     <style name="QiHua" parent="Theme.AppCompat.DayNight">
 <!--        <item name="titleTextColor">@color/white</item>-->
-        <item name="colorAccent">@color/accent</item>
+        <item name="colorAccent">@color/theme</item>
         <item name="actionBarStyle">@style/QiHuaActionBar</item>
     </style>
 
@@ -10,6 +10,9 @@
 <!--        <item name="dividerHorizontal">@color/theme</item>-->
 <!--        <item name="showDividers">end</item>-->
 <!--        <item name="background">@drawable/divider_shape</item>-->
+
+        <item name="displayOptions">showTitle|useLogo|showHome</item>
+        <item name="logo">@drawable/short_vertical_bar</item>
     </style>
 
     <!-- Application theme. -->

@@ -21,6 +21,7 @@
 package com.undatech.opaque;
 
 import static com.qihua.bVNC.Utils.createMainScreenDialog;
+import static com.qihua.bVNC.Utils.messageAndStackTraceAsString;
 import static com.qihua.bVNC.Utils.setClipboard;
 import static com.qihua.bVNC.Utils.startUriIntent;
 
@@ -53,6 +54,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.AppCompatImageButton;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
@@ -202,6 +204,15 @@ public class ConnectionGridActivity extends AppCompatActivity implements GetText
 //                addNewConnection();
 //            }
 //        });
+
+        String nightMode = Utils.querySharedPreferenceString(this, Constants.themeModeType, "auto");
+        if ("light".equals(nightMode)) {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+        } else if ("night".equals(nightMode)) {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+        }
+        // else let the system decide
+
 
         editDefaultSettings = findViewById(R.id.actionEditDefaultSettings);
         editDefaultSettings.setOnClickListener(new View.OnClickListener() {

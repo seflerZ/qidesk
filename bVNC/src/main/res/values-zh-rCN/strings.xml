@@ -891,4 +891,11 @@ aSPICE对应的功能如下：
     <string name="pref_extrakeys_horizontal_pref">横屏时显示内容</string>
     <string name="pref_extrakeys_tutor">例子:\n- 单个字符 \'a\'\n- {key:\'a\', popup:\'b\'} 表示带弹出键的字符 \n- [[...],[...]] 表示两排键（可更多） \n- 一些特殊字符如 \' 需要被转译后使用，请用 \\ 转译成 \\\'</string>
     <string name="pref_extrakeys_parsing_error">软件键盘配置解析错误，将使用默认值</string>
+
+    <string name="theme_mode">主题样式</string>
+    <string name="theme_mode_restart">变更重启后才能生效。</string>
+
+    <string name="pref_theme_mode_auto">自动</string>
+    <string name="pref_theme_mode_light">浅色</string>
+    <string name="pref_theme_mode_night">暗色</string>
 </resources>

@@ -14,6 +14,14 @@
         android:key="forceLandscape"
         android:title="@string/landscape_force" />
 
+    <ListPreference
+        android:entries="@array/pref_theme_mode_label"
+        android:summary="@string/theme_mode_restart"
+        android:entryValues="@array/pref_theme_mode_values"
+        android:defaultValue="@string/pref_theme_mode_auto_value"
+        android:key="themeModeType"
+        android:title="@string/theme_mode" />
+
 <!--    <SwitchPreferenceCompat-->
 <!--        android:defaultValue="false"-->
 <!--        android:key="leftHandedModeTag"-->

@@ -907,4 +907,7 @@ Below that is where you configure your connection.
     <string name="pref_extrakeys_horizontal_pref">Configs for horizontal screen</string>
     <string name="pref_extrakeys_tutor">Example:\n- One single token is \'a\'\n- {key:\'a\', popup:\'b\'} stands for a token with popup alternative\n- [[...],[...]] for two rows\n- Some character like \' should be escaped with \\</string>
     <string name="pref_extrakeys_parsing_error">Error parsing extra keys config, using default</string>
+
+    <string name="theme_mode">Theme Mode</string>
+    <string name="theme_mode_restart">Need restart the application to take effect.</string>
 </resources>
