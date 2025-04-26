@@ -493,6 +493,20 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         }  else if (keys.contains("END")) {
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_MOVE_END, new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MOVE_END));
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_MOVE_END, new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MOVE_END));
+        } else if (keys.contains("FUNC")) {
+            try {
+                int num = Integer.parseInt(keys.get(keys.size() - 1));
+                if (num <= 0 || num > 9) {
+                    throw new NumberFormatException();
+                }
+
+                int keycode = KeyEvent.KEYCODE_F1 + num - 1;
+
+                canvas.getKeyboard().keyEvent(keycode, new KeyEvent(KeyEvent.ACTION_DOWN, keycode));
+                canvas.getKeyboard().keyEvent(keycode, new KeyEvent(KeyEvent.ACTION_UP, keycode));
+            } catch (NumberFormatException e) {
+                Toast.makeText(this, getText(R.string.gesture_func_num_error), Toast.LENGTH_SHORT).show();
+            }
         } else {
             // perform the key
             if (!keys.isEmpty()) {

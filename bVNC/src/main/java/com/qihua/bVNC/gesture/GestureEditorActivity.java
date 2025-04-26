@@ -345,15 +345,17 @@ public class GestureEditorActivity extends AppCompatActivity implements GestureE
         return gestureHolder;
     }
 
+    private int previousColor = 0;
     public void changeBtnBackground(View view) {
         Button btn = (Button) view;
 
         if (!btn.isSelected()) {
             btn.setSelected(true);
-            btn.setBackgroundResource(R.drawable.btn_pressed);
+            previousColor = btn.getTextColors().getDefaultColor();
+            btn.setTextColor(getColor(R.color.theme));
         } else {
             btn.setSelected(false);
-            btn.setBackgroundResource(R.drawable.btn_normal);
+            btn.setTextColor(previousColor);
         }
     }
 

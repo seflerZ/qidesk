@@ -890,11 +890,12 @@ Below that is where you configure your connection.
     <string name="configure_connection">Configure Connection</string>
     <string name="save_gesture">Save Gesture</string>
     <string name="copy_gesture">Copy Gesture</string>
-    <string name="gesture_keycode_hint">The key to be sent. Buttons for special key</string>
+    <string name="gesture_keycode_hint">The key to be sent. Buttons for special key. If FUNC button above pressed, only number 1–9 can be used.</string>
     <string name="gesture_not_recognized">Gesture not recognized</string>
     <string name="gesture_not_configured">No gesture, configure in the connection settings page</string>
     <string name="gesture_hint">Gesture</string>
     <string name="gesture_click_to_retry">Click to Redo</string>
+    <string name="gesture_func_num_error">Shortcut with FUNC key can only be append by number 1–9</string>
 
     <string name="touchpad_control_pref">Touchpad customization</string>
     <string name="touchpad_edge_wheel">Use screen edge as touchpad scrolling</string>

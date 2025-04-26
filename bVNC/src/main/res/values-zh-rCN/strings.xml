@@ -868,9 +868,10 @@ aSPICE对应的功能如下：
     <string name="copy_gesture">复制手势</string>
     <string name="configure_connection">配置连接</string>
     <string name="gesture_click_to_retry">单击再次执行</string>
+    <string name="gesture_func_num_error">带 Func 的快捷键后续只能填入数字 1–9</string>
 
     <string name="my_connections">我的连接</string>
-    <string name="gesture_keycode_hint">输入要发送的键值，按扭输入特殊字符</string>
+    <string name="gesture_keycode_hint">输入要发送的键值，上面以按扭输入特殊字符。若选择了 FUNC 键，则这里只能输入 1-9。</string>
     <string name="gesture_not_recognized">手势未识别</string>
     <string name="gesture_hint">手势</string>
 

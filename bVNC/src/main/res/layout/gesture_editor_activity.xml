@@ -34,7 +34,6 @@
                 android:layout_height="wrap_content"
                 android:text="←"
                 android:onClick="inputDpadKey"
-                android:background="@drawable/btn_normal"
                 android:tag="keycode_special"
                 />
 
@@ -43,7 +42,6 @@
                 android:layout_height="wrap_content"
                 android:onClick="inputDpadKey"
                 android:text="↑"
-                android:background="@drawable/btn_normal"
                 android:tag="keycode_special"
                 />
 
@@ -52,7 +50,6 @@
                 android:layout_height="wrap_content"
                 android:onClick="inputDpadKey"
                 android:text="→"
-                android:background="@drawable/btn_normal"
                 android:tag="keycode_special"
                 />
 
@@ -61,7 +58,6 @@
                 android:layout_height="wrap_content"
                 android:onClick="inputDpadKey"
                 android:text="↓"
-                android:background="@drawable/btn_normal"
                 android:tag="keycode_special"
                 />
 
@@ -70,7 +66,6 @@
                 android:layout_height="wrap_content"
                 android:onClick="inputDpadKey"
                 android:text="␡"
-                android:background="@drawable/btn_normal"
                 android:tag="keycode_special"
                 />
         </LinearLayout>
@@ -89,7 +84,6 @@
                 android:layout_height="wrap_content"
                 android:onClick="changeBtnBackground"
                 android:text="CTRL"
-                android:background="@drawable/btn_normal"
                 android:tag="keycode_special"
                 />
 
@@ -98,7 +92,6 @@
                 android:layout_height="wrap_content"
                 android:onClick="changeBtnBackground"
                 android:text="ALT"
-                android:background="@drawable/btn_normal"
                 android:tag="keycode_special"
                 />
 
@@ -107,7 +100,6 @@
                 android:layout_height="wrap_content"
                 android:text="TAB"
                 android:onClick="changeBtnBackground"
-                android:background="@drawable/btn_normal"
                 android:tag="keycode_special"
                 />
 
@@ -116,7 +108,14 @@
                 android:layout_height="wrap_content"
                 android:onClick="changeBtnBackground"
                 android:text="META"
-                android:background="@drawable/btn_normal"
+                android:tag="keycode_special"
+                />
+
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:onClick="changeBtnBackground"
+                android:text="FUNC"
                 android:tag="keycode_special"
                 />
 
@@ -125,7 +124,6 @@
                 android:layout_height="wrap_content"
                 android:onClick="changeBtnBackground"
                 android:text="SHIFT"
-                android:background="@drawable/btn_normal"
                 android:tag="keycode_special"
                 />
 
@@ -134,7 +132,6 @@
                 android:layout_height="wrap_content"
                 android:onClick="changeBtnBackground"
                 android:text="ESC"
-                android:background="@drawable/btn_normal"
                 android:tag="keycode_special"
                 />
         </LinearLayout>
