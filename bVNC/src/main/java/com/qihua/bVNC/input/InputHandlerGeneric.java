@@ -690,7 +690,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             return true;
         }
 
-        if (e.getDeviceId() > 10 && touchpad != canvas) {
+        if (e.getDeviceId() > 10) {
             if (e.getButtonState() == MotionEvent.BUTTON_PRIMARY) {
                 touchpad.startPointerCapture();
             }
@@ -1026,11 +1026,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                 return true;
             }
 
-            // release mouse capture
-            if (canvas.isOutDisplay() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                touchpad.releasePointerCapture();
-            }
-
             if (!activity.getSupportActionBar().isShowing()) {
                 activity.showToolbar();
             }
@@ -1041,6 +1036,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                 GestureOverlayView gestureOverlay = activity.findViewById(R.id.gestureOverlay);
                 gestureOverlay.setVisibility(View.GONE);
             }
+
+            touchpad.releasePointerCapture();
 
             return true;
         }
