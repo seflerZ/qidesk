@@ -133,6 +133,7 @@ public class LabeledImageApapter extends BaseAdapter {
 
         String screenshotFilePath = context.getFilesDir() + "/" + c.getScreenshotFilename();
         AppCompatImageView imageView = gridView.findViewById(R.id.grid_item_image);
+        imageView.setBackgroundColor(context.getColor(R.color.black_overlay));
         if (doNotShowDesktopThumbnails) {
             imageView.setImageResource(R.drawable.rdp_connection);
             imageView.setScaleType(ImageView.ScaleType.CENTER);

@@ -23,10 +23,10 @@
         >
 
         <androidx.appcompat.widget.AppCompatImageView
+            android:background="@color/black_overlay"
             android:id="@+id/grid_item_image"
             android:layout_width="fill_parent"
             android:layout_height="fill_parent"
-            android:background="@color/black_overlay"
             android:gravity="bottom"
             android:scaleType="centerInside" />
 
@@ -34,7 +34,7 @@
             android:id="@+id/grid_item_text"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:background="@color/black_overlay"
+            android:background="@color/dark_overlay"
             android:paddingLeft="7dip"
             android:paddingTop="3dip"
             android:paddingRight="7dip"
@@ -42,7 +42,6 @@
             android:textColor="#ffffff"
             android:layout_gravity="top"
             android:textSize="14sp" />
-
     </androidx.cardview.widget.CardView>
 </RelativeLayout>
 
