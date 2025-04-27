@@ -6,7 +6,7 @@
     <string name="action_new_connection">创建新连接</string>
     <string name="action_edit_default_settings">编辑全局设置</string>
     <string name="action_export_settings">导出设定</string>
-    <string name="action_delete_connection">删除连接设定</string>
+    <string name="action_delete_connection">删除连接配置</string>
     <string name="opaque_app_name">Opaque</string>
     <string name="opaque_app_name_beta">Opaque Beta</string>
     <string name="advanced_settings">进阶设定</string>
@@ -209,7 +209,7 @@
     <string name="copy_list_button">复制列表</string>
     <string name="ctrl_alt_del">Ctrl-Alt-Del</string>
     <string name="default_input_mode">默认输入模式</string>
-    <string name="delete_connection">删除连接设定</string>
+    <string name="delete_connection">删除连接配置</string>
     <string name="delete_key">删除所选密钥</string>
     <string name="delete_key_list">删除密钥列表</string>
     <string name="disconnect">切断</string>

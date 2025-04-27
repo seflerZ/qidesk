@@ -112,7 +112,6 @@ public class Utils {
             }
             AlertDialog.Builder builder = new AlertDialog.Builder(_context);
             builder.setTitle(title);
-            builder.setIcon(android.R.drawable.ic_dialog_info);
             builder.setMessage(message);
             builder.setCancelable(false);
             builder.setPositiveButton(_context.getString(android.R.string.yes), onYesListener);
@@ -121,8 +120,8 @@ public class Utils {
                 alertDialog = builder.create();
                 alertDialog.show();
             }
-        } catch (IllegalArgumentException e) {
-            e.printStackTrace();
+        } catch (IllegalArgumentException ignore) {
+
         }
     }
 

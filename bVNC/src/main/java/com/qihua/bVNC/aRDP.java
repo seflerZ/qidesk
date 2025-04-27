@@ -412,7 +412,8 @@ public class aRDP extends MainConfiguration {
 
     public void editGesture(View view) {
         Intent intent = new Intent(this, GestureEditorActivity.class);
-        intent.putExtra("connId", getCurrentConnection().getId());
+        selected.save(this);
+        intent.putExtra("connId", selected.getId());
         startActivity(intent);
     }
 
