@@ -49,7 +49,10 @@ import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.Button;
 import android.widget.ScrollView;
+
+import androidx.core.content.ContextCompat;
 
 import com.antlersoft.android.contentxml.SqliteElement;
 import com.antlersoft.android.contentxml.SqliteElement.ReplaceStrategy;
@@ -119,6 +122,14 @@ public class Utils {
             if (!(alertDialog != null && alertDialog.isShowing()) && !isContextActivityThatIsFinishing(_context)) {
                 alertDialog = builder.create();
                 alertDialog.show();
+
+                alertDialog.setOnShowListener(d -> {
+                    Button yes = alertDialog.getButton(DialogInterface.BUTTON_POSITIVE);
+                    yes.setTextColor(ContextCompat.getColor(_context, R.color.theme));
+
+                    Button no = alertDialog.getButton(DialogInterface.BUTTON_NEGATIVE);
+                    no.setTextColor(ContextCompat.getColor(_context, R.color.theme));
+                });
             }
         } catch (IllegalArgumentException ignore) {
 
@@ -183,6 +194,9 @@ public class Utils {
             if (!(alertDialog != null && alertDialog.isShowing()) && !isContextActivityThatIsFinishing(_context)) {
                 alertDialog = builder.create();
                 alertDialog.show();
+
+                Button yes = alertDialog.getButton(DialogInterface.BUTTON_POSITIVE);
+                yes.setTextColor(ContextCompat.getColor(_context, R.color.theme));
             }
         } catch (IllegalArgumentException e) {
             e.printStackTrace();
