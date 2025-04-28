@@ -69,12 +69,15 @@ public class IntroTextDialog extends Dialog {
 
         dialog = new IntroTextDialog(context, database);
         if (show && !hidePrivacyTag) {
+            dialog.setCancelable(false);
             dialog.show();
             return true;
         }
 
-        // At this time, user has granted permission to collect anonymous user data, start the SDK now
-        UMConfigure.init(context, "68086a69bc47b67d83466552", "DEFAULT", UMConfigure.DEVICE_TYPE_PHONE, "");
+        if (show) {
+            // At this time, user has granted permission to collect anonymous user data, start the SDK now
+            UMConfigure.init(context, "68086a69bc47b67d83466552", "DEFAULT", UMConfigure.DEVICE_TYPE_PHONE, "");
+        }
 
         return false;
     }
