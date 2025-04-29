@@ -36,6 +36,10 @@ android {
         create("free") {
             applicationIdSuffix ""
         }
+
+        create("play") {
+            applicationIdSuffix ".play"
+        }
     }
 }
 

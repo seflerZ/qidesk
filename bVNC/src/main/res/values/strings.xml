@@ -84,13 +84,6 @@
     <string name="ssl_strict">Require common name to match cert (recommended)</string>
     <string name="usb">USB (plug in OTG cable first)</string>
 
-    <string name="ad_donate_text0">The Pro version now has support for multi-factor SSH authentication. In addition, it supports the much requested Master Password feature that prevents unauthorized use and also encrypts all connection settings including passwords and SSH keys to guard against theft. Enable it from the main Menu. If the Menu button is missing, please long-tap the running apps button for the Menu.</string>
-    <string name="ad_donate_text1">Tap here to support the project with a small donation by buying the Pro version.</string>
-    <string name="ad_donate_text2">The Pro version allows you to disable this dialog and gives you access to additional features.</string>
-    <string name="ad_donate_text3">If you would like to support the project further, follow the following links for links to client apps for: </string>
-    <string name="ad_donate_text_rdp">The Pro version of aRDP now supports sound redirection!</string>
-    <string name="ad_donate_text_spice"></string>
-
     <string name="address_caption">VNC Server</string>
     <string name="address_caption_hint">VNC Server</string>
     <string name="address_caption_hint_tunneled">VNC Server</string>
@@ -99,7 +92,7 @@
 
     <string name="alt_check">Alt</string>
 
-    <string name="ardp_app_name">QihuaRemote</string>
+    <string name="ardp_app_name">QRemote</string>
 
     <string name="arrow_down">Down Arrow</string>
     <string name="arrow_left">Left Arrow</string>
@@ -270,11 +263,11 @@
 
     <string name="force">Fullscreen Bitmap</string>
 
-    <string name="freeardp_app_name">aRDP Free</string>
+    <string name="freeardp_app_name">QRemote</string>
 
     <string name="freeaspice_app_name">aSPICE Free</string>
 
-    <string name="freebvnc_app_name">bVNC Free</string>
+    <string name="freebvnc_app_name">QRemote</string>
 
     <string name="immersive_mode_disable">Disable Immersive Mode</string>
 
@@ -356,8 +349,8 @@ All Input Modes:
  - Key combos: Menu-&gt;More-&gt;Send Keys.
  - Send text: Either type on the on-screen keyboard, or use Menu-&gt;More-&gt;Send Text."</string>
 
-    <string name="intro_close">Close</string>
-    <string name="intro_dont_show">Don\'t show again</string>
+    <string name="intro_close">Disagree</string>
+    <string name="intro_dont_show">Agree</string>
     <string name="intro_header" />
     <string name="intro_text">
 Current list of bVNC features:
@@ -407,7 +400,7 @@ Current list of bVNC features:
 &lt;br&gt;
 Known issues:
 &lt;br&gt;</string>
-    <string name="intro_title">QihuaRemote: The swizz knife remote client</string>
+    <string name="intro_title">QRemote: Workstation In Your Pocket</string>
     <string name="intro_version_text" />
 
     <string name="keep_password_button">Keep</string>
@@ -579,42 +572,38 @@ If you are looking for a quick performance boost, try setting the Color mode to 
         <item>@string/rdp_geom_custom</item>
     </string-array>
     <string name="rdp_intro_text">
-Thank you for supporting QihuaRemote. This software is developed by SeflerZ(sefler@126.com) and with &lt;em&gt;absolutely no warranty&lt;/em&gt;.
-&lt;br&gt;&lt;br&gt;
-        &lt;h2&gt;1. Infomation we will use&lt;/h2&gt;
-We do not store any data on the server, such as your remote device password, server address, etc.
-        &lt;br&gt;
-        we might collect some anonymous logs to help debug or analyze our product.
-        &lt;br&gt;
-        If you are using this software in China, please read about the privacy policy of this product by switch local language to Chinese.
+    &lt;h1&gt;Privacy Policy&lt;/h1&gt;
+    &lt;strong&gt;You must read and agree this privacy policy before using the QRemote app.&lt;/strong&gt;
+
+    &lt;p&gt;This privacy policy applies to the QRemote app (hereby referred to as &quot;Application&quot;) for mobile devices that was created by NervNeuron (hereby referred to as &quot;Service Provider&quot;) as a Commercial service. This service is intended for use &quot;AS IS&quot;.&lt;/p&gt;&lt;br&gt;&lt;strong&gt;Information Collection and Use&lt;/strong&gt;
+    &lt;p&gt;The Application doesn\'t collect any type of data. All the data like the passwords, connection configurations are stored on your own device.
+    &lt;p&gt;The Application does not gather precise information about the location of your mobile device.&lt;/p&gt;
+    &lt;br&gt;&lt;strong&gt;Children&lt;/strong&gt;
+    &lt;p&gt;The Service Provider does not use the Application to knowingly solicit data from or market to children under the age of 13.&lt;/p&gt;
+        &lt;!----&gt;
+        &lt;div&gt;&lt;br&gt;
+        &lt;p&gt;The Service Provider does not knowingly collect personally
+            identifiable information from children. The Service Provider
+            encourages all children to never submit any personally
+            identifiable information through the Application and/or Services.
+            The Service Provider encourage parents and legal guardians to monitor
+            their children\'s Internet usage and to help enforce this Policy by instructing
+            their children never to provide personally identifiable information through the Application and/or Services without their permission. If you have reason to believe that a child
+            has provided personally identifiable information to the Service Provider through the Application and/or Services,
+            please contact the Service Provider (sefler.zy@gmail.com) so that they will be able to take the necessary actions.
+            You must also be at least 16 years of age to consent to the processing
+            of your personally identifiable information in your country (in some countries we may allow your parent
+            or guardian to do so on your behalf).&lt;/p&gt;
+    &lt;/div&gt;&lt;br&gt;&lt;strong&gt;Security&lt;/strong&gt;
+    &lt;p&gt;All the data is stored on your device locally with well encryption. And you will be responsible for storing securities.&lt;/p&gt;&lt;br&gt;&lt;strong&gt;Changes&lt;/strong&gt;
+    &lt;p&gt;This Privacy Policy may be updated from time to time for any reason. The Service Provider will notify you of any changes to the Privacy Policy by updating this page with the new Privacy Policy. You are advised to consult this Privacy Policy regularly for any changes, as continued use is deemed approval of all changes.&lt;/p&gt;&lt;br&gt;
+    &lt;p&gt;This privacy policy is effective as of 2025-04-26&lt;/p&gt;&lt;br&gt;&lt;strong&gt;Your Consent&lt;/strong&gt;
+    &lt;p&gt;By using the Application, you are consenting to the processing of your information as set forth in this Privacy Policy now and as amended by us.&lt;/p&gt;&lt;br&gt;&lt;strong&gt;Contact Us&lt;/strong&gt;
+    &lt;p&gt;If you have any questions regarding privacy while using the Application, or have questions about the practices, please contact the Service Provider via email at sefler.zy@gmail.com.&lt;/p&gt;
     </string>
-    <string name="rdp_intro_title">aRDP: Intuitive, secure RDP client</string>
+    <string name="rdp_intro_title">QRemote: Workstation In Your Pocket</string>
     <string name="rdp_connection_screen_help_text" tools:ignore="TypographyOther">"
-When you add or edit a connection, you will see a connection configuration page. Here you can set up a new RDP connection, or choose a preexisting one. At the top is a button that allows you to save the connection. Below that is where you configure your connection.
-
- - Connection Type: Here you choose the RDP connection type. Available connection types are:
-   (a) RDP, which connects directly to a computer over the RDP protocol.
-   (b) RDP over SSH, which first tunnels your connection through a computer running an SSH server.
-
- - Title: Each connection you create can have a nickname to easily identify it on the list.
-
- - SSH Tunnel Settings: Available in RDP over SSH mode.
-   (a) SSH Server/Port: The address and port of the SSH server that the connection will be tunnelled through. By default SSH listens on port 22.
-   (b) Username/Password: The username and password of the account on the SSH server. The password will be filled in on this page if you haven't quit the app since you last entered it.
-   (c) Manage Key/Use Key: A button to manage public/private keys, and a checkbox indicating whether to use a key rather than password to authenticate. If you use the Copy to Clipboard button after generating a key-pair, you should be able to paste the public key once connected to the RDP server (the clipboard is synchronized to the server).
-
- - RDP Connection Settings:
-   (a) RDP Server/Port: This is where you enter the host name or IP address and port of the computer running the RDP server that you wish to contact. In RDP over SSH mode, this address is as seen from the SSH Server. If the SSH Server and RDP server are the same physical computer, you can use localhost. RDP servers typically listen on port 3389.
-   (b) RDP User: This is where you enter your Windows/UNIX account user name.
-   (c) RDP Domain: Enter the domain your account belongs to.
-   (d) RDP Password: This si where you enter your Windows/UNIX account password. Secure storage is not used for passwords (they are in a database), and the password will be stored only if you check the "Keep" box. The password will be filled in on this page if you haven't quit the app since you last entered it.
-
- - Advanced settings: In this section you'll find a ways to customize the resolution of the desktop, and various RDP performance tweaks
-
- - Local Device Tweaks: These adjust the behavior of the app on your device.
-   (a) Use D-Pad for arrows: If you prefer, you can use the D-Pad of your Bluetooth keyboard or arrows on your on-screen keyboard to send arrows to the RDP server.
-   (b) Rotate D-Pad: Phones paired with a Bluetooth keyboard may need the keyboard's D-pad to be rotated anti-clockwise to send correct directions to the server.
-   (c) Local mouse pointer: If the pointer is invisible, select this to force it to be drawn by the app."</string>
+    </string>
     <string name="rdp_password_hint">Password</string>
     <string name="rdp_server_empty">RDP Server or port empty. Cannot connect!</string>
     <string name="rdp_username_hint">Username</string>
@@ -874,13 +863,13 @@ Below that is where you configure your connection.
     <string name="more_apps">More Apps 📱</string>
     <string name="previous_versions">Previous Versions ⍼</string>
     <string name="keyboard_type">Software Keyboard Type</string>
-    <string name="touchpad_longpress_action">Touchpad long press action</string>
+    <string name="touchpad_longpress_action">Touchpad Long Press Action</string>
     <string name="pref_keyboard_type_label_TYPE_NULL">Default (TYPE_NULL)</string>
     <string name="pref_keyboard_type_label_VISIBLE_PASSWORD">Text/Numbers No Suggestions (VISIBLE_PASSWORD)</string>
     <string name="pref_keyboard_type_label_TYPE_CLASS_TEXT">Text With Suggestions (TYPE_CLASS_TEXT)</string>
     <string name="rdp_geom_full_hd">1080p</string>
     <string name="warn_disconnect_will_reconnect">Connection lost due to network error or logged in from another computer, will reconnect now.</string>
-    <string name="show_privacy_policy">Show privacy policy</string>
+    <string name="show_privacy_policy">Show Privacy Policy</string>
     <string name="request_recording_parameter_title">Will request recoding permission</string>
     <string name="request_recording_parameter_description">"This permission is used to redirect local microphone to remote devices, especially useful in net meetings. "</string>
     <string name="spice_main_screen_help_text">spice intro</string>
@@ -892,23 +881,23 @@ Below that is where you configure your connection.
     <string name="copy_gesture">Copy Gesture</string>
     <string name="gesture_keycode_hint">The key to be sent. Buttons for special key. If FUNC button above pressed, only number 1–9 can be used.</string>
     <string name="gesture_not_recognized">Gesture not recognized</string>
-    <string name="gesture_not_configured">No gesture, configure in the connection settings page</string>
+    <string name="gesture_not_configured">No gesture configured</string>
     <string name="gesture_hint">Gesture</string>
     <string name="gesture_click_to_retry">Click to Redo</string>
     <string name="gesture_func_num_error">Shortcut with FUNC key can only be append by number 1–9</string>
 
-    <string name="touchpad_control_pref">Touchpad customization</string>
-    <string name="touchpad_edge_wheel">Use screen edge as touchpad scrolling</string>
+    <string name="touchpad_control_pref">Touchpad Customization</string>
+    <string name="touchpad_edge_wheel">Use Screen Edges as Wheels</string>
     <string name="touchpad_touch_feedback">Enable click feedback</string>
     <string name="touchpad_edge_wheel_hint">Swipe to scroll and click to call soft keyboard. Disable automatically when connected to external monitor.</string>
     <string name="touchpad_cursor_speed">Cursor speed</string>
 
-    <string name="extrakeys_pref">Extra key customization</string>
-    <string name="pref_extrakeys_vertical_pref">Configs for vertical screen</string>
-    <string name="pref_extrakeys_horizontal_pref">Configs for horizontal screen</string>
+    <string name="extrakeys_pref">Extra Key Customization</string>
+    <string name="pref_extrakeys_vertical_pref">Configs for Vertical Screen</string>
+    <string name="pref_extrakeys_horizontal_pref">Configs for Horizontal Screen</string>
     <string name="pref_extrakeys_tutor">Example:\n- One single token is \'a\'\n- {key:\'a\', popup:\'b\'} stands for a token with popup alternative\n- [[...],[...]] for two rows\n- Some character like \' should be escaped with \\</string>
     <string name="pref_extrakeys_parsing_error">Error parsing extra keys config, using default</string>
 
-    <string name="theme_mode">Theme Mode</string>
-    <string name="theme_mode_restart">Need restart the application to take effect.</string>
+    <string name="theme_mode">Theme Settings</string>
+    <string name="theme_mode_restart">Need to restart the application after changes.</string>
 </resources>
