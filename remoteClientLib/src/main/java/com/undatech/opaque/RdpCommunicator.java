@@ -525,6 +525,7 @@ public class RdpCommunicator extends RfbConnectable implements RdpKeyboardMapper
                 , width
                 , height);
 
+//        viewable.countFps();
         viewable.reDraw(x, y, width, height);
     }
 
