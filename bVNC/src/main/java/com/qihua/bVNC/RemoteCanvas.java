@@ -1764,9 +1764,13 @@ public class RemoteCanvas extends SurfaceView implements Viewable
      * Causes a redraw of the myDrawable to happen at the indicated coordinates.
      */
     public void reDraw(int x, int y, int w, int h) {
-//        if (System.currentTimeMillis() - lastDraw < 5) {
-//            return;
-//        }
+        if (System.currentTimeMillis() - lastDraw < 8) {
+            return;
+        }
+
+        if (progressDialog != null && progressDialog.isShowing()) {
+            progressDialog.dismiss();
+        }
 
         //android.util.Log.i(TAG, "reDraw called: " + x +", " + y + " + " + w + "x" + h);
 //        float scale = getZoomFactor();
@@ -1785,7 +1789,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                     canvas = surfaceHolder.lockCanvas();
                     synchronized (surfaceHolder) {
                         canvas.setMatrix(scaler.getMatrix());
-                        canvas.drawColor(Color.BLACK);
+                        canvas.drawColor(Color.YELLOW);
                         bitmapData.drawable.draw(canvas);
                     }
                 } finally {
