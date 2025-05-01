@@ -108,6 +108,11 @@ class ZoomScaling extends AbstractScaling {
         return scaling;
     }
 
+    @Override
+    public Matrix getMatrix() {
+        return matrix;
+    }
+
     /* (non-Javadoc)
      * @see com.qihua.bVNC.AbstractScaling#zoomOut(com.qihua.bVNC.RemoteCanvasActivity)
      */
