@@ -47,8 +47,6 @@ public class AbstractBitmapDrawable extends DrawableContainer {
     Paint _whitePaint;
     Paint _blackPaint;
 
-    Paint _textPaint;
-
     AbstractBitmapDrawable(AbstractBitmapData data) {
         this.data = data;
         cursorRect = new RectF();
@@ -64,12 +62,6 @@ public class AbstractBitmapDrawable extends DrawableContainer {
         _whitePaint.setColor(0xffffffff);
         _blackPaint = new Paint();
         _blackPaint.setColor(0xff000000);
-        _textPaint = new Paint();
-        _textPaint.setColor(0xffffffff);
-
-        Typeface font = Typeface.create(Typeface.DEFAULT, Typeface.BOLD);
-        _textPaint.setTypeface(font);
-        _textPaint.setTextSize(32);
     }
 
     void draw(Canvas canvas, int xoff, int yoff) {

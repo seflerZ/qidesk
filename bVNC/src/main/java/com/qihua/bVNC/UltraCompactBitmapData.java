@@ -169,40 +169,11 @@ class UltraCompactBitmapData extends AbstractBitmapData {
             super(UltraCompactBitmapData.this);
         }
 
-        private int fps = 0;
-        private int avg = 0;
-        private int max = 0;
-        private int lst = 0;
-        private final static boolean showFps = true;
-
         @Override
         public void draw(Canvas canvas) {
             try {
-                if (showFps) {
-                    fps += 1;
-                }
-
-
-                canvas.drawColor(Color.BLACK);
                 canvas.drawBitmap(data.mbitmap, 0, 0, _defaultPaint);
                 canvas.drawBitmap(softCursor, cursorRect.left, cursorRect.top, _defaultPaint);
-
-                if (showFps) {
-                    char[] text = ("FPS:" + lst).toCharArray();
-                    canvas.drawText(text, 0, text.length, 100f, 100f, _textPaint);
-                }
-
-                if (showFps && System.currentTimeMillis() - last > 1000) {
-                    if (fps > max) {
-                        max = fps;
-                    }
-
-                    avg = (avg + fps)/ 2;
-                    lst = fps;
-
-                    fps = 0;
-                    last = System.currentTimeMillis();
-                }
             } catch (Throwable ignored) {
             }
         }

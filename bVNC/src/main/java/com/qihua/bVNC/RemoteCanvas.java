@@ -36,9 +36,9 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.RectF;
+import android.graphics.Typeface;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
@@ -111,7 +111,7 @@ import java.util.Timer;
 import javax.security.auth.login.LoginException;
 
 public class RemoteCanvas extends SurfaceView implements Viewable
-        , SurfaceHolder.Callback, GetTextFragment.OnFragmentDismissedListener{
+        , SurfaceHolder.Callback, GetTextFragment.OnFragmentDismissedListener {
     private final static String TAG = "RemoteCanvas";
 
     private SurfaceHolder surfaceHolder;
@@ -212,6 +212,10 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     boolean isOpaque = false;
     boolean sshTunneled = false;
     long lastDraw;
+
+    private boolean showFps = true;
+    private FpsCounter fpsCounter;
+
     boolean userPanned = false;
     String vvFileName;
     /**
@@ -266,6 +270,10 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             } else {
                 display = context.getDisplay();
             }
+        }
+
+        if (showFps) {
+            fpsCounter = new FpsCounter();
         }
 
         HandlerThread handlerThread = new HandlerThread("RenderThread");
@@ -1753,20 +1761,54 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
     @Override
     public Bitmap getBitmap() {
-        Bitmap bitmap = null;
-        if (bitmapData != null) {
-            bitmap = bitmapData.mbitmap;
-        }
-        return bitmap;
+        return bitmapData.mbitmap;
     }
+
+    private class DrawR implements Runnable {
+        private long inTime;
+
+        public DrawR() {
+            inTime = System.currentTimeMillis();
+        }
+
+        @Override
+        public void run() {
+            if (!isRunning) {
+                return;
+            }
+
+            Canvas canvas = null;
+            try {
+                fpsCounter.count();
+
+                canvas = surfaceHolder.lockHardwareCanvas();
+                canvas.setMatrix(scaler.getMatrix());
+
+                canvas.drawColor(Color.BLACK);
+
+                bitmapData.drawable.draw(canvas);
+
+                if (fpsCounter != null) {
+                    fpsCounter.finish(inTime);
+                    fpsCounter.draw(canvas);
+                }
+            } finally {
+                if (canvas != null) {
+                    surfaceHolder.unlockCanvasAndPost(canvas);
+                }
+            }
+        }
+    };
 
     /**
      * Causes a redraw of the myDrawable to happen at the indicated coordinates.
      */
     public void reDraw(int x, int y, int w, int h) {
-        if (System.currentTimeMillis() - lastDraw < 8) {
+        if (System.currentTimeMillis() - lastDraw < 5) {
             return;
         }
+
+        lastDraw = System.currentTimeMillis();
 
         if (progressDialog != null && progressDialog.isShowing()) {
             progressDialog.dismiss();
@@ -1777,29 +1819,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 //        float shiftedX = x - shiftX;
 //        float shiftedY = y - shiftY;
 
-        renderHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                if (!isRunning) {
-                    return;
-                }
-
-                Canvas canvas = null;
-                try {
-                    canvas = surfaceHolder.lockCanvas();
-                    synchronized (surfaceHolder) {
-                        canvas.setMatrix(scaler.getMatrix());
-                        bitmapData.drawable.draw(canvas);
-                    }
-                } finally {
-                    if (canvas != null) {
-                        surfaceHolder.unlockCanvasAndPost(canvas);
-                    }
-                }
-            }
-        });
-
-//        lastDraw = System.currentTimeMillis();
+        renderHandler.post(new DrawR());
     }
 
     /**
