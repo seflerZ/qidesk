@@ -1789,7 +1789,6 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                     canvas = surfaceHolder.lockCanvas();
                     synchronized (surfaceHolder) {
                         canvas.setMatrix(scaler.getMatrix());
-                        canvas.drawColor(Color.YELLOW);
                         bitmapData.drawable.draw(canvas);
                     }
                 } finally {

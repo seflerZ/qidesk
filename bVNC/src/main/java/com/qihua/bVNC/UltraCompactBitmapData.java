@@ -21,6 +21,7 @@ package com.qihua.bVNC;
 
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 
@@ -171,6 +172,7 @@ class UltraCompactBitmapData extends AbstractBitmapData {
         private int fps = 0;
         private int avg = 0;
         private int max = 0;
+        private int lst = 0;
         private final static boolean showFps = true;
 
         @Override
@@ -180,11 +182,13 @@ class UltraCompactBitmapData extends AbstractBitmapData {
                     fps += 1;
                 }
 
+
+                canvas.drawColor(Color.BLACK);
                 canvas.drawBitmap(data.mbitmap, 0, 0, _defaultPaint);
                 canvas.drawBitmap(softCursor, cursorRect.left, cursorRect.top, _defaultPaint);
 
                 if (showFps) {
-                    char[] text = String.valueOf("FPS:" + avg).toCharArray();
+                    char[] text = ("FPS:" + lst).toCharArray();
                     canvas.drawText(text, 0, text.length, 100f, 100f, _textPaint);
                 }
 
@@ -194,6 +198,7 @@ class UltraCompactBitmapData extends AbstractBitmapData {
                     }
 
                     avg = (avg + fps)/ 2;
+                    lst = fps;
 
                     fps = 0;
                     last = System.currentTimeMillis();

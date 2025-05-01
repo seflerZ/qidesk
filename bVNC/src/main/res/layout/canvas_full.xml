@@ -9,8 +9,7 @@
         android:id="@+id/canvas"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
-        android:layout_gravity="top|center"
-        android:background="@android:color/background_dark" />
+        android:layout_gravity="top|center" />
 
     <View
         android:id="@+id/edgeTop"
