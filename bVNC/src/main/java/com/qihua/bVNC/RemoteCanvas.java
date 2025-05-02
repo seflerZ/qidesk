@@ -1820,8 +1820,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                     bitmapData.drawable.draw(canvas);
 
                     if (fpsCounter != null) {
-                        fpsCounter.finish(task.getInTimeMs());
-                        fpsCounter.draw(canvas);
+                        fpsCounter.finish(task.getInTimeMs(), tasks.size());
+                        fpsCounter.drawFps(canvas);
                     }
                 } catch (Exception e) {
 
