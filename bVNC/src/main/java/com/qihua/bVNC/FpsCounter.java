@@ -17,6 +17,7 @@ public class FpsCounter {
     private long maxlatency = 0;
     private long avglatency = 0;
     private long maxlastMs = 0;
+    private int qsize = 0;
 
     Paint _textPaint;
 
@@ -34,7 +35,7 @@ public class FpsCounter {
         fps += 1;
     }
 
-    public void finish(long inFpsMs) {
+    public void finish(long inFpsMs, int qsize) {
         long latency = System.currentTimeMillis() - inFpsMs;
         avglatency = (avglatency + latency)/ 2;
         if (latency > maxlatency) {
@@ -45,14 +46,19 @@ public class FpsCounter {
             maxlatency = 0;
             maxlastMs = System.currentTimeMillis();
         }
+
+        this.qsize  = qsize;
     }
 
-    public void draw(Canvas canvas) {
+    public void drawFps(Canvas canvas) {
         char[] text = ("FPS:" + lst + ",AVG:" + avg).toCharArray();
         canvas.drawText(text, 0, text.length, 100f, 100f, _textPaint);
 
         char[] latText = ("DELAY: MAX-5=" + maxlatency + ", AVG=" + avglatency).toCharArray();
         canvas.drawText(latText, 0, latText.length, 100f, 140f, _textPaint);
+
+        char[] qText = ("Q-SIZE:" + qsize).toCharArray();
+        canvas.drawText(qText, 0, qText.length, 100f, 180f, _textPaint);
 
         reset();
     }
