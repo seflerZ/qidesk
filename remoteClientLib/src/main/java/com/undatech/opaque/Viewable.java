@@ -26,4 +26,6 @@ public interface Viewable {
     boolean isAbleToPan();
 
     void onConnectionSuccess();
+
+    void countFps();
 }
