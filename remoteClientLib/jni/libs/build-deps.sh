@@ -628,10 +628,10 @@ build_freerdp() {
                -e 's/WITH_OPENH264=.*/WITH_OPENH264=1/'\
                -e 's/WITH_MEDIACODEC=.*/WITH_MEDIACODEC=1/'\
                -e 's/WITH_FFMPEG=.*/WITH_FFMPEG=0/'\
-               -e 's/OPENH264_TAG=.*/OPENH264_TAG=v2.4.1/'\
+               -e 's/OPENH264_TAG=.*/OPENH264_TAG=v2.5.0/'\
                -e 's/OPENSSL_TAG=.*/OPENSSL_TAG=openssl-1.1.1w/'\
                -e 's/NDK_TARGET=26/NDK_TARGET=21/'\
-               -e 's/453afa66dacb560bc5fd0468aabee90c483741571bca820a39a1c07f0362dc32/8ffbe944e74043d0d3fb53d4a2a14c94de71f58dbea6a06d0dc92369542958ea/'\
+               -e 's/453afa66dacb560bc5fd0468aabee90c483741571bca820a39a1c07f0362dc32/94c8ca364db990047ec4ec3481b04ce0d791e62561ef5601443011bdc00825e3/'\
                -e 's/d7939ce614029cdff0b6c20f0e2e5703158a489a72b2507b8bd51bf8c8fd10ca/cf3098950cb4d853ad95c0841f1f9c6d3dc102dccfcacd521d93925208b76ac8/'\
                -e "s/BUILD_ARCH=.*/BUILD_ARCH=\"${abis}\"/"\
                 ./scripts/android-build.conf
