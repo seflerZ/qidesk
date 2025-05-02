@@ -36,9 +36,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Paint;
 import android.graphics.RectF;
-import android.graphics.Typeface;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
@@ -107,6 +105,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Timer;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import javax.security.auth.login.LoginException;
 
@@ -141,7 +141,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
      * Also shows the dialogs which show various connection failures.
      */
     public Handler handler;
-    public Handler renderHandler;
+
+    private DrawThread drawThread;
 
     private InputHandler inputHandler;
 
@@ -213,9 +214,6 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     boolean sshTunneled = false;
     long lastDraw;
 
-    private boolean showFps = true;
-    private FpsCounter fpsCounter;
-
     boolean userPanned = false;
     String vvFileName;
     /**
@@ -272,13 +270,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             }
         }
 
-        if (showFps) {
-            fpsCounter = new FpsCounter();
-        }
-
-        HandlerThread handlerThread = new HandlerThread("RenderThread");
-        handlerThread.start();
-        renderHandler = new Handler(handlerThread.getLooper());
+        drawThread = new DrawThread();
 
         surfaceHolder = getHolder();
         surfaceHolder.addCallback(this);
@@ -1550,11 +1542,13 @@ public class RemoteCanvas extends SurfaceView implements Viewable
      * Change to Canvas's scroll position to match the absoluteXPosition
      */
     void resetScroll() {
-        float scale = getZoomFactor();
+//        float scale = getZoomFactor();
         //android.util.Log.d(TAG, "resetScroll: " + (absoluteXPosition - shiftX) * scale + ", "
         //                                        + (absoluteYPosition - shiftY) * scale);
-        scrollTo((int) ((absoluteXPosition) * scale),
-                (int) ((absoluteYPosition) * scale));
+
+        reDraw(0, 0, getWidth(), getHeight());
+//        scrollTo((int) ((absoluteXPosition) * scale),
+//                (int) ((absoluteYPosition) * scale));
     }
 
     /**
@@ -1764,47 +1758,98 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         return bitmapData.mbitmap;
     }
 
-    private class DrawR implements Runnable {
-        private long inTime;
+    private class DrawTask {
+        private int x,y;
+        private int width,height;
 
-        public DrawR() {
-            inTime = System.currentTimeMillis();
+        private long inTimeMs;
+
+        public DrawTask(int x, int y, int width, int height) {
+            this.x = x;
+            this.y = y;
+            this.width = width;
+            this.height = height;
+
+            inTimeMs = System.currentTimeMillis();
+        }
+
+        public long getInTimeMs() {
+            return inTimeMs;
+        }
+    }
+
+    private class DrawThread implements Runnable {
+        private FpsCounter fpsCounter;
+        private BlockingQueue<DrawTask> tasks = new LinkedBlockingQueue();
+        private Thread thread;
+
+        public DrawThread() {
+//            fpsCounter = new FpsCounter();
+
+            thread = new Thread(this, "RenderThread");
+            thread.start();
+        }
+
+        public void addTask(DrawTask task) {
+            tasks.add(task);
+        }
+
+        public void count() {
+            if (fpsCounter != null) {
+                fpsCounter.count();
+            }
         }
 
         @Override
         public void run() {
-            if (!isRunning) {
-                return;
-            }
-
-            Canvas canvas = null;
-            try {
-                fpsCounter.count();
-
-                canvas = surfaceHolder.lockHardwareCanvas();
-                canvas.setMatrix(scaler.getMatrix());
-
-                canvas.drawColor(Color.BLACK);
-
-                bitmapData.drawable.draw(canvas);
-
-                if (fpsCounter != null) {
-                    fpsCounter.finish(inTime);
-                    fpsCounter.draw(canvas);
+            while (true) {
+                if (!isRunning) {
+                    continue;
                 }
-            } finally {
-                if (canvas != null) {
-                    surfaceHolder.unlockCanvasAndPost(canvas);
+
+                Canvas canvas = null;
+                try {
+                    DrawTask task = tasks.take();
+
+                    canvas = surfaceHolder.lockHardwareCanvas();
+                    canvas.setMatrix(scaler.getMatrix());
+                    canvas.translate((-absoluteXPosition), (-absoluteYPosition));
+
+                    canvas.drawColor(Color.BLACK);
+
+                    bitmapData.drawable.draw(canvas);
+
+                    if (fpsCounter != null) {
+                        fpsCounter.finish(task.getInTimeMs());
+                        fpsCounter.draw(canvas);
+                    }
+                } catch (Exception e) {
+
+                } finally {
+                    if (canvas != null) {
+                        surfaceHolder.unlockCanvasAndPost(canvas);
+                    }
                 }
             }
         }
+
+        public boolean isShowFps() {
+            return fpsCounter != null;
+        }
     };
+
+    @Override
+    public void countFps() {
+        if (drawThread.isShowFps()) {
+            drawThread.count();
+        }
+    }
 
     /**
      * Causes a redraw of the myDrawable to happen at the indicated coordinates.
      */
     public void reDraw(int x, int y, int w, int h) {
-        if (System.currentTimeMillis() - lastDraw < 5) {
+        if (System.currentTimeMillis() - lastDraw < 11) {
             return;
         }
 
@@ -1819,7 +1864,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 //        float shiftedX = x - shiftX;
 //        float shiftedY = y - shiftY;
 
-        renderHandler.post(new DrawR());
+        drawThread.addTask(new DrawTask(x, y, w, h));
     }
 
     /**
