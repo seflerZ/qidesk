@@ -1767,7 +1767,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             fpsCounter = new FpsCounter();
             lastDraw = System.currentTimeMillis();
 
-            thread = new Thread(this, "RenderThread");
+            thread = new Thread(this, "CanvasRenderThread");
             thread.start();
         }
 
@@ -1838,7 +1838,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
      * Causes a redraw of the myDrawable to happen at the indicated coordinates.
      */
     public void reDraw(int x, int y, int w, int h) {
-//        reDraw(new DrawTask(x, y, w, h));
+        reDraw(new DrawTask(x, y, w, h));
     }
 
     public void reDraw(DrawTask drawTask) {
