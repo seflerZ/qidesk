@@ -898,7 +898,7 @@ Below that is where you configure your connection.
     <string name="pref_extrakeys_tutor">Example:\n- One single token is \'a\'\n- {key:\'a\', popup:\'b\'} stands for a token with popup alternative\n- [[...],[...]] for two rows\n- Some character like \' should be escaped with \\</string>
     <string name="pref_extrakeys_parsing_error">Error parsing extra keys config, using default</string>
 
-    <string name="theme_mode">Theme Mode</string>
+    <string name="theme_mode">Theme Settings</string>
     <string name="theme_mode_restart">Need restart the application to take effect.</string>
     <string name="use_as_touchpad">USE AS TOUCHPAD</string>
 
@@ -919,6 +919,4 @@ Below that is where you configure your connection.
     <string name="delete">Delete</string>
     <string name="saved">Saved</string>
     <string name="save_fail">Save Failed</string>
-    <string name="theme_mode">Theme Settings</string>
-    <string name="theme_mode_restart">Need to restart the application after changes.</string>
 </resources>
