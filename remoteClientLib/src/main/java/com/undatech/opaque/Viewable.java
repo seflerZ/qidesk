@@ -15,6 +15,8 @@ public interface Viewable {
 
     void reDraw(int x, int y, int width, int height);
 
+    void reDraw(DrawTask task);
+
     void setMousePointerPosition(int x, int y);
 
     void setSoftCursorPixels(int[] pixels, int width, int height, int xPos, int yPos);
@@ -26,6 +28,4 @@ public interface Viewable {
     boolean isAbleToPan();
 
     void onConnectionSuccess();
-
-    void countFps();
 }

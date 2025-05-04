@@ -82,6 +82,7 @@ import com.qihua.bVNC.input.RemoteVncKeyboard;
 import com.qihua.bVNC.input.RemoteVncPointer;
 import com.tigervnc.rfb.AuthFailureException;
 import com.undatech.opaque.Connection;
+import com.undatech.opaque.DrawTask;
 import com.undatech.opaque.MessageDialogs;
 import com.undatech.opaque.RdpCommunicator;
 import com.undatech.opaque.RemoteClientLibConstants;
@@ -212,8 +213,6 @@ public class RemoteCanvas extends SurfaceView implements Viewable
      */
     boolean isOpaque = false;
     boolean sshTunneled = false;
-    long lastDraw;
-
     boolean userPanned = false;
     String vvFileName;
     /**
@@ -1758,33 +1757,15 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         return bitmapData.mbitmap;
     }
 
-    private class DrawTask {
-        private int x,y;
-        private int width,height;
-
-        private long inTimeMs;
-
-        public DrawTask(int x, int y, int width, int height) {
-            this.x = x;
-            this.y = y;
-            this.width = width;
-            this.height = height;
-
-            inTimeMs = System.currentTimeMillis();
-        }
-
-        public long getInTimeMs() {
-            return inTimeMs;
-        }
-    }
-
     private class DrawThread implements Runnable {
         private FpsCounter fpsCounter;
+        private long lastDraw;
         private BlockingQueue<DrawTask> tasks = new LinkedBlockingQueue();
         private Thread thread;
 
         public DrawThread() {
-//            fpsCounter = new FpsCounter();
+            fpsCounter = new FpsCounter();
+            lastDraw = System.currentTimeMillis();
 
             thread = new Thread(this, "RenderThread");
             thread.start();
@@ -1810,6 +1791,12 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                 Canvas canvas = null;
                 try {
                     DrawTask task = tasks.take();
+
+                    if (System.currentTimeMillis() - lastDraw < 10) {
+                        continue;
+                    }
+
+                    lastDraw = System.currentTimeMillis();
 
                     canvas = surfaceHolder.lockHardwareCanvas();
                     canvas.setMatrix(scaler.getMatrix());
@@ -1838,22 +1825,17 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         }
     };
 
-    @Override
-    public void countFps() {
-        if (drawThread.isShowFps()) {
-            drawThread.count();
-        }
-    }
-
     /**
      * Causes a redraw of the myDrawable to happen at the indicated coordinates.
      */
     public void reDraw(int x, int y, int w, int h) {
-        if (System.currentTimeMillis() - lastDraw < 11) {
-            return;
-        }
+//        reDraw(new DrawTask(x, y, w, h));
+    }
 
-        lastDraw = System.currentTimeMillis();
+    public void reDraw(DrawTask drawTask) {
+        if (drawTask.isCountFps() && drawThread.isShowFps()) {
+            drawThread.count();
+        }
 
         if (progressDialog != null && progressDialog.isShowing()) {
             progressDialog.dismiss();
@@ -1864,7 +1846,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 //        float shiftedX = x - shiftX;
 //        float shiftedY = y - shiftY;
 
-        drawThread.addTask(new DrawTask(x, y, w, h));
+        drawThread.addTask(drawTask);
     }
 
     /**
