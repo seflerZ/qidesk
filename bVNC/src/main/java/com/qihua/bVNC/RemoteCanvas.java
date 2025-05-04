@@ -1789,14 +1789,23 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                 }
 
                 Canvas canvas = null;
+                DrawTask task = null;
                 try {
-                    DrawTask task = tasks.take();
+                    task = tasks.take();
 
+                    // 100 fps drawing limit
                     if (System.currentTimeMillis() - lastDraw < 10) {
                         continue;
                     }
 
                     lastDraw = System.currentTimeMillis();
+
+                    if (System.currentTimeMillis() - task.getInTimeMs() > 10) {
+                        // drop frame, lagging
+                        fpsCounter.finish(task.getInTimeMs(), tasks.size());
+                        fpsCounter.frameDrop();
+                        continue;
+                    }
 
                     canvas = surfaceHolder.lockHardwareCanvas();
                     canvas.setMatrix(scaler.getMatrix());
@@ -1806,7 +1815,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
                     bitmapData.drawable.draw(canvas);
 
-                    if (fpsCounter != null) {
+                    if (fpsCounter != null && task != null) {
                         fpsCounter.finish(task.getInTimeMs(), tasks.size());
                         fpsCounter.drawFps(canvas);
                     }
