@@ -899,4 +899,22 @@ aSPICE对应的功能如下：
     <string name="pref_theme_mode_auto">自动</string>
     <string name="pref_theme_mode_light">浅色</string>
     <string name="pref_theme_mode_night">暗色</string>
+    <string name="use_as_touchpad">可作为触摸板使用</string>
+
+    <string name="delete_gesture">删除手势</string>
+    <string name="gesture_name">手势名称</string>
+    <string name="create_new_gesture">新增手势</string>
+    <string name="add_some_gesture">请先新增手势</string>
+    <string name="gesture_name_required">必须输入手势名称</string>
+
+    <string name="cancel">取消</string>
+    <string name="delete">删除</string>
+    <string name="saved">已保存</string>
+    <string name="save_fail">保存失败</string>
+
+    <string name="gesture_copy_to">复制至哪里?</string>
+
+    <string name="gesture_key_required">请输入手势触发的键值</string>
+
+    <string name="gesture_copied">手势已复制</string>
 </resources>

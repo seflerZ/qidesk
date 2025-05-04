@@ -282,7 +282,10 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
                         | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
 
         touchpad.setOutDisplay(false);
+        touchpad.setTouchpad(true);
+
         canvas.setOutDisplay(canvas != touchpad);
+        canvas.setTouchpad(false);
 
         StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
         StrictMode.setThreadPolicy(policy);

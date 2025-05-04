@@ -911,4 +911,23 @@ Below that is where you configure your connection.
 
     <string name="theme_mode">Theme Mode</string>
     <string name="theme_mode_restart">Need restart the application to take effect.</string>
+    <string name="use_as_touchpad">USE AS TOUCHPAD</string>
+
+    <string name="delete_gesture">Delete Gesture</string>
+    <string name="gesture_name">Gesture Name</string>
+    <string name="create_new_gesture">New Gesture</string>
+    <string name="add_some_gesture">Add a gesture first</string>
+    <string name="gesture_name_required">Gesture name required</string>
+
+    <string name="gesture_copy_to">Copy to which?</string>
+
+    <string name="my_connections">My Connections</string>
+    <string name="gesture_key_required">Shortcut key needed</string>
+
+    <string name="gesture_copied">Gesture Copied</string>
+
+    <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
+    <string name="saved">Saved</string>
+    <string name="save_fail">Save Failed</string>
 </resources>
