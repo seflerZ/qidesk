@@ -18,6 +18,8 @@ public class FpsCounter {
     private long avglatency = 0;
     private long maxlastMs = 0;
     private int qsize = 0;
+    private int frameDropped = 0;
+    private long frameDroppedMs = 0;
 
     Paint _textPaint;
 
@@ -31,7 +33,7 @@ public class FpsCounter {
         _textPaint.setColor(0xffffffff);
     }
 
-    public void count() {
+    public synchronized void count() {
         fps += 1;
     }
 
@@ -47,17 +49,22 @@ public class FpsCounter {
             maxlastMs = System.currentTimeMillis();
         }
 
+        if (System.currentTimeMillis() - frameDroppedMs > 10000) {
+            frameDropped = 0;
+            frameDroppedMs = System.currentTimeMillis();
+        }
+
         this.qsize  = qsize;
     }
 
     public void drawFps(Canvas canvas) {
-        char[] text = ("FPS:" + lst + ",AVG:" + avg).toCharArray();
+        char[] text = ("FPS:" + lst + ", AVG:" + avg).toCharArray();
         canvas.drawText(text, 0, text.length, 100f, 100f, _textPaint);
 
         char[] latText = ("DELAY: MAX-5=" + maxlatency + ", AVG=" + avglatency).toCharArray();
         canvas.drawText(latText, 0, latText.length, 100f, 140f, _textPaint);
 
-        char[] qText = ("Q-SIZE:" + qsize).toCharArray();
+        char[] qText = ("Q-SIZE:" + qsize + ", DROP-10:" + frameDropped).toCharArray();
         canvas.drawText(qText, 0, qText.length, 100f, 180f, _textPaint);
 
         reset();
@@ -76,5 +83,9 @@ public class FpsCounter {
 
             fps = 0;
         }
+    }
+
+    public synchronized void frameDrop() {
+        frameDropped += 1;
     }
 }
