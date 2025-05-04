@@ -36,7 +36,9 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.RectF;
+import android.graphics.Typeface;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
@@ -45,6 +47,7 @@ import android.os.Handler;
 import android.os.SystemClock;
 import android.provider.Settings;
 import android.text.ClipboardManager;
+import android.text.TextPaint;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -245,6 +248,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         }
     };
 
+    private boolean touchpad = false;
+
     /**
      * Constructor used by the inflation apparatus
      *
@@ -277,7 +282,6 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         DisplayMetrics metrics = new DisplayMetrics();
         display.getMetrics(metrics);
         displayDensity = metrics.density;
-
 
         LayoutInflater inflater = LayoutInflater.from(getContext());
         View dialogView = inflater.inflate(R.layout.connection_progress, null);
@@ -319,24 +323,11 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         return inputHandler.onPointerEvent(event);
     }
 
-    private void drawBitmap(int x, int y, Bitmap bitmap) {
-        Canvas canvas = null;
-        try {
-            canvas = surfaceHolder.lockCanvas();
-            if (canvas != null) {
-                synchronized (surfaceHolder) {
-                    canvas.drawBitmap(bitmap, x, y, null);
-                }
-            }
-        } finally {
-            if (canvas != null) {
-                surfaceHolder.unlockCanvasAndPost(canvas);
-            }
-        }
-    }
-
     @Override
     public void surfaceCreated(@NonNull SurfaceHolder holder) {
+        if (!outDisplay && touchpad) {
+            drawTouchpadHint();
+        }
     }
 
     @Override
@@ -1760,7 +1751,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         private Thread thread;
 
         public DrawWorker() {
-            fpsCounter = new FpsCounter();
+//            fpsCounter = new FpsCounter();
             lastDraw = System.currentTimeMillis();
         }
 
@@ -2202,6 +2193,14 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         return this.outDisplay;
     }
 
+    public boolean isTouchpad() {
+        return touchpad;
+    }
+
+    public void setTouchpad(boolean touchpad) {
+        this.touchpad = touchpad;
+    }
+
     public void setScaler(AbstractScaling scaler) {
         this.scaler = scaler;
     }
@@ -2219,5 +2218,33 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
     public float getZoomLevelFactor() {
         return connection.getZoomLevel() / 100;
+    }
+
+    public void drawTouchpadHint() {
+        Paint paint = new Paint();
+
+        Typeface font = Typeface.create(Typeface.DEFAULT, Typeface.BOLD);
+        paint.setTypeface(font);
+        paint.setTextSize(64);
+
+        paint.setColor(0x33ffffff);
+
+        Canvas canvas = null;
+        try {
+            canvas = surfaceHolder.lockHardwareCanvas();
+            if (canvas != null) {
+                synchronized (surfaceHolder) {
+                    String text = getContext().getString(R.string.use_as_touchpad);
+                    float textWidth = paint.measureText(text);
+                    float x = (canvas.getWidth() - textWidth) / 2f;
+
+                    canvas.drawText(text,  x, canvas.getHeight() / 2, paint);
+                }
+            }
+        } finally {
+            if (canvas != null) {
+                surfaceHolder.unlockCanvasAndPost(canvas);
+            }
+        }
     }
 }
