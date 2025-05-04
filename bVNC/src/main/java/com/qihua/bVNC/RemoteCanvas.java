@@ -42,7 +42,6 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
-import android.os.HandlerThread;
 import android.os.SystemClock;
 import android.provider.Settings;
 import android.text.ClipboardManager;
@@ -106,8 +105,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Timer;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 import javax.security.auth.login.LoginException;
 
@@ -143,7 +140,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
      */
     public Handler handler;
 
-    private DrawThread drawThread;
+    private DrawWorker drawWorker;
 
     private InputHandler inputHandler;
 
@@ -269,7 +266,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             }
         }
 
-        drawThread = new DrawThread();
+        drawWorker = new DrawWorker();
 
         surfaceHolder = getHolder();
         surfaceHolder.addCallback(this);
@@ -1757,22 +1754,14 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         return bitmapData.mbitmap;
     }
 
-    private class DrawThread implements Runnable {
+    private class DrawWorker {
         private FpsCounter fpsCounter;
         private long lastDraw;
-        private BlockingQueue<DrawTask> tasks = new LinkedBlockingQueue();
         private Thread thread;
 
-        public DrawThread() {
+        public DrawWorker() {
             fpsCounter = new FpsCounter();
             lastDraw = System.currentTimeMillis();
-
-            thread = new Thread(this, "CanvasRenderThread");
-            thread.start();
-        }
-
-        public void addTask(DrawTask task) {
-            tasks.add(task);
         }
 
         public void count() {
@@ -1781,50 +1770,40 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             }
         }
 
-        @Override
-        public void run() {
-            while (true) {
-                if (!isRunning) {
-                    continue;
+        public void draw(DrawTask task) {
+            Canvas canvas = null;
+            try {
+                // 100 fps drawing limit
+                if (System.currentTimeMillis() - lastDraw < 10) {
+                    return;
                 }
 
-                Canvas canvas = null;
-                DrawTask task = null;
-                try {
-                    task = tasks.take();
+                lastDraw = System.currentTimeMillis();
 
-                    // 100 fps drawing limit
-                    if (System.currentTimeMillis() - lastDraw < 10) {
-                        continue;
-                    }
+                if (System.currentTimeMillis() - task.getInTimeMs() > 10) {
+                    // drop frame, lagging
+                    fpsCounter.finish(task.getInTimeMs());
+                    fpsCounter.frameDrop();
+                    return;
+                }
 
-                    lastDraw = System.currentTimeMillis();
+                canvas = surfaceHolder.lockHardwareCanvas();
+                canvas.setMatrix(scaler.getMatrix());
+                canvas.translate((-absoluteXPosition), (-absoluteYPosition));
 
-                    if (System.currentTimeMillis() - task.getInTimeMs() > 10) {
-                        // drop frame, lagging
-                        fpsCounter.finish(task.getInTimeMs(), tasks.size());
-                        fpsCounter.frameDrop();
-                        continue;
-                    }
+                canvas.drawColor(Color.BLACK);
 
-                    canvas = surfaceHolder.lockHardwareCanvas();
-                    canvas.setMatrix(scaler.getMatrix());
-                    canvas.translate((-absoluteXPosition), (-absoluteYPosition));
+                bitmapData.drawable.draw(canvas);
 
-                    canvas.drawColor(Color.BLACK);
+                if (fpsCounter != null && task != null) {
+                    fpsCounter.finish(task.getInTimeMs());
+                    fpsCounter.drawFps(canvas);
+                }
+            } catch (Exception e) {
 
-                    bitmapData.drawable.draw(canvas);
-
-                    if (fpsCounter != null && task != null) {
-                        fpsCounter.finish(task.getInTimeMs(), tasks.size());
-                        fpsCounter.drawFps(canvas);
-                    }
-                } catch (Exception e) {
-
-                } finally {
-                    if (canvas != null) {
-                        surfaceHolder.unlockCanvasAndPost(canvas);
-                    }
+            } finally {
+                if (canvas != null) {
+                    surfaceHolder.unlockCanvasAndPost(canvas);
                 }
             }
         }
@@ -1842,8 +1821,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     }
 
     public void reDraw(DrawTask drawTask) {
-        if (drawTask.isCountFps() && drawThread.isShowFps()) {
-            drawThread.count();
+        if (drawTask.isCountFps() && drawWorker.isShowFps()) {
+            drawWorker.count();
         }
 
         if (progressDialog != null && progressDialog.isShowing()) {
@@ -1855,7 +1834,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 //        float shiftedX = x - shiftX;
 //        float shiftedY = y - shiftY;
 
-        drawThread.addTask(drawTask);
+        drawWorker.draw(drawTask);
     }
 
     /**
