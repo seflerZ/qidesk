@@ -566,17 +566,30 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         e.setLocation(x, y);
     }
 
-    private boolean detectImmersiveRange(float x, float y) {
+    protected boolean detectImmersiveRange(float x, float y) {
+        return detectImmersiveVertical(x) || detectImmersiveHorizontal(y);
+    }
+
+    protected boolean detectImmersiveVertical(float x) {
         if (!immersiveSwipeEnabled || canvas.isOutDisplay()) {
             return false;
         }
 
         float immersiveXDistance = Math.max(touchpad.getWidth() * immersiveSwipeRatio, 20);
+
+        return Constants.SDK_INT >= Build.VERSION_CODES.KITKAT &&
+                (x <= immersiveXDistance || touchpad.getWidth() - x <= immersiveXDistance);
+    }
+
+    protected boolean detectImmersiveHorizontal(float y) {
+        if (!immersiveSwipeEnabled || canvas.isOutDisplay()) {
+            return false;
+        }
+
         float immersiveYDistance = Math.max(touchpad.getHeight() * immersiveSwipeRatio, 20);
 
         return Constants.SDK_INT >= Build.VERSION_CODES.KITKAT &&
-                (x <= immersiveXDistance || touchpad.getWidth() - x <= immersiveXDistance
-                        || y <= immersiveYDistance || touchpad.getHeight() - y <= immersiveYDistance);
+                (y <= immersiveYDistance || touchpad.getHeight() - y <= immersiveYDistance);
     }
 
     private boolean detectLeftRange(float x, float y) {

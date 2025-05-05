@@ -195,6 +195,18 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             scrollDown = false;
         }
 
+        if (immersiveSwipe) {
+            if (detectImmersiveVertical(x)) {
+                scrollLeft = false;
+                scrollRight = false;
+            }
+
+            if (detectImmersiveHorizontal(y)) {
+                scrollUp = false;
+                scrollDown = false;
+            }
+        }
+
         if (scrollUp || scrollDown) {
             if (distanceY < 0 && newY == 0) {
                 delta = 0;
