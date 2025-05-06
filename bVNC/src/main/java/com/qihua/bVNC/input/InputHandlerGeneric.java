@@ -116,7 +116,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     float baseSwipeDist = 10f;
     // This is how far from the top and bottom edge to detect immersive swipe.
     float immersiveSwipeRatio = 0.09f;
-    boolean immersiveSwipe = false;
+    boolean immersiveSwipeY = false;
+    boolean immersiveSwipeX = false;
     // Some variables indicating what kind of a gesture we're currently in or just finished.
     boolean inScrolling = false;
     boolean inScaling = false;
@@ -544,7 +545,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         panMode = false;
         inSwiping = false;
         inScrolling = false;
-        immersiveSwipe = false;
+        immersiveSwipeX = false;
+        immersiveSwipeY = false;
 
         if (dragMode || rightDragMode || middleDragMode) {
             nonDragGesture = false;
@@ -619,28 +621,34 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         float immersiveXDistance = Math.min(Math.max(touchpad.getWidth() * immersiveSwipeRatio, 50), 150);
         float immersiveYDistance = Math.min(Math.max(touchpad.getHeight() * immersiveSwipeRatio, 50), 150);
 
-        if (detectImmersiveRange(x, y)) {
-
+        if (detectImmersiveVertical(x)) {
             inSwiping = true;
-            immersiveSwipe = true;
+            immersiveSwipeY = true;
 
-            if (x <= immersiveXDistance) {
-                edgeLeft.setVisibility(View.VISIBLE);
-                setEdgeWidth(edgeLeft, (int) immersiveXDistance);
-            } else if (touchpad.getWidth() - x <= immersiveXDistance) {
-                edgeRight.setVisibility(View.VISIBLE);
-                setEdgeWidth(edgeRight, (int) immersiveXDistance);
-            } else if (y <= immersiveYDistance) {
-                edgeTop.setVisibility(View.VISIBLE);
-                setEdgeHeight(edgeTop, (int) immersiveYDistance);
-            } else if (touchpad.getHeight() - y <= immersiveYDistance) {
-                edgeBottom.setVisibility(View.VISIBLE);
-                setEdgeHeight(edgeBottom, (int) immersiveYDistance);
-            }
-        } else if (!singleHandedGesture) {
-            inSwiping = false;
-            immersiveSwipe = false;
+            edgeLeft.setVisibility(View.VISIBLE);
+            setEdgeWidth(edgeLeft, (int) immersiveXDistance);
+
+            edgeRight.setVisibility(View.VISIBLE);
+            setEdgeWidth(edgeRight, (int) immersiveXDistance);
+
+            return;
         }
+
+        if (detectImmersiveHorizontal(y)) {
+            inSwiping = true;
+            immersiveSwipeX = true;
+
+            edgeTop.setVisibility(View.VISIBLE);
+            setEdgeHeight(edgeTop, (int) immersiveYDistance);
+            edgeBottom.setVisibility(View.VISIBLE);
+            setEdgeHeight(edgeBottom, (int) immersiveYDistance);
+
+            return;
+        }
+
+        inSwiping = false;
+        immersiveSwipeX = false;
+        immersiveSwipeY = false;
     }
 
     private void setEdgeWidth(View view, int newWidthDp) {
