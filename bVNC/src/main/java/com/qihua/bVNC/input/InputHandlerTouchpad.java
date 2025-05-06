@@ -119,7 +119,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         distanceY = sensitivity * (distanceY / displayDensity) * canvas.getZoomLevelFactor();
 
         // If in swiping mode, indicate a swipe at regular intervals.
-        if (inSwiping || immersiveSwipe) {
+        if (inSwiping || immersiveSwipeX || immersiveSwipeY) {
             scrollDown = false;
             scrollUp = false;
             scrollRight = false;
@@ -195,19 +195,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             scrollDown = false;
         }
 
-        if (immersiveSwipe) {
-            if (detectImmersiveVertical(x)) {
-                scrollLeft = false;
-                scrollRight = false;
-            }
-
-            if (detectImmersiveHorizontal(y)) {
-                scrollUp = false;
-                scrollDown = false;
-            }
-        }
-
-        if (scrollUp || scrollDown) {
+        if ((scrollUp || scrollDown) && !immersiveSwipeX) {
             if (distanceY < 0 && newY == 0) {
                 delta = 0;
             } else if (distanceY > 0 && newY == 0) {
@@ -240,7 +228,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             swipeSpeed = 1;
         }
 
-        if (scrollRight || scrollLeft) {
+        if ((scrollRight || scrollLeft) && !immersiveSwipeY) {
             if (distanceX < 0 && newX == 0) {
                 delta = 0;
             } else if (distanceX > 0 && newX == 0) {
