@@ -27,7 +27,8 @@
 
     <application
         android:name="com.qihua.bVNC.App"
-        android:banner="@drawable/app_icon"
+        android:allowBackup="false"
+        android:banner="@drawable/banner"
         android:icon="@drawable/app_icon"
         android:label="@string/ardp_app_name"
         android:theme="@style/QiHua"
