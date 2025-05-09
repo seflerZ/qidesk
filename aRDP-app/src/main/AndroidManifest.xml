@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.qihua.rmt"
     android:installLocation="auto"
-    android:versionCode="2800"
+    android:versionCode="2880"
     android:versionName="v1.8.0">
 
 <!--    <uses-permission tools:node="removeAll" />-->
