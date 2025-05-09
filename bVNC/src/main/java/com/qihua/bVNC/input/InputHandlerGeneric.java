@@ -625,11 +625,13 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             inSwiping = true;
             immersiveSwipeY = true;
 
-            edgeLeft.setVisibility(View.VISIBLE);
-            setEdgeWidth(edgeLeft, (int) immersiveXDistance);
-
-            edgeRight.setVisibility(View.VISIBLE);
-            setEdgeWidth(edgeRight, (int) immersiveXDistance);
+            if (x < immersiveXDistance) {
+                edgeLeft.setVisibility(View.VISIBLE);
+                setEdgeWidth(edgeLeft, (int) immersiveXDistance);
+            } else {
+                edgeRight.setVisibility(View.VISIBLE);
+                setEdgeWidth(edgeRight, (int) immersiveXDistance);
+            }
 
             return;
         }
@@ -638,10 +640,13 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             inSwiping = true;
             immersiveSwipeX = true;
 
-            edgeTop.setVisibility(View.VISIBLE);
-            setEdgeHeight(edgeTop, (int) immersiveYDistance);
-            edgeBottom.setVisibility(View.VISIBLE);
-            setEdgeHeight(edgeBottom, (int) immersiveYDistance);
+            if (y < immersiveYDistance) {
+                edgeTop.setVisibility(View.VISIBLE);
+                setEdgeHeight(edgeTop, (int) immersiveYDistance);
+            } else {
+                edgeBottom.setVisibility(View.VISIBLE);
+                setEdgeHeight(edgeBottom, (int) immersiveYDistance);
+            }
 
             return;
         }
@@ -837,10 +842,10 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                         }
                         break;
                     case MotionEvent.ACTION_UP:
-                        edgeLeft.setVisibility(View.GONE);
-                        edgeRight.setVisibility(View.GONE);
-                        edgeTop.setVisibility(View.GONE);
-                        edgeBottom.setVisibility(View.GONE);
+                        edgeLeft.setVisibility(View.INVISIBLE);
+                        edgeRight.setVisibility(View.INVISIBLE);
+                        edgeTop.setVisibility(View.INVISIBLE);
+                        edgeBottom.setVisibility(View.INVISIBLE);
 
                         cumulatedX = 0;
                         cumulatedY = 0;
