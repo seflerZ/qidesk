@@ -8,7 +8,7 @@
         android:id="@+id/canvas"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
-        android:layout_gravity="bottom|center" />
+        android:layout_gravity="bottom|center"/>
 
 <!--    <ImageView-->
 <!--        android:layout_width="wrap_content"-->
@@ -65,29 +65,14 @@
             android:scaleType="center"/>
     </android.gesture.GestureOverlayView>
 
-    <ImageView
-        android:id="@+id/gestureTipBackground"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/gesture_overlay"
-        android:visibility="gone"/>
-
-    <ImageView
-        android:id="@+id/gestureTipTexts"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:src="@drawable/gesture_tap_drag"
-        android:scaleType="center"
-        android:visibility="gone"/>
-
     <com.undatech.opaque.util.RemoteToolbar
         android:id="@+id/toolbar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="right|center"
-        android:background="@color/black_overlay"></com.undatech.opaque.util.RemoteToolbar>
+        android:gravity="center_vertical|end"
+        android:background="@color/black_overlay"/>
 
-    <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    <RelativeLayout
         android:id="@+id/layoutKeys"
         android:layout_width="fill_parent"
         android:layout_height="74dp"

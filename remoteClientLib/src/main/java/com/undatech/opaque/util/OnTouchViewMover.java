@@ -43,7 +43,8 @@ public class OnTouchViewMover implements OnTouchListener {
                 break;
             case MotionEvent.ACTION_MOVE:
                 Log.d(TAG, "onTouch called ACTION_MOVE");
-                viewToMove.animate().x(event.getRawX() + dX).y(event.getRawY() + dY).setDuration(0).start();
+                viewToMove.setX(event.getRawX() + dX);
+                viewToMove.setY(event.getRawY() + dY);
                 if (handler != null) {
                     handler.postAtTime(runnable, SystemClock.uptimeMillis() + delay);
                 }
