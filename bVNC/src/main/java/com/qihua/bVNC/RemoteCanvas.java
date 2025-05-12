@@ -1764,14 +1764,9 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         public void draw(DrawTask task) {
             Canvas canvas = null;
             try {
-                // 100 fps drawing limit
-                if (System.currentTimeMillis() - lastDraw < 10) {
-                    return;
-                }
-
                 lastDraw = System.currentTimeMillis();
 
-                if (System.currentTimeMillis() - task.getInTimeMs() > 10) {
+                if (System.currentTimeMillis() - task.getInTimeMs() > 8) {
                     // drop frame, lagging
                     fpsCounter.finish(task.getInTimeMs());
                     fpsCounter.frameDrop();
