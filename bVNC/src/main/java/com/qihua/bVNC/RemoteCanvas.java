@@ -37,6 +37,7 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.PorterDuff;
 import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.net.ConnectivityManager;
@@ -1777,7 +1778,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                 canvas.setMatrix(scaler.getMatrix());
                 canvas.translate((-absoluteXPosition), (-absoluteYPosition));
 
-                canvas.drawColor(Color.BLACK);
+                canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
 
                 bitmapData.drawable.draw(canvas);
 
