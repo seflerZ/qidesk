@@ -52,19 +52,7 @@ public class FpsCounter {
             frameDropped = 0;
             frameDroppedMs = System.currentTimeMillis();
         }
-    }
 
-    public void drawFps(Canvas canvas) {
-        char[] text = ("FPS:" + lst + ", AVG:" + avg).toCharArray();
-        canvas.drawText(text, 0, text.length, 100f, 100f, _textPaint);
-
-        char[] latText = ("DRAW COST: MAX-5:" + maxlatency + ", AVG:" + avglatency).toCharArray();
-        canvas.drawText(latText, 0, latText.length, 100f, 140f, _textPaint);
-
-        reset();
-    }
-
-    public void reset() {
         if (System.currentTimeMillis() - lastCountMs > 1000) {
             if (fps > max) {
                 max = fps;
@@ -77,6 +65,14 @@ public class FpsCounter {
 
             fps = 0;
         }
+    }
+
+    public void drawFps(Canvas canvas) {
+        char[] text = ("FPS-D:" + lst + ", AVG:" + avg).toCharArray();
+        canvas.drawText(text, 0, text.length, 100f, 100f, _textPaint);
+
+        char[] latText = ("DRAW COST: MAX-5:" + maxlatency + ", AVG:" + avglatency).toCharArray();
+        canvas.drawText(latText, 0, latText.length, 100f, 140f, _textPaint);
     }
 
     public synchronized void frameDrop() {
