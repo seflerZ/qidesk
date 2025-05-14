@@ -48,7 +48,6 @@ import android.os.Handler;
 import android.os.SystemClock;
 import android.provider.Settings;
 import android.text.ClipboardManager;
-import android.text.TextPaint;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -109,6 +108,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Timer;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import javax.security.auth.login.LoginException;
 
@@ -272,7 +272,9 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             }
         }
 
-        drawWorker = new DrawWorker();
+        if (!isTouchpad()) {
+            drawWorker = new DrawWorker();
+        }
 
         surfaceHolder = getHolder();
         surfaceHolder.addCallback(this);
@@ -333,6 +335,9 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
     @Override
     public void surfaceChanged(@NonNull SurfaceHolder holder, int format, int width, int height) {
+        if (!outDisplay && touchpad) {
+            drawTouchpadHint();
+        }
     }
 
     @Override
@@ -1746,14 +1751,18 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         return bitmapData.mbitmap;
     }
 
-    private class DrawWorker {
+    private class DrawWorker implements Runnable {
         private FpsCounter fpsCounter;
         private long lastDraw;
         private Thread thread;
+        private LinkedBlockingQueue<DrawTask> queue = new LinkedBlockingQueue<DrawTask>();
 
         public DrawWorker() {
-//            fpsCounter = new FpsCounter();
+            fpsCounter = new FpsCounter();
             lastDraw = System.currentTimeMillis();
+
+            thread = new Thread(this, "DrawWorker");
+            thread.start();
         }
 
         public void count() {
@@ -1762,36 +1771,44 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             }
         }
 
-        public void draw(DrawTask task) {
-            Canvas canvas = null;
-            try {
-                lastDraw = System.currentTimeMillis();
+        public void addTask(DrawTask task) {
+            queue.add(task);
+        }
 
-                if (System.currentTimeMillis() - task.getInTimeMs() > 8) {
-                    // drop frame, lagging
-                    fpsCounter.finish(task.getInTimeMs());
-                    fpsCounter.frameDrop();
-                    return;
-                }
+        @Override
+        public void run() {
+            while (true) {
+                Canvas canvas = null;
+                try {
+                    DrawTask task = queue.take();
 
-                canvas = surfaceHolder.lockHardwareCanvas();
-                canvas.setMatrix(scaler.getMatrix());
-                canvas.translate((-absoluteXPosition), (-absoluteYPosition));
+//                    lastDraw = System.currentTimeMillis();
 
-                canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
+                    if (System.currentTimeMillis() - task.getInTimeMs() > 13) {
+                        // drop frame, lagging
+                        fpsCounter.finish(task.getInTimeMs());
+                        fpsCounter.frameDrop();
+                        continue;
+                    }
 
-                bitmapData.drawable.setClipRect(task.getDirtyRect());
-                bitmapData.drawable.draw(canvas);
+                    canvas = surfaceHolder.lockHardwareCanvas();
+                    canvas.setMatrix(scaler.getMatrix());
+                    canvas.translate((-absoluteXPosition), (-absoluteYPosition));
 
-                if (fpsCounter != null && task != null) {
-                    fpsCounter.finish(task.getInTimeMs());
-                    fpsCounter.drawFps(canvas);
-                }
-            } catch (Exception e) {
+                    canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
 
-            } finally {
-                if (canvas != null) {
-                    surfaceHolder.unlockCanvasAndPost(canvas);
+                    bitmapData.drawable.draw(canvas);
+
+                    if (fpsCounter != null && task != null) {
+                        fpsCounter.finish(task.getInTimeMs());
+                        fpsCounter.drawFps(canvas);
+                    }
+                } catch (Exception e) {
+
+                } finally {
+                    if (canvas != null) {
+                        surfaceHolder.unlockCanvasAndPost(canvas);
+                    }
                 }
             }
         }
@@ -1809,7 +1826,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     }
 
     public void reDraw(DrawTask drawTask) {
-        if (drawTask.isCountFps() && drawWorker.isShowFps()) {
+        if (drawTask.isCount() && drawWorker.isShowFps()) {
             drawWorker.count();
         }
 
@@ -1822,7 +1839,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 //        float shiftedX = x - shiftX;
 //        float shiftedY = y - shiftY;
 
-        drawWorker.draw(drawTask);
+        drawWorker.addTask(drawTask);
     }
 
     /**
@@ -2235,6 +2252,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                     float textWidth = paint.measureText(text);
                     float x = (canvas.getWidth() - textWidth) / 2f;
 
+                    canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
                     canvas.drawText(text,  x, canvas.getHeight() / 2, paint);
                 }
             }

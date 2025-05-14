@@ -58,7 +58,7 @@ public class FpsCounter {
         char[] text = ("FPS:" + lst + ", AVG:" + avg).toCharArray();
         canvas.drawText(text, 0, text.length, 100f, 100f, _textPaint);
 
-        char[] latText = ("DRAW COST: MAX-5=" + maxlatency + ", AVG=" + avglatency).toCharArray();
+        char[] latText = ("DRAW COST: MAX-5:" + maxlatency + ", AVG:" + avglatency).toCharArray();
         canvas.drawText(latText, 0, latText.length, 100f, 140f, _textPaint);
 
         reset();
