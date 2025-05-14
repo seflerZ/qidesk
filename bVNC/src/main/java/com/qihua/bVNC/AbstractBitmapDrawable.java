@@ -103,6 +103,14 @@ public class AbstractBitmapDrawable extends DrawableContainer {
         oldSoftCursor.recycle();
     }
 
+    public void setClipRect(Rect clipRect) {
+        this.clipRect = clipRect;
+    }
+
+    public Rect getClipRect() {
+        return clipRect;
+    }
+
     /* (non-Javadoc)
      * @see android.graphics.drawable.DrawableContainer#getIntrinsicHeight()
      */
