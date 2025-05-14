@@ -522,10 +522,10 @@ public class RdpCommunicator extends RfbConnectable implements RdpKeyboardMapper
         DrawTask drawTask = new DrawTask(x, y, width, height, true);
 
         LibFreeRDP.updateGraphics(session.getInstance(), bitmap
-                , x
-                , y
-                , width
-                , height);
+                , 0
+                , 0
+                , bitmap.getWidth()
+                , bitmap.getHeight());
 
         viewable.reDraw(drawTask);
     }

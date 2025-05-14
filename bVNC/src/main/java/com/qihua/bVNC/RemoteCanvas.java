@@ -1758,7 +1758,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         private LinkedBlockingQueue<DrawTask> queue = new LinkedBlockingQueue<DrawTask>();
 
         public DrawWorker() {
-            fpsCounter = new FpsCounter();
+//            fpsCounter = new FpsCounter();
             lastDraw = System.currentTimeMillis();
 
             thread = new Thread(this, "DrawWorker");
@@ -1784,11 +1784,15 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
 //                    lastDraw = System.currentTimeMillis();
 
-                    if (System.currentTimeMillis() - task.getInTimeMs() > 13) {
+                    if (System.currentTimeMillis() - task.getInTimeMs() > 16) {
                         // drop frame, lagging
                         fpsCounter.finish(task.getInTimeMs());
                         fpsCounter.frameDrop();
                         continue;
+                    }
+
+                    if (isShowFps()) {
+                        fpsCounter.count();
                     }
 
                     canvas = surfaceHolder.lockHardwareCanvas();
@@ -1826,10 +1830,6 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     }
 
     public void reDraw(DrawTask drawTask) {
-        if (drawTask.isCount() && drawWorker.isShowFps()) {
-            drawWorker.count();
-        }
-
         if (progressDialog != null && progressDialog.isShowing()) {
             progressDialog.dismiss();
         }
