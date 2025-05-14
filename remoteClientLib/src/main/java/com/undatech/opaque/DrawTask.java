@@ -1,20 +1,20 @@
 package com.undatech.opaque;
 
+import android.graphics.Bitmap;
 import android.graphics.Rect;
 
 public class DrawTask {
     private Rect dirtyRect;
-    private boolean countFps;
+    private boolean count;
     private long inTimeMs;
-
     public DrawTask(int x, int y, int width, int height) {
         this(x, y, width, height, false);
     }
 
-    public DrawTask(int x, int y, int width, int height, boolean countFps) {
+    public DrawTask(int x, int y, int width, int height, boolean count) {
         this.dirtyRect = new Rect(x, y, x + width, y + height);
 
-        this.countFps = countFps;
+        this.count = count;
         inTimeMs = System.currentTimeMillis();
     }
 
@@ -22,8 +22,8 @@ public class DrawTask {
         return inTimeMs;
     }
 
-    public boolean isCountFps() {
-        return countFps;
+    public boolean isCount() {
+        return count;
     }
 
     public Rect getDirtyRect() {

@@ -86,6 +86,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     protected float lastX = 0;
     protected float lastY = 0;
     protected boolean thirdPointerWasDown = false;
+    protected boolean thirdPointerGesture = false;
+
     protected RemotePointer pointer;
     // This is the initial "focal point" of the gesture (between the two fingers).
     float xInitialFocus;
@@ -691,24 +693,23 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
         // 当手势层可见时，直接转发事件，这样可以无缝将触摸事件转至手势层
         if (gestureOverlay.getVisibility() == View.VISIBLE) {
-            if (pointerID > 0) {
+            // for three pointer movement
+            if (pointerID > 0 && action != MotionEvent.ACTION_UP) {
                 return true;
             }
 
-            // 转换坐标到手势层的局部坐标系
-            float x = e.getX(0) - gestureOverlay.getLeft();
-            float y = e.getY(0) - gestureOverlay.getTop();
             MotionEvent translatedEvent = MotionEvent.obtain(
                     e.getDownTime(),
                     e.getEventTime(),
                     e.getAction(),
-                    x,
-                    y,
+                    e.getX(),
+                    e.getY(),
                     e.getMetaState()
             );
 
             boolean handled = gestureOverlay.dispatchTouchEvent(translatedEvent);
             translatedEvent.recycle();
+
             return handled;
         }
 
@@ -736,6 +737,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                         secondPointerWasDown = false;
                         // Permit right-clicking again.
                         thirdPointerWasDown = false;
+                        thirdPointerGesture = false;
                         // Cancel any effect of scaling having "just finished" (e.g. ignoring scrolling).
                         scalingJustFinished = false;
                         // Cancel drag modes and scrolling.
@@ -840,6 +842,32 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                             GeneralUtils.debugLog(debugLogging, TAG, "onTouchEvent: ACTION_MOVE in a drag mode, moving mouse with button down");
                             break;
                         }
+
+                        if (thirdPointerWasDown
+                                && (Math.abs(e.getX() - dragX) > 30 || Math.abs(e.getY() - dragY) > 30)) {
+                            thirdPointerGesture = true;
+                            // Here we mock a ACTION_DOWN event for gestureOverlayView to transmit the touch events to it flawlessly
+                            // further touch events will be transmitted in method onTouchEvent.
+                            gestureOverlay = activity.findViewById(R.id.gestureOverlay);
+                            gestureOverlay.setVisibility(View.VISIBLE);
+
+                            // 获取当前触摸坐标（需转换为手势层坐标系）
+                            float x = e.getRawX() - gestureOverlay.getLeft();
+                            float y = e.getRawY() - gestureOverlay.getTop();
+
+                            // 生成并分发模拟事件
+                            MotionEvent downEvent = MotionEvent.obtain(
+                                    SystemClock.uptimeMillis(),
+                                    SystemClock.uptimeMillis(),
+                                    MotionEvent.ACTION_DOWN,
+                                    x,
+                                    y,
+                                    0
+                            );
+                            gestureOverlay.dispatchTouchEvent(downEvent);
+                            downEvent.recycle();
+                        }
+
                         break;
                     case MotionEvent.ACTION_UP:
                         edgeLeft.setVisibility(View.INVISIBLE);
@@ -883,7 +911,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                         break;
                     case MotionEvent.ACTION_POINTER_UP:
                     case MotionEvent.ACTION_UP:
-                        if (!inScaling && thirdPointerWasDown) {
+                        if (!inScaling && thirdPointerWasDown && !thirdPointerGesture) {
                             activity.toggleKeyboard(null);
 
                             thirdPointerWasDown = false;
