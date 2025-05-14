@@ -1780,6 +1780,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
                 canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
 
+                bitmapData.drawable.setClipRect(task.getDirtyRect());
                 bitmapData.drawable.draw(canvas);
 
                 if (fpsCounter != null && task != null) {

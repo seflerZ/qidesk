@@ -28,11 +28,6 @@ import android.graphics.Paint;
 import com.undatech.opaque.RfbConnectable;
 
 class UltraCompactBitmapData extends AbstractBitmapData {
-    /**
-     * Multiply this times total number of pixels to get estimate of process size with all buffers plus
-     * safety factor
-     */
-    static final int CAPACITY_MULTIPLIER = 4;
     private final static String TAG = "UltraCompactBitmapData";
     Bitmap.Config cfg = Bitmap.Config.RGB_565;
 
@@ -156,8 +151,6 @@ class UltraCompactBitmapData extends AbstractBitmapData {
         }
     }
 
-    private long last = 0;
-
     @Override
     void syncScroll() {
         // Don't need anything here either
@@ -171,11 +164,8 @@ class UltraCompactBitmapData extends AbstractBitmapData {
 
         @Override
         public void draw(Canvas canvas) {
-            try {
-                canvas.drawBitmap(data.mbitmap, 0, 0, _defaultPaint);
-                canvas.drawBitmap(softCursor, cursorRect.left, cursorRect.top, _defaultPaint);
-            } catch (Throwable ignored) {
-            }
+            canvas.drawBitmap(data.mbitmap, 0, 0, _defaultPaint);
+            canvas.drawBitmap(softCursor, cursorRect.left, cursorRect.top, _defaultPaint);
         }
     }
 }
