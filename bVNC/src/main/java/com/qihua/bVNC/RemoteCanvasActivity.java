@@ -48,6 +48,7 @@ import android.os.Handler;
 import android.os.PersistableBundle;
 import android.os.StrictMode;
 import android.os.SystemClock;
+import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.util.Log;
 import android.view.Display;
@@ -939,7 +940,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 
     public void sendShortVibration() {
         if (myVibrator != null) {
-            myVibrator.vibrate(Constants.SHORT_VIBRATION);
+            myVibrator.vibrate(VibrationEffect.createOneShot(25, 80));
         } else {
             Log.i(TAG, "Device cannot vibrate, not sending vibration");
         }
