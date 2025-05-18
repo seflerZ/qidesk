@@ -68,7 +68,9 @@ public class RemoteVncPointer extends RemotePointer {
             return;
         }
 
-        pointerMask = MOUSE_BUTTON_SCROLL_UP | POINTER_DOWN_MASK;
+        pointerMask = MOUSE_BUTTON_SCROLL_UP;
+        sendPointerEvent(x, y, metaState, false);
+        pointerMask = MOUSE_BUTTON_NONE;
         sendPointerEvent(x, y, metaState, false);
 
         lastScrollMs = System.currentTimeMillis();
@@ -80,7 +82,10 @@ public class RemoteVncPointer extends RemotePointer {
             // avoid too fast scrolling
             return;
         }
+
         pointerMask = MOUSE_BUTTON_SCROLL_DOWN | POINTER_DOWN_MASK;
+        sendPointerEvent(x, y, metaState, false);
+        pointerMask = MOUSE_BUTTON_NONE;
         sendPointerEvent(x, y, metaState, false);
 
         lastScrollMs = System.currentTimeMillis();
@@ -88,14 +93,32 @@ public class RemoteVncPointer extends RemotePointer {
 
     @Override
     public void scrollLeft(int x, int y, int speed, int metaState) {
+        if (System.currentTimeMillis() - lastScrollMs < 200) {
+            // avoid too fast scrolling
+            return;
+        }
+
         pointerMask = MOUSE_BUTTON_SCROLL_LEFT | POINTER_DOWN_MASK;
         sendPointerEvent(x, y, metaState, false);
+        pointerMask = MOUSE_BUTTON_NONE;
+        sendPointerEvent(x, y, metaState, false);
+
+        lastScrollMs = System.currentTimeMillis();
     }
 
     @Override
     public void scrollRight(int x, int y, int speed, int metaState) {
+        if (System.currentTimeMillis() - lastScrollMs < 200) {
+            // avoid too fast scrolling
+            return;
+        }
+
         pointerMask = MOUSE_BUTTON_SCROLL_RIGHT | POINTER_DOWN_MASK;
         sendPointerEvent(x, y, metaState, false);
+        pointerMask = MOUSE_BUTTON_NONE;
+        sendPointerEvent(x, y, metaState, false);
+
+        lastScrollMs = System.currentTimeMillis();
     }
 
     @Override
