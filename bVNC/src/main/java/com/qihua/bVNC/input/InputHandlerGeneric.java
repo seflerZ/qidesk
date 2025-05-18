@@ -115,7 +115,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     // This is how far the swipe has to travel before a swipe event is generated.
     float startSwipeDist = 5f;
     boolean canSwipeToMove = false;
-    float baseSwipeDist = 10f;
+    float baseSwipeDist = 8f;
     // This is how far from the top and bottom edge to detect immersive swipe.
     float immersiveSwipeRatio = 0.09f;
     boolean immersiveSwipeY = false;
@@ -966,13 +966,12 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                 // to form a double click. note that the first click is performed during the drag
                 if (totalDragX < 5 && totalDragY < 5) {
                     pointer.leftButtonDown(getX(e), getY(e), meta);
+                    SystemClock.sleep(50);
+                    pointer.releaseButton(getX(e), getY(e), meta);
 
                     if (touchpadFeedback) {
                         activity.sendShortVibration();
                     }
-
-                    SystemClock.sleep(50);
-                    pointer.releaseButton(getX(e), getY(e), meta);
                 }
             }
         }
