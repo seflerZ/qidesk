@@ -13,7 +13,6 @@ import org.jcodec.codecs.h264.H264Utils;
 import org.jcodec.codecs.h264.io.model.SeqParameterSet;
 import org.jcodec.codecs.h264.io.model.VUIParameters;
 
-import com.limelight.BuildConfig;
 import com.limelight.LimeLog;
 import com.limelight.R;
 import com.limelight.nvstream.av.video.VideoDecoderRenderer;
@@ -1837,7 +1836,8 @@ public class MediaCodecDecoderRenderer extends VideoDecoderRenderer implements C
 
     static class RendererException extends RuntimeException {
         private static final long serialVersionUID = 8985937536997012406L;
-        protected static final String DELIMITER = BuildConfig.DEBUG ? "\n" : " | ";
+//        protected static final String DELIMITER = BuildConfig.DEBUG ? "\n" : " | ";
+        protected static final String DELIMITER = " | ";
 
         private String text;
 
