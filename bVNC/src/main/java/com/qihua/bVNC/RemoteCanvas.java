@@ -86,6 +86,7 @@ import com.tigervnc.rfb.AuthFailureException;
 import com.undatech.opaque.Connection;
 import com.undatech.opaque.DrawTask;
 import com.undatech.opaque.MessageDialogs;
+import com.undatech.opaque.NvCommunicator;
 import com.undatech.opaque.RdpCommunicator;
 import com.undatech.opaque.RemoteClientLibConstants;
 import com.undatech.opaque.RfbConnectable;
@@ -126,10 +127,14 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     // Connection parameters
     public Connection connection;
     public SSHConnection sshConnection = null;
-    // VNC protocol connection
+
+    // The communicators for different protocols
     public RfbConnectable rfbconn = null;
     public RfbProto rfb = null;
     public SpiceCommunicator spicecomm = null;
+    private RdpCommunicator rdpcomm = null;
+    private NvCommunicator nvcomm = null;
+
     public boolean maintainConnection = true;
     public AbstractBitmapData bitmapData;
     // Progress dialog shown at connection time.
@@ -231,7 +236,6 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         }
     };
 
-    private RdpCommunicator rdpcomm = null;
     // Internal bitmap data
     private int capacity;
 
