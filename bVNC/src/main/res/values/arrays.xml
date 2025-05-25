@@ -26,7 +26,7 @@
     <string name="pref_longpress_type_left">Left Button</string>
     <string name="pref_longpress_type_middle">Middle Button</string>
     <string name="pref_longpress_type_right">Right Button</string>
-    <string name="pref_longpress_type_gesture">Active Gesture</string>
+    <string name="pref_longpress_type_gesture">Activate Gesture</string>
 
     <array name="pref_touchpad_long_press_values">
         <item>@string/pref_longpress_type_left_value</item>

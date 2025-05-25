@@ -888,9 +888,9 @@ Below that is where you configure your connection.
 
     <string name="touchpad_control_pref">Touchpad Customization</string>
     <string name="touchpad_edge_wheel">Use Screen Edges as Wheels</string>
-    <string name="touchpad_touch_feedback">Enable click feedback</string>
+    <string name="touchpad_touch_feedback">Enable Click Feedback</string>
     <string name="touchpad_edge_wheel_hint">Swipe to scroll and click to call soft keyboard. Disable automatically when connected to external monitor.</string>
-    <string name="touchpad_cursor_speed">Cursor speed</string>
+    <string name="touchpad_cursor_speed">Cursor Speed</string>
 
     <string name="extrakeys_pref">Extra Key Customization</string>
     <string name="pref_extrakeys_vertical_pref">Configs for Vertical Screen</string>
@@ -899,7 +899,7 @@ Below that is where you configure your connection.
     <string name="pref_extrakeys_parsing_error">Error parsing extra keys config, using default</string>
 
     <string name="theme_mode">Theme Settings</string>
-    <string name="theme_mode_restart">Need restart the application to take effect.</string>
+    <string name="theme_mode_restart">Restart the application to take effect.</string>
     <string name="use_as_touchpad">USE AS TOUCHPAD</string>
 
     <string name="delete_gesture">Delete Gesture</string>
