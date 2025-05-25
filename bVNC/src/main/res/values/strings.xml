@@ -92,7 +92,7 @@
     <string name="ad_donate_text_spice"></string>
 
     <string name="address_caption">VNC Server</string>
-    <string name="address_caption_hint">VNC Server</string>
+    <string name="address_caption_hint">Server Domain or IP</string>
     <string name="address_caption_hint_tunneled">VNC Server</string>
     <string name="address_caption_ssh">SSH Server</string>
     <string name="address_caption_ssh_hint">SSH Server</string>
@@ -527,6 +527,7 @@ If you are looking for a quick performance boost, try setting the Color mode to 
     <string-array name="rdp_connection_type">
         <item>@string/connection_type_rdp</item>
         <item>@string/connection_type_vnc</item>
+        <item>@string/connection_type_nvstream</item>
     </string-array>
     <string name="rdp_descript_geom">Remote Desktop Size (WxH)</string>
     <string name="rdp_domain_hint">RDP Domain(Optional)</string>
@@ -770,8 +771,8 @@ When you add or edit a connection, you will see a connection configuration page.
     <string name="tap_enable">Enable</string>
 
     <string name="username_caption">VNC User</string>
-    <string name="username_hint">UltraVNC MS Logon Username</string>
-    <string name="username_hint_optional">VNC Username (optional)</string>
+    <string name="username_hint">Remote Login Username</string>
+    <string name="username_hint_optional">Username (optional)</string>
     <string name="username_hint_ssh">SSH Username</string>
     <string name="username_hint_vencrypt">VNC Username</string>
     <string name="verification_code">Verification Code</string>
@@ -930,4 +931,6 @@ Below that is where you configure your connection.
     <string name="delete">Delete</string>
     <string name="saved">Saved</string>
     <string name="save_fail">Save Failed</string>
+
+    <string name="connection_type_nvstream">NvStream(Sunshine)</string>
 </resources>

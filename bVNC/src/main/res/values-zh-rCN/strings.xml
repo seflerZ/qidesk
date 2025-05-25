@@ -100,7 +100,7 @@
     <string name="ad_donate_text_rdp">Pro版本的aRDP已对应声音重定向！</string>
     <string name="ad_donate_text_spice">Pro版本的aSPICE已对应USB重定向！只要在连接之前安装OTG电缆就行了。</string>
     <string name="address_caption">VNC服务器</string>
-    <string name="address_caption_hint">VNC服务器</string>
+    <string name="address_caption_hint">服务器域名或IP地址</string>
     <string name="address_caption_hint_tunneled">VNC服务器</string>
     <string name="address_caption_ssh">SSH服务器</string>
     <string name="address_caption_ssh_hint">SSH服务器</string>
@@ -472,6 +472,7 @@ bVNC对应的功能如下：
     <string-array name="rdp_connection_type">
         <item>@string/connection_type_rdp</item>
         <item>@string/connection_type_vnc</item>
+        <item>@string/connection_type_nvstream</item>
     </string-array>
     <string name="rdp_descript_geom">远程桌面大小（WxH）</string>
     <string name="rdp_domain_hint">RDP 域（可选）</string>
@@ -778,7 +779,7 @@ aSPICE对应的功能如下：
     <string name="tap_disable">无效</string>
     <string name="tap_enable">有效</string>
     <string name="username_caption">VNC用户</string>
-    <string name="username_hint">UltraVNC MS登录用户名</string>
+    <string name="username_hint">登录用户名</string>
     <string name="username_hint_optional">VNC用户名（可选）</string>
     <string name="username_hint_ssh">SSH用户名</string>
     <string name="username_hint_vencrypt">VNC用户名</string>
@@ -917,4 +918,6 @@ aSPICE对应的功能如下：
     <string name="gesture_key_required">请输入手势触发的键值</string>
 
     <string name="gesture_copied">手势已复制</string>
+
+    <string name="connection_type_nvstream">NvStream(Sunshine)</string>
 </resources>

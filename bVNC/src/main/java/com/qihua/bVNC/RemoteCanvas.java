@@ -472,6 +472,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
         isVnc = conn.getConnectionType() == Constants.CONN_TYPE_VNC;
         isRdp = conn.getConnectionType() == Constants.CONN_TYPE_RDP;
+        isNvStream  = conn.getConnectionType() == Constants.CONN_TYPE_NVSTREAM;
+        isSpice = false;
 
         try {
             if (isSpice) {
@@ -480,6 +482,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                 initializeRdpConnection();
             } else if (isVnc) {
                 initializeVncConnection();
+            } else if (isNvStream) {
+                initializeNvStreamConnection();
             } else {
                 throw new Exception("unknown connection type");
             }
@@ -517,6 +521,9 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         }
 
         return pointer;
+    }
+
+    private void initializeNvStreamConnection() {
     }
 
     private void handleUncaughtException(Throwable e) {

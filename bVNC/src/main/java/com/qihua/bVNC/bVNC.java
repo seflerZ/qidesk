@@ -133,28 +133,18 @@ public class bVNC extends MainConfiguration {
                     setVisibilityOfSshWidgets(View.GONE);
                     setVisibilityOfUltraVncWidgets(View.GONE);
                     ipText.setHint(R.string.address_caption_hint);
-                    textUsername.setHint(R.string.username_hint_optional);
-                } else if (selectedConnType == Constants.CONN_TYPE_SSH) {
-                    setVisibilityOfSshWidgets(View.VISIBLE);
-                    setVisibilityOfUltraVncWidgets(View.GONE);
-                    if (ipText.getText().toString().equals(""))
-                        ipText.setText("localhost");
-                    ipText.setHint(R.string.address_caption_hint_tunneled);
-                    textUsername.setHint(R.string.username_hint_optional);
+                    textUsername.setHint(R.string.username_hint);
                 } else if (selectedConnType == Constants.CONN_TYPE_VNC) {
                     setVisibilityOfSshWidgets(View.GONE);
                     setVisibilityOfUltraVncWidgets(View.VISIBLE);
                     ipText.setHint(R.string.address_caption_hint);
                     textUsername.setHint(R.string.username_hint);
-                } else if (selectedConnType == Constants.CONN_TYPE_VENCRYPT) {
+                } else if (selectedConnType == Constants.CONN_TYPE_NVSTREAM) {
                     setVisibilityOfSshWidgets(View.GONE);
-                    textUsername.setVisibility(View.VISIBLE);
-                    repeaterEntry.setVisibility(View.GONE);
-                    if (passwordText.getText().toString().equals(""))
-                        checkboxKeepPassword.setChecked(false);
                     ipText.setHint(R.string.address_caption_hint);
-                    textUsername.setHint(R.string.username_hint_vencrypt);
+                    textUsername.setVisibility(View.GONE);
                 }
+
                 updateViewFromSelected();
             }
 
