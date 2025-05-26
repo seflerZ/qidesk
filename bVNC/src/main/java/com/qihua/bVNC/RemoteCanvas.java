@@ -254,6 +254,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     };
 
     private boolean touchpad = false;
+    private Activity activity;
 
     /**
      * Constructor used by the inflation apparatus
@@ -334,6 +335,14 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     public void surfaceCreated(@NonNull SurfaceHolder holder) {
         if (!outDisplay && touchpad) {
             drawTouchpadHint();
+        }
+
+        try {
+            if (isNvStream) {
+                startNvStreamConnection(holder);
+            }
+        } catch (Exception e) {
+            Utils.showFatalErrorMessage(getContext(), e.getMessage());
         }
     }
 
@@ -523,9 +532,6 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         return pointer;
     }
 
-    private void initializeNvStreamConnection() {
-    }
-
     private void handleUncaughtException(Throwable e) {
         if (maintainConnection) {
             Log.e(TAG, e.toString());
@@ -619,6 +625,30 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         spicecomm.connectSpice(address, Integer.toString(port), Integer.toString(tport), connection.getPassword(),
                 connection.getCaCertPath(), null, // TODO: Can send connection.getCaCert() here instead
                 connection.getCertSubject(), connection.getEnableSound());
+    }
+
+
+    private void initializeNvStreamConnection() throws Exception {
+        Log.i(TAG, "initializeRdpConnection: Initializing NvStream connection.");
+
+        nvcomm = new NvCommunicator(activity);
+
+//        pointer = new RemoteNvStreamPointer(nvcomm, RemoteCanvas.this, handler, App.debugLog);
+//        keyboard = new RemoteNvStreamKeyboard(nvcomm, RemoteCanvas.this, handler, App.debugLog);
+    }
+
+    private void startNvStreamConnection(SurfaceHolder surfaceHolder) throws Exception {
+        Log.i(TAG, "startNvStreamConnection: Starting NvStream connection.");
+
+        String appName = "testApp";
+        int appId = 12345;
+        byte[] certData = connection.getCaCert().getBytes();
+
+        nvcomm.setConnectionParameters(getAddress(), getRemoteProtocolPort(connection.getPort()),
+                getRemoteProtocolPort(connection.getTlsPort()),
+                connection.getUserName(), appName,
+                appId, certData);
+        nvcomm.connect(surfaceHolder);
     }
 
     /**
@@ -1760,6 +1790,10 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     @Override
     public Bitmap getBitmap() {
         return bitmapData.mbitmap;
+    }
+
+    public void setActivity(Activity activity) {
+        this.activity = activity;
     }
 
     private class DrawWorker implements Runnable {

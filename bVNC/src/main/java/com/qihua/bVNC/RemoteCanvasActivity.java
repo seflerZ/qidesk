@@ -287,6 +287,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 
         canvas.setOutDisplay(canvas != touchpad);
         canvas.setTouchpad(false);
+        canvas.setActivity(this);
 
         StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
         StrictMode.setThreadPolicy(policy);

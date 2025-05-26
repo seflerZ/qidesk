@@ -2,14 +2,8 @@ package com.undatech.opaque;
 
 import android.app.Activity;
 import android.content.Context;
-import android.content.pm.PackageManager;
-import android.graphics.Point;
-import android.os.Build;
-import android.view.Display;
 import android.view.SurfaceHolder;
-import android.view.WindowManager;
 
-import com.limelight.Game;
 import com.limelight.LimeLog;
 import com.limelight.binding.PlatformBinding;
 import com.limelight.binding.audio.AndroidAudioRenderer;
@@ -22,7 +16,6 @@ import com.limelight.nvstream.NvConnectionListener;
 import com.limelight.nvstream.StreamConfiguration;
 import com.limelight.nvstream.http.ComputerDetails;
 import com.limelight.nvstream.http.NvApp;
-import com.limelight.nvstream.http.NvHTTP;
 import com.limelight.nvstream.jni.MoonBridge;
 import com.limelight.preferences.GlPreferences;
 import com.limelight.preferences.PreferenceConfiguration;
@@ -44,8 +37,8 @@ public class NvCommunicator implements NvConnectionListener, PerfOverlayListener
         this.attemptedConnection = false;
     }
 
-    public void init(String host, int port, int httpsPort,
-                        String uniqueId, String appName, int appId, byte[] derCertData) throws Exception {
+    public void setConnectionParameters(String host, int port, int httpsPort,
+                                        String uniqueId, String appName, int appId, byte[] derCertData) {
         app = new NvApp(appName != null ? appName : "app", appId, false);
         Context context = this.activity.getApplicationContext();
 
@@ -153,7 +146,7 @@ public class NvCommunicator implements NvConnectionListener, PerfOverlayListener
                 PlatformBinding.getCryptoProvider(context), serverCert);
     }
 
-    public void start(SurfaceHolder surfaceHolder) {
+    public void connect(SurfaceHolder surfaceHolder) {
         if (!attemptedConnection) {
             attemptedConnection = true;
             decoderRenderer.setRenderTarget(surfaceHolder);
