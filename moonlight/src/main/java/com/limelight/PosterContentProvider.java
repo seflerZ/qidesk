@@ -17,7 +17,7 @@ import java.util.List;
 public class PosterContentProvider extends ContentProvider {
 
 
-    public static final String AUTHORITY = "poster." + BuildConfig.APPLICATION_ID;
+    public static final String AUTHORITY = "poster.qihua";
     public static final String PNG_MIME_TYPE = "image/png";
     public static final int APP_ID_PATH_INDEX = 2;
     public static final int COMPUTER_UUID_PATH_INDEX = 1;
