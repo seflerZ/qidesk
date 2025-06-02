@@ -41,6 +41,7 @@
     <string name="hide_toolbar">Hide toolbar</string>
     <string name="manage_custom_ca_title">Manage custom CA</string>
     <string name="save_button">Save</string>
+    <string name="send_pin_to_pair">Pair</string>
     <string name="select_vm_title">Select Virtual Machine</string>
     <string name="vv_file_not_found">The .vv file was not found!</string>
     <string name="vv_file_error">The .vv file is either missing or corrupt!</string>
@@ -933,4 +934,15 @@ Below that is where you configure your connection.
     <string name="save_fail">Save Failed</string>
 
     <string name="connection_type_nvstream">NvStream(Sunshine)</string>
+
+    <!-- NVStream specific values -->
+    <string name="title_add_pc">Add PC Manually</string>
+    <string name="msg_add_pc">Connecting to the PC…</string>
+    <string name="addpc_fail">Unable to connect to the specified computer. Make sure the required ports are allowed through the firewall.</string>
+    <string name="addpc_success">Successfully added computer</string>
+    <string name="addpc_unknown_host">Unable to resolve PC address. Make sure you didn\'t make a typo in the address.</string>
+    <string name="addpc_enter_ip">You must enter an IP address</string>
+    <string name="addpc_wrong_sitelocal">That address doesn\'t look right. You must use your router\'s public IP address for streaming over the Internet.</string>
+    <string name="conn_error_title">Connection Error</string>
+    <string name="nettest_text_blocked">Your device\'s current network connection is blocking Moonlight. Streaming over the Internet may not work while connected to this network.</string>
 </resources>

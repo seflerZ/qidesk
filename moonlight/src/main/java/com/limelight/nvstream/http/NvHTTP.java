@@ -46,7 +46,6 @@ import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
 
-import com.limelight.BuildConfig;
 import com.limelight.LimeLog;
 import com.limelight.nvstream.ConnectionContext;
 import com.limelight.nvstream.http.PairingManager.PairState;
@@ -71,7 +70,7 @@ public class NvHTTP {
     public static final int READ_TIMEOUT = 7000;
 
     // Print URL and content to logcat on debug builds
-    private static boolean verbose = BuildConfig.DEBUG;
+    private static boolean verbose = false;
 
     private HttpUrl baseUrlHttp;
 
