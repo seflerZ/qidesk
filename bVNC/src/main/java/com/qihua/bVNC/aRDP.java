@@ -593,7 +593,7 @@ public class aRDP extends MainConfiguration {
 
     }
 
-    protected void nvStreamPair() {
+    public void nvStreamPair(View view) {
         TextView ipText = (TextView)findViewById(R.id.textIP);
         TextView portText = (TextView)findViewById(R.id.textPORT);
         computersToAdd.add(ipText +  ":" + portText);

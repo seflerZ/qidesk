@@ -5,7 +5,7 @@ android {
 
     defaultConfig {
         targetSdkVersion targetApi
-        minSdkVersion project.getProperties().get("SDK_VERSION")
+        minSdkVersion minApi
         multiDexEnabled true
         applicationId "com.qihua.rmt"
     }

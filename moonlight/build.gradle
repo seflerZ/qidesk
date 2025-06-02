@@ -5,14 +5,14 @@ plugins {
 
 android {
     ndkVersion "23.2.8568313"
+    compileSdkVersion compileApi
 
-    compileSdk 34
 
     namespace 'com.limelight'
 
     defaultConfig {
-        minSdk 16
-        targetSdk 34
+        minSdkVersion minApi
+        targetSdkVersion targetApi
 
         versionName "12.1"
         versionCode = 314
