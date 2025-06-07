@@ -484,7 +484,7 @@ build() {
         echo "Cerbero was previously built. Remove $(realpath CERBERO_BUILT_${1}) if you want to rebuild it."
         echo ; echo
     else
-        # Build GStreamer SDK
+        # Build cross compiler cerbero
         if git clone https://gitlab.freedesktop.org/gstreamer/cerbero
         then
             pushd cerbero
@@ -507,24 +507,19 @@ build() {
         cerbero/cerbero-uninstalled -c cerbero/config/cross-android-universal.cbc build \
           gstreamer-1.0 glib glib-networking libxml2 pixman libsoup openssl cairo json-glib gst-android-1.0 gst-plugins-bad-1.0 gst-plugins-good-1.0 gst-plugins-base-1.0 gst-plugins-ugly-1.0 gst-libav-1.0 spiceglue
 
-        echo "Copying spice-gtk header files that it does not install automatically"
-        SPICEDIR=$(ls -d1 cerbero/build/sources/android_universal/${gstarch}/spice-gtk-* | tail -n 1)
+#        echo "Copying spice-gtk header files that it does not install automatically"
+#        SPICEDIR=$(ls -d1 cerbero/build/sources/android_universal/${gstarch}/spice-gtk-* | tail -n 1)
 
         # Workaround for non-existent lib-pthread.la dpendency snaking its way into some of the libraries.
         sed -i 's/[^ ]*lib-pthread.la//' cerbero/build/dist/android_universal/*/lib/*la
 
         # Prepare gstreamer for current architecture
-        if [ ! -e "${gst}/lib/libglib-2.0.a" ] ; then
-            echo "Linking ../../cerbero/build/dist/android_universal/${gstarch} to ${gst}"
-            ln -sf "../../cerbero/build/dist/android_universal/${gstarch}" "${gst}"
-            ls -ld "${gst}"
-        fi
+#        if [ ! -e "${gst}/lib/libglib-2.0.a" ] ; then
+#            echo "Linking ../../cerbero/build/dist/android_universal/${gstarch} to ${gst}"
+#            ln -sf "../../cerbero/build/dist/android_universal/${gstarch}" "${gst}"
+#            ls -ld "${gst}"
+#        fi
 
-
-        for f in ${SPICEDIR}/config.h ${SPICEDIR}/_builddir/subprojects/spice-common/common ${SPICEDIR}/_builddir/config.h ${SPICEDIR}/tools/*.h ${SPICEDIR}/src/*.h ${SPICEDIR}/spice-common/common ${SPICEDIR}/subprojects/spice-common/common
-        do
-            rsync -a $f ${gst}/include/spice-1/ || true
-        done
         touch CERBERO_BUILT_${1}
     fi
 
@@ -581,6 +576,55 @@ fail_handler() {
     # Report failed command
     echo "Failed: $BASH_COMMAND (line $BASH_LINENO)"
     exit 1
+}
+
+build_moonlight() {
+
+    if [ -f MOONLIGHT_BUILT ]
+    then
+      echo ; echo
+      echo "Moonlight was previously built. Remove $(realpath FREERDP_BUILT) if you want to rebuild it."
+      echo ; echo
+      return
+    fi
+
+    pushd deps
+    basedir="$(pwd)"
+
+    missing_artifact="true"
+
+    if [ $missing_artifact == "true" ]
+    then
+        if [ ! -d ${moonlight_build}/.git/ ]
+        then
+            rm -rf ${moonlight_build}/
+            git clone ${moonlight_url}
+        fi
+
+        pushd ${moonlight_build}
+        git submodule update --init --recursive
+        git fetch
+        git checkout ${moonlight_ver}
+        git reset --hard
+
+        # Prepare the Moonlight project for use as a library
+#        cp "${basedir}/../moonlight_build.gradle" "${basedir}/moonlight-android/app/build.gradle"
+#        rm "${basedir}/moonlight-android/app/src/main/AndroidManifest.xml"
+
+        # link to native lib to start compile
+        rm -f "${basedir}/../../../jni/moonlight-core"
+        rm -f "${basedir}/../../../jni/evdev_reader"
+        ln -s "${basedir}/${moonlight_build}/app/src/main/jni/moonlight-core" "${basedir}/../../../jni/moonlight-core"
+        ln -s "${basedir}/${moonlight_build}/app/src/main/jni/evdev_reader" "${basedir}/../../../jni/evdev_reader"
+
+        export NDK_LIBS_OUT="${basedir}/../../../src/main/jniLibs"
+        ${ANDROID_NDK}/ndk-build -j 2
+
+        popd
+    fi
+
+    popd
+    touch MOONLIGHT_BUILT
 }
 
 build_freerdp() {
@@ -645,8 +689,6 @@ build_freerdp() {
         sed -i 's/implementationSdkVersion/compileSdkVersion/; s/.*rootProject.ext.versionName.*//; s/.*rootProject.ext.versionCode.*//; s/.*.*buildToolsVersion.*.*//; s/compile /implementation /; s/minSdkVersion .*/minSdkVersion 14/;' \
                client/Android/Studio/freeRDPCore/build.gradle
 
-        cp "${basedir}/../freerdp_AndroidManifest.xml" client/Android/Studio/freeRDPCore/src/main/AndroidManifest.xml
-
         echo "Installing android NDK ${freerdp_ndk_version} for FreeRDP build compatibility"
         export ANDROID_NDK=$(install_ndk ../../ ${freerdp_ndk_version})
         export OPENH264_NDK=$(install_ndk ../../ ${freerdp_openh264_ndk_version})
@@ -657,9 +699,6 @@ build_freerdp() {
         export CMAKE_PROGRAM=${CMAKE_PATH}/cmake
         ./scripts/android-build-freerdp.sh
 
-        # Prepare the FreeRDPCore project for use as a library
-        rm -f ../../../../../freeRDPCore
-        ln -s remoteClientLib/jni/libs/deps/${freerdp_build}/client/Android/Studio/freeRDPCore/ ../../../../../freeRDPCore
         popd
     fi
 
@@ -703,6 +742,7 @@ build)
     done
 
     build_freerdp
+    build_moonlight
 
 #    echo
 #    echo "Now you can run ndk-build if building aSPICE."

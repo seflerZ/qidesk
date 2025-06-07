@@ -144,7 +144,7 @@ public class RdpCommunicator extends RfbConnectable implements RdpKeyboardMapper
             sendModifierKeys(true);
         }
         LibFreeRDP.sendCursorEvent(session.getInstance(), x, y, pointerMask);
-        SystemClock.sleep(6);
+
         if ((pointerMask & RemotePointer.POINTER_DOWN_MASK) == 0) {
             sendModifierKeys(false);
         }

@@ -25,7 +25,7 @@ android {
     defaultConfig {
         targetSdkVersion targetApi
         minSdkVersion project.getProperties().get("SDK_VERSION")
-        ndk.abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86' ,'x86_64'
+        ndk.abiFilters 'arm64-v8a'
         multiDexEnabled true
     }
 
@@ -42,8 +42,7 @@ android {
 
     sourceSets.main {
         java.srcDirs += 'src/main/java'
-        java.srcDirs += 'java'
-        jniLibs.srcDirs += 'src/main/jniLibs'
+        jniLibs.srcDirs += 'src/main/jni'
     }
 
     packagingOptions {
@@ -53,12 +52,11 @@ android {
 
 dependencies {
     implementation project(':remoteClientLib:jni:libs:deps:FreeRDP:client:Android:Studio:freeRDPCore')
+    implementation project(":remoteClientLib:jni:libs:deps:moonlight-android:app")
+
     api 'com.android.support:multidex:1.0.3'
     implementation 'com.android.support:appcompat-v7:28.0.0'
     implementation 'org.apache.httpcomponents:httpcore:4.4.10'
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     implementation group: 'commons-validator', name: 'commons-validator', version: '1.7'
-
-    implementation project(':moonlight')
 }
-
