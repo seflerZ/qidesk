@@ -25,7 +25,7 @@ import android.view.MotionEvent;
 import com.qihua.bVNC.RemoteCanvas;
 import com.qihua.bVNC.RemoteCanvasActivity;
 import com.undatech.opaque.util.GeneralUtils;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 public class InputHandlerDirectDragPan extends InputHandlerGeneric {
     public static final String ID = "TOUCH_ZOOM_MODE_DRAG_PAN";

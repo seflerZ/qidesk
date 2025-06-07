@@ -42,7 +42,7 @@ import android.widget.ToggleButton;
 
 import com.qihua.bVNC.dialogs.AutoXCustomizeDialog;
 import com.qihua.bVNC.dialogs.RepeaterDialog;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 /**
  * bVNC is the Activity for setting up VNC connections.

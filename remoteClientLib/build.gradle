@@ -28,6 +28,9 @@ android {
         ndk.abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86' ,'x86_64'
         multiDexEnabled true
     }
+
+    namespace 'com.undatech.remoteClientLib'
+
     useLibrary 'org.apache.http.legacy'
 
     buildTypes {
@@ -40,28 +43,14 @@ android {
     sourceSets.main {
         java.srcDirs += 'src/main/java'
         java.srcDirs += 'java'
-        jni.srcDirs += 'jni'
         jniLibs.srcDirs += 'src/main/jniLibs'
     }
 
     packagingOptions {
         exclude 'META-INF/DEPENDENCIES'
     }
-    /*
-    externalNativeBuild {
-        ndkBuild {
-            path file('jni/Application.mk')
-            path file('jni/Android.mk')
-        }
-    }
-    */
+}
 
-}
-tasks.all { task ->
-    if (task.name.startsWith('compile') && task.name.endsWith('Ndk')) {
-        task.enabled = false
-    }
-}
 dependencies {
     implementation project(':remoteClientLib:jni:libs:deps:FreeRDP:client:Android:Studio:freeRDPCore')
     api 'com.android.support:multidex:1.0.3'
@@ -69,6 +58,7 @@ dependencies {
     implementation 'org.apache.httpcomponents:httpcore:4.4.10'
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     implementation group: 'commons-validator', name: 'commons-validator', version: '1.7'
+
     implementation project(':moonlight')
 }
 

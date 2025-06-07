@@ -4,7 +4,6 @@ plugins {
 }
 
 android {
-    ndkVersion "23.2.8568313"
     compileSdkVersion compileApi
 
 
@@ -43,18 +42,12 @@ android {
 
             buildConfigField "boolean", "ROOT_BUILD", "false"
 
-            minifyEnabled true
+            debuggable true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-        }
-    }
-
-    externalNativeBuild {
-        ndkBuild {
-            path "src/main/jni/Android.mk"
         }
     }
 }

@@ -30,7 +30,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import com.qihua.bVNC.bVNC;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 /**
  * @author Michael A. MacDonald

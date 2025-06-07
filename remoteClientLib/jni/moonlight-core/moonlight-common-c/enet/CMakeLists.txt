@@ -87,15 +87,15 @@ set(INCLUDE_FILES
 )
 
 set(SOURCE_FILES
-    callbacks.c
-    compress.c
-    host.c
-    list.c
-    packet.c
-    peer.c
-    protocol.c
-    unix.c
-    win32.c)
+        callbacks.c
+        compress.c
+        host.c
+        list.c
+        packet.c
+        peer.c
+        protocol.c
+        unix.c
+        win32.c)
 
 source_group(include FILES ${INCLUDE_FILES})
 source_group(source FILES ${SOURCE_FILES})
@@ -116,6 +116,6 @@ if(NOT ENET_NO_INSTALL)
         ARCHIVE DESTINATION lib/static
         LIBRARY DESTINATION lib)
 
-    install(DIRECTORY include/
+    install(DIRECTORY include
             DESTINATION include)
 endif()

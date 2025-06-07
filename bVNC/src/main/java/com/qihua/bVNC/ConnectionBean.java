@@ -30,7 +30,7 @@ import android.widget.ImageView.ScaleType;
 import com.antlersoft.android.dbimpl.NewInstance;
 import com.qihua.bVNC.input.InputHandlerTouchpad;
 import com.undatech.opaque.Connection;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 import net.sqlcipher.database.SQLiteDatabase;
 

@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.1)
 project(moonlight-common-c LANGUAGES C)
 
-set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+set(CMAKE_MODULE_PATH cmake)
 
 option(USE_MBEDTLS "Use MbedTLS instead of OpenSSL" OFF)
 option(CODE_ANALYSIS "Run code analysis during compilation" OFF)
@@ -77,7 +77,7 @@ endif()
 target_include_directories(moonlight-common-c SYSTEM PUBLIC src)
 
 target_include_directories(moonlight-common-c PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/reedsolomon
+        reedsolomon
 )
 
 target_compile_definitions(moonlight-common-c PRIVATE HAS_SOCKLEN_T)

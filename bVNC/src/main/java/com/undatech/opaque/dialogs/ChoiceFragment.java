@@ -31,7 +31,7 @@ import android.widget.TextView;
 
 import androidx.fragment.app.DialogFragment;
 
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 public class ChoiceFragment extends DialogFragment {
     public static String TAG = "ChoiceFragment";

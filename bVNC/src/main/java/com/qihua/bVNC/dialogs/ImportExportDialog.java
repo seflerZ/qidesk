@@ -32,7 +32,7 @@ import android.widget.Button;
 import com.qihua.bVNC.Database;
 import com.qihua.bVNC.Utils;
 import com.undatech.opaque.RemoteClientLibConstants;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 /**
  * @author Michael A. MacDonald

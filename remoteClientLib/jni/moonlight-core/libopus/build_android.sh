@@ -92,9 +92,9 @@ ADDI_CONFIGURE_FLAGS="--enable-fixed-point"
 build_one
 }
 
-build_mips
-build_mips64
-build_x86
-build_x86_64
-build_armv7
+#build_mips
+#build_mips64
+#build_x86
+#build_x86_64
+#build_armv7
 build_armv8

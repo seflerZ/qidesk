@@ -35,7 +35,7 @@ import android.widget.TextView;
 
 import androidx.fragment.app.DialogFragment;
 
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 public class MessageFragment extends DialogFragment {
     public static String TAG = "MessageFragment";

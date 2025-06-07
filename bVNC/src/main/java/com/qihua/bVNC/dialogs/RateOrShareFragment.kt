@@ -27,7 +27,7 @@ import android.widget.Button
 import android.widget.TableLayout
 import androidx.fragment.app.DialogFragment
 import com.qihua.bVNC.Utils
-import com.undatech.remoteClientUi.R
+import com.qihua.bVNC.R
 
 class RateOrShareFragment : DialogFragment() {
     private var layout: TableLayout? = null

@@ -11,7 +11,7 @@ import androidx.core.content.ContextCompat;
 
 import com.qihua.bVNC.Constants;
 import com.qihua.bVNC.Utils;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 import java.util.Arrays;
 import java.util.Collections;

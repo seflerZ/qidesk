@@ -51,7 +51,7 @@ import com.qihua.bVNC.gesture.GestureEditorActivity;
 import com.qihua.util.PermissionGroups;
 import com.qihua.util.PermissionsManager;
 import com.morpheusly.common.Utilities;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;

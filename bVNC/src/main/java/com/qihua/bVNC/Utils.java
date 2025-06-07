@@ -63,7 +63,7 @@ import com.google.android.play.core.review.ReviewInfo;
 import com.google.android.play.core.review.ReviewManager;
 import com.google.android.play.core.review.ReviewManagerFactory;
 import com.undatech.opaque.ConnectionSetupActivity;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 import net.sqlcipher.database.SQLiteDatabase;
 

@@ -104,7 +104,7 @@ import com.undatech.opaque.RemoteClientLibConstants;
 import com.undatech.opaque.util.FileUtils;
 import com.undatech.opaque.util.OnTouchViewMover;
 import com.undatech.opaque.util.RemoteToolbar;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 import org.json.JSONException;
 

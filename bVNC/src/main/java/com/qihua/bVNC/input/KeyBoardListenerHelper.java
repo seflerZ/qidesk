@@ -7,7 +7,7 @@ import android.view.View;
 import android.view.ViewTreeObserver;
 import android.view.WindowManager;
 
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 import java.lang.ref.WeakReference;
 

@@ -10,6 +10,8 @@ android {
         vectorDrawables.useSupportLibrary = true
     }
 
+    namespace 'com.qihua.bVNC'
+
     buildTypes {
         release {
             minifyEnabled false

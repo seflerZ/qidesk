@@ -35,7 +35,7 @@ import com.qihua.bVNC.ConnectionBean;
 import com.qihua.bVNC.Database;
 import com.qihua.bVNC.aSPICE;
 import com.morpheusly.common.Utilities;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 /**
  * @author Iordan K Iordanov

@@ -704,12 +704,12 @@ build)
 
     build_freerdp
 
-    echo
-    echo "Now you can run ndk-build if building aSPICE."
-    echo
-    echo "Run the following command:"
-    echo "cd ../../ ; ndk-build"
-    echo
+#    echo
+#    echo "Now you can run ndk-build if building aSPICE."
+#    echo
+#    echo "Run the following command:"
+#    echo "cd ../../ ; ndk-build"
+#    echo
 
     ;;
 clean)

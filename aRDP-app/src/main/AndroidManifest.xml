@@ -31,6 +31,7 @@
         android:label="@string/ardp_app_name"
         android:theme="@style/QiHua"
         android:hardwareAccelerated="true"
+        android:extractNativeLibs="true"
         tools:replace="android:label,android:theme">
         <activity
             android:name="com.undatech.opaque.ConnectionGridActivity"

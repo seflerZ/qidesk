@@ -2,6 +2,6 @@ include ':remoteClientLib:jni:libs:deps:FreeRDP:client:Android:Studio:freeRDPCor
 include ':pubkeyGenerator'
 include ':bVNC'
 include ':aRDP-app'
-include ':remoteClientLib'
+include ':native-clients-libs'
 include ':common'
 include ':moonlight'

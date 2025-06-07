@@ -98,7 +98,7 @@ import com.undatech.opaque.proxmox.pojo.PveResource;
 import com.undatech.opaque.proxmox.pojo.SpiceDisplay;
 import com.undatech.opaque.proxmox.pojo.VmStatus;
 import com.undatech.opaque.util.FileUtils;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 import org.apache.http.HttpException;
 import org.json.JSONException;

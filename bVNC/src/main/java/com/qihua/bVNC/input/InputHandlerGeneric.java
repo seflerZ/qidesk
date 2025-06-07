@@ -37,7 +37,7 @@ import com.qihua.bVNC.RemoteCanvas;
 import com.qihua.bVNC.RemoteCanvasActivity;
 import com.qihua.bVNC.Utils;
 import com.undatech.opaque.util.GeneralUtils;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 import java.util.LinkedList;
 import java.util.Queue;

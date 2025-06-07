@@ -43,7 +43,7 @@ import com.qihua.util.PermissionGroups;
 import com.qihua.util.PermissionsManager;
 import com.morpheusly.common.Utilities;
 import com.undatech.opaque.util.FileUtils;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 import java.io.File;
 import java.io.FileNotFoundException;

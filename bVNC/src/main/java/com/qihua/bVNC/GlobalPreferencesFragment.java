@@ -7,7 +7,7 @@ import androidx.preference.PreferenceFragmentCompat;
 
 import com.alibaba.fastjson2.util.StringUtils;
 import com.qihua.bVNC.extrakeys.ExtraKeysConstants;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 public class GlobalPreferencesFragment extends PreferenceFragmentCompat {
     @Override

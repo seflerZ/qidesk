@@ -30,7 +30,7 @@ import androidx.fragment.app.FragmentActivity;
 
 import com.qihua.pubkeygenerator.GeneratePubkeyActivity;
 import com.undatech.opaque.util.LogcatReader;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 import net.sqlcipher.database.SQLiteDatabase;
 

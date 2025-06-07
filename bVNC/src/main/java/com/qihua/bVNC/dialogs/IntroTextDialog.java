@@ -40,7 +40,7 @@ import com.qihua.bVNC.Constants;
 import com.qihua.bVNC.Database;
 import com.qihua.bVNC.Utils;
 import com.umeng.commonsdk.UMConfigure;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 import kotlin.UNumbersKt;
 

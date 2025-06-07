@@ -21,7 +21,7 @@
 package com.qihua.bVNC;
 
 import com.undatech.opaque.RfbConnectable;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 import java.io.IOException;
 

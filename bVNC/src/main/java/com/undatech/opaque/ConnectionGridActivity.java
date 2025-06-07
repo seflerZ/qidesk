@@ -76,7 +76,7 @@ import com.undatech.opaque.util.ConnectionLoader;
 import com.undatech.opaque.util.FileUtils;
 import com.undatech.opaque.util.GeneralUtils;
 import com.undatech.opaque.util.LogcatReader;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 import java.io.File;
 import java.io.InputStream;
