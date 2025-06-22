@@ -11,11 +11,13 @@
     <color name="accent">#FFD86000</color>
     <color name="notification">#ffafafaf</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="green">#FF009f00</color>
 
     <!-- Extra keys colors. -->
     <color name="extraKeysButtonTextColor">@color/white</color>
     <color name="extraKeysButtonActiveTextColor">@color/theme</color>
     <color name="extraKeysButtonBackgroundColor">@color/gesture_overlay</color>
     <color name="extraKeysButtonActiveBackgroundColor">@color/black_overlay</color>
+
 
 </resources>

@@ -21,14 +21,17 @@ package com.qihua.bVNC;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Service;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
@@ -40,10 +43,16 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
+import com.limelight.PcView;
+import com.limelight.binding.PlatformBinding;
+import com.limelight.binding.crypto.AndroidCryptoProvider;
+import com.limelight.computers.ComputerManagerListener;
 import com.limelight.computers.ComputerManagerService;
 import com.limelight.nvstream.http.ComputerDetails;
 import com.limelight.nvstream.http.NvHTTP;
+import com.limelight.nvstream.http.PairingManager;
 import com.limelight.nvstream.jni.MoonBridge;
+import com.limelight.preferences.AddComputerManually;
 import com.limelight.utils.Dialog;
 import com.limelight.utils.ServerHelper;
 import com.limelight.utils.SpinnerDialog;
@@ -52,15 +61,23 @@ import com.qihua.util.PermissionGroups;
 import com.qihua.util.PermissionsManager;
 import com.morpheusly.common.Utilities;
 import com.qihua.bVNC.R;
+import com.umeng.commonsdk.debug.E;
 
+import org.xmlpull.v1.XmlPullParserException;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
@@ -105,65 +122,72 @@ public class aRDP extends MainConfiguration {
     private CheckBox checkboxPreferSendingUnicode;
     private Spinner spinnerRdpColor;
     private List<String> rdpColorArray;
-
+    private Map<String, ComputerDetails> nvComputers = new HashMap<>();
     private Thread addThread;
     private ComputerManagerService.ComputerManagerBinder managerBinder;
-    private final LinkedBlockingQueue<String> computersToAdd = new LinkedBlockingQueue<>();
 
     private final ServiceConnection serviceConnection = new ServiceConnection() {
         public void onServiceConnected(ComponentName className, final IBinder binder) {
-            managerBinder = ((ComputerManagerService.ComputerManagerBinder)binder);
-            startAddThread();
+            final ComputerManagerService.ComputerManagerBinder localBinder =
+                    ((ComputerManagerService.ComputerManagerBinder)binder);
+
+            // Wait in a separate thread to avoid stalling the UI
+            new Thread() {
+                @Override
+                public void run() {
+                    // Wait for the binder to be ready
+                    localBinder.waitForReady();
+
+                    // Now make the binder visible
+                    managerBinder = localBinder;
+
+                    // Start polling
+                    managerBinder.startPolling(new ComputerManagerListener() {
+                        @Override
+                        public void notifyComputerUpdated(final ComputerDetails details) {
+                            if (details.pairState == PairingManager.PairState.PAIRED
+                                    && details.manualAddress != null) {
+                                aRDP.this.runOnUiThread(() -> {
+                                    String computerAddress = details.manualAddress.toString();
+
+                                    TextView ipText = (TextView)findViewById(R.id.textIP);
+                                    TextView portText = (TextView)findViewById(R.id.textPORT);
+                                    TextView nickText = (TextView)findViewById(R.id.textNickname);
+
+                                    if (computerAddress.equals(ipText.getText() + ":" + portText.getText())) {
+                                        Button btn = findViewById(R.id.nvstream_pair);
+                                        btn.setEnabled(false);
+                                        btn.setBackgroundColor(getColor(R.color.grey_overlay));
+                                        btn.setTextColor(getColor(R.color.theme));
+                                        btn.setText("Paired(" + details.state.toString() + ")");
+
+                                        nickText.setText(details.name);
+                                    }
+                                });
+                            }
+                        }
+                    });
+
+                    // Force a keypair to be generated early to avoid discovery delays
+                    new AndroidCryptoProvider(aRDP.this).getClientCertificate();
+                }
+            }.start();
         }
 
         public void onServiceDisconnected(ComponentName className) {
-            joinAddThread();
             managerBinder = null;
         }
     };
-
-    private void startAddThread() {
-        addThread = new Thread() {
-            @Override
-            public void run() {
-                while (!isInterrupted()) {
-                    try {
-                        String computer = computersToAdd.take();
-                        doAddPc(computer);
-                    } catch (InterruptedException e) {
-                        return;
-                    }
-                }
-            }
-        };
-        addThread.setName("UI - AddComputerManually");
-        addThread.start();
-    }
-
-    private void joinAddThread() {
-        if (addThread != null) {
-            addThread.interrupt();
-
-            try {
-                addThread.join();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-
-                // InterruptedException clears the thread's interrupt status. Since we can't
-                // handle that here, we will re-interrupt the thread to set the interrupt
-                // status back to true.
-                Thread.currentThread().interrupt();
-            }
-
-            addThread = null;
-        }
-    }
 
     @Override
     public void onCreate(Bundle icicle) {
         layoutID = R.layout.main_rdp;
 
         super.onCreate(icicle);
+
+        // Bind to the ComputerManager service
+        bindService(new Intent(aRDP.this,
+                ComputerManagerService.class), serviceConnection, Service.BIND_AUTO_CREATE);
 
         sshServer = (EditText) findViewById(R.id.sshServer);
         sshPort = (EditText) findViewById(R.id.sshPort);
@@ -272,6 +296,7 @@ public class aRDP extends MainConfiguration {
                     findViewById(R.id.textPASSWORD).setVisibility(View.VISIBLE);
                     findViewById(R.id.checkboxKeepPassword).setVisibility(View.VISIBLE);
                     findViewById(R.id.textUsername).setVisibility(View.VISIBLE);
+                    findViewById(R.id.textNickname).setVisibility(View.VISIBLE);
 
                     findViewById(R.id.geometryGroup).setVisibility(View.VISIBLE);
                     findViewById(R.id.checkboxEnableRecording).setVisibility(View.VISIBLE);
@@ -287,6 +312,7 @@ public class aRDP extends MainConfiguration {
                     findViewById(R.id.textPASSWORD).setVisibility(View.VISIBLE);
                     findViewById(R.id.checkboxKeepPassword).setVisibility(View.VISIBLE);
                     findViewById(R.id.textUsername).setVisibility(View.VISIBLE);
+                    findViewById(R.id.textNickname).setVisibility(View.VISIBLE);
 
                     findViewById(R.id.geometryGroup).setVisibility(View.GONE);
                     findViewById(R.id.checkboxEnableRecording).setVisibility(View.GONE);
@@ -302,6 +328,7 @@ public class aRDP extends MainConfiguration {
                     findViewById(R.id.geometryGroup).setVisibility(View.GONE);
                     findViewById(R.id.checkboxEnableRecording).setVisibility(View.GONE);
                     findViewById(R.id.textDescriptGeom).setVisibility(View.GONE);
+                    findViewById(R.id.textNickname).setVisibility(View.GONE);
 
                     findViewById(R.id.textPASSWORD).setVisibility(View.GONE);
                     findViewById(R.id.checkboxKeepPassword).setVisibility(View.GONE);
@@ -337,6 +364,15 @@ public class aRDP extends MainConfiguration {
         checkboxEnableGfxH264 = (CheckBox) findViewById(R.id.checkboxEnableGfxH264);
         checkboxPreferSendingUnicode = (CheckBox) findViewById(R.id.checkboxPreferSendingUnicode);
 //        setConnectionTypeSpinnerAdapter(R.array.rdp_connection_type);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        if (managerBinder != null) {
+            unbindService(serviceConnection);
+        }
     }
 
     /**
@@ -504,7 +540,7 @@ public class aRDP extends MainConfiguration {
         }
     }
 
-    private void doAddPc(String rawUserInput) throws InterruptedException {
+    private ComputerDetails doAddPc(String rawUserInput) {
         boolean wrongSiteLocal = false;
         boolean invalidInput = false;
         boolean success;
@@ -513,9 +549,9 @@ public class aRDP extends MainConfiguration {
         SpinnerDialog dialog = SpinnerDialog.displayDialog(this, getResources().getString(R.string.title_add_pc),
                 getResources().getString(R.string.msg_add_pc), false);
 
-        try {
-            ComputerDetails details = new ComputerDetails();
+        ComputerDetails computerDetails = new ComputerDetails();
 
+        try {
             // Check if we parsed a host address successfully
             URI uri = parseRawUserInputToUri(rawUserInput);
             if (uri != null && uri.getHost() != null && !uri.getHost().isEmpty()) {
@@ -527,8 +563,8 @@ public class aRDP extends MainConfiguration {
                     port = NvHTTP.DEFAULT_HTTP_PORT;
                 }
 
-                details.manualAddress = new ComputerDetails.AddressTuple(host, port);
-                success = managerBinder.addComputerBlocking(details);
+                computerDetails.manualAddress = new ComputerDetails.AddressTuple(host, port);
+                success = managerBinder.addComputerBlocking(computerDetails);
                 if (!success){
                     wrongSiteLocal = isWrongSubnetSiteLocalAddress(host);
                 }
@@ -537,14 +573,7 @@ public class aRDP extends MainConfiguration {
                 success = false;
                 invalidInput = true;
             }
-        } catch (InterruptedException e) {
-            // Propagate the InterruptedException to the caller for proper handling
-            dialog.dismiss();
-            throw e;
-        } catch (IllegalArgumentException e) {
-            // This can be thrown from OkHttp if the host fails to canonicalize to a valid name.
-            // https://github.com/square/okhttp/blob/okhttp_27/okhttp/src/main/java/com/squareup/okhttp/HttpUrl.java#L705
-            e.printStackTrace();
+        } catch (Exception e) {
             success = false;
             invalidInput = true;
         }
@@ -582,21 +611,131 @@ public class aRDP extends MainConfiguration {
                 @Override
                 public void run() {
                     Toast.makeText(aRDP.this, getResources().getString(R.string.addpc_success), Toast.LENGTH_LONG).show();
-
-                    if (!isFinishing()) {
-                        // Close the activity
-                        aRDP.this.finish();
-                    }
                 }
             });
         }
 
+        if (!success) {
+            return null;
+        }
+
+        return computerDetails;
     }
 
     public void nvStreamPair(View view) {
         TextView ipText = (TextView)findViewById(R.id.textIP);
         TextView portText = (TextView)findViewById(R.id.textPORT);
-        computersToAdd.add(ipText +  ":" + portText);
+
+        String address = ipText.getText() +  ":" + portText.getText();
+
+        ComputerDetails computerDetails = managerBinder.getComputerByAddress(address);
+        if (computerDetails == null) {
+            computerDetails = doAddPc(address);
+        }
+
+        if (computerDetails == null) {
+            // error handling
+            return;
+        }
+
+        // Fill in the NickName of this device
+        TextView nickText = findViewById(R.id.textNickname);
+        nickText.setText(computerDetails.name);
+
+        doPair(computerDetails);
+    }
+
+    private void doPair(final ComputerDetails computer) {
+        if (computer.state == ComputerDetails.State.OFFLINE || computer.activeAddress == null) {
+            Toast.makeText(aRDP.this, getResources().getString(com.limelight.R.string.pair_pc_offline), Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (managerBinder == null) {
+            Toast.makeText(aRDP.this, getResources().getString(com.limelight.R.string.error_manager_not_running), Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        Toast.makeText(aRDP.this, getResources().getString(com.limelight.R.string.pairing), Toast.LENGTH_SHORT).show();
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                NvHTTP httpConn;
+                String message;
+                boolean success = false;
+                try {
+                    httpConn = new NvHTTP(ServerHelper.getCurrentAddressFromComputer(computer),
+                            computer.httpsPort, managerBinder.getUniqueId(), computer.serverCert,
+                            PlatformBinding.getCryptoProvider(aRDP.this));
+                    if (httpConn.getPairState() == PairingManager.PairState.PAIRED) {
+                        message = getResources().getString(com.limelight.R.string.pair_succeed);
+                        success = true;
+                    } else {
+                        final String pinStr = PairingManager.generatePinString();
+
+                        // Spin the dialog off in a thread because it blocks
+                        Dialog.displayDialog(aRDP.this, getResources().getString(com.limelight.R.string.pair_pairing_title),
+                                getResources().getString(com.limelight.R.string.pair_pairing_msg) + " " + pinStr + "\n\n" +
+                                        getResources().getString(com.limelight.R.string.pair_pairing_help), false);
+
+                        PairingManager pm = httpConn.getPairingManager();
+
+                        PairingManager.PairState pairState = pm.pair(httpConn.getServerInfo(true), pinStr);
+                        if (pairState == PairingManager.PairState.PIN_WRONG) {
+                            message = getResources().getString(com.limelight.R.string.pair_incorrect_pin);
+                        } else if (pairState == PairingManager.PairState.FAILED) {
+                            if (computer.runningGameId != 0) {
+                                message = getResources().getString(com.limelight.R.string.pair_pc_ingame);
+                            } else {
+                                message = getResources().getString(com.limelight.R.string.pair_fail);
+                            }
+                        } else if (pairState == PairingManager.PairState.ALREADY_IN_PROGRESS) {
+                            message = getResources().getString(com.limelight.R.string.pair_already_in_progress);
+                        } else if (pairState == PairingManager.PairState.PAIRED) {
+                            // Just navigate to the app view without displaying a toast
+                            message = getResources().getString(com.limelight.R.string.pair_succeed);
+                            success = true;
+
+                            // Pin this certificate for later HTTPS use
+                            managerBinder.getComputer(computer.uuid).serverCert = pm.getPairedCert();
+
+                            // Invalidate reachability information after pairing to force
+                            // a refresh before reading pair state again
+                            managerBinder.invalidateStateForComputer(computer.uuid);
+                        } else {
+                            // Should be no other values
+                            message = null;
+                        }
+                    }
+                } catch (UnknownHostException e) {
+                    message = getResources().getString(com.limelight.R.string.error_unknown_host);
+                } catch (FileNotFoundException e) {
+                    message = getResources().getString(com.limelight.R.string.error_404);
+                } catch (XmlPullParserException | IOException e) {
+                    message = e.getMessage();
+                }
+
+                Dialog.closeDialogs();
+
+                final String toastMessage = message;
+                final boolean toastSuccess = success;
+
+                runOnUiThread(() -> {
+                    if (toastMessage != null) {
+                        Toast.makeText(aRDP.this, toastMessage, Toast.LENGTH_LONG).show();
+                    }
+
+//                        if (toastSuccess) {
+//                            // Open the app list after a successful pairing attempt
+//                            doAppList(computer, true, false);
+//                        }
+//                        else {
+//                            // Start polling again if we're still in the foreground
+//                            startComputerUpdates();
+//                        }
+                });
+            }
+        }).start();
     }
 
     protected void updateSelectedFromView() {

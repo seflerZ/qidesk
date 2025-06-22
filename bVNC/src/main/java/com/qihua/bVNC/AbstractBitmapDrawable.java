@@ -93,14 +93,14 @@ public class AbstractBitmapDrawable extends DrawableContainer {
         softCursor = Bitmap.createBitmap(newSoftCursorPixels, (int) cursorRect.width(),
                 (int) cursorRect.height(), Bitmap.Config.ARGB_8888);
         softCursorInit = true;
-        oldSoftCursor.recycle();
+//        oldSoftCursor.recycle();
     }
 
     void setSoftCursor(Bitmap bitmap) {
         Bitmap oldSoftCursor = softCursor;
         softCursor = bitmap;
         softCursorInit = true;
-        oldSoftCursor.recycle();
+//        oldSoftCursor.recycle();
     }
 
     public void setClipRect(Rect clipRect) {
