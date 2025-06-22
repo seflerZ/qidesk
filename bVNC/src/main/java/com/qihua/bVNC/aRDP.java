@@ -27,7 +27,6 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
@@ -43,7 +42,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
-import com.limelight.PcView;
 import com.limelight.binding.PlatformBinding;
 import com.limelight.binding.crypto.AndroidCryptoProvider;
 import com.limelight.computers.ComputerManagerListener;
@@ -52,7 +50,6 @@ import com.limelight.nvstream.http.ComputerDetails;
 import com.limelight.nvstream.http.NvHTTP;
 import com.limelight.nvstream.http.PairingManager;
 import com.limelight.nvstream.jni.MoonBridge;
-import com.limelight.preferences.AddComputerManually;
 import com.limelight.utils.Dialog;
 import com.limelight.utils.ServerHelper;
 import com.limelight.utils.SpinnerDialog;
@@ -60,8 +57,6 @@ import com.qihua.bVNC.gesture.GestureEditorActivity;
 import com.qihua.util.PermissionGroups;
 import com.qihua.util.PermissionsManager;
 import com.morpheusly.common.Utilities;
-import com.qihua.bVNC.R;
-import com.umeng.commonsdk.debug.E;
 
 import org.xmlpull.v1.XmlPullParserException;
 
@@ -78,7 +73,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * aRDP is the Activity for setting up RDP connections.
@@ -150,18 +144,15 @@ public class aRDP extends MainConfiguration {
                                 aRDP.this.runOnUiThread(() -> {
                                     String computerAddress = details.manualAddress.toString();
 
-                                    TextView ipText = (TextView)findViewById(R.id.textIP);
-                                    TextView portText = (TextView)findViewById(R.id.textPORT);
-                                    TextView nickText = (TextView)findViewById(R.id.textNickname);
-
                                     if (computerAddress.equals(ipText.getText() + ":" + portText.getText())) {
                                         Button btn = findViewById(R.id.nvstream_pair);
                                         btn.setEnabled(false);
                                         btn.setBackgroundColor(getColor(R.color.grey_overlay));
                                         btn.setTextColor(getColor(R.color.theme));
-                                        btn.setText("Paired(" + details.state.toString() + ")");
+                                        btn.setText("PAIRED & " + details.state.toString());
 
                                         nickText.setText(details.name);
+                                        passwordText.setText(details.uuid);
                                     }
                                 });
                             }
@@ -302,8 +293,9 @@ public class aRDP extends MainConfiguration {
                     findViewById(R.id.checkboxEnableRecording).setVisibility(View.VISIBLE);
                     findViewById(R.id.textDescriptGeom).setVisibility(View.VISIBLE);
 
-                    TextView portView = (TextView) findViewById(R.id.textPORT);
-                    portView.setText("3389");
+                    if (selected.getPort() <= 0) {
+                        portText.setText("3389");
+                    }
                 } else if (selectedConnType == Constants.CONN_TYPE_VNC) {
                     rdpDomain.setVisibility(View.GONE);
 
@@ -318,8 +310,9 @@ public class aRDP extends MainConfiguration {
                     findViewById(R.id.checkboxEnableRecording).setVisibility(View.GONE);
                     findViewById(R.id.textDescriptGeom).setVisibility(View.GONE);
 
-                    TextView portView = (TextView) findViewById(R.id.textPORT);
-                    portView.setText("5900");
+                    if (selected.getPort() <= 0) {
+                        portText.setText("5900");
+                    }
                 } else if (selectedConnType == Constants.CONN_TYPE_NVSTREAM) {
                     rdpDomain.setVisibility(View.GONE);
 
@@ -338,8 +331,9 @@ public class aRDP extends MainConfiguration {
                     findViewById(R.id.checkboxEnableRecording).setVisibility(View.GONE);
                     findViewById(R.id.textDescriptGeom).setVisibility(View.GONE);
 
-                    TextView portView = (TextView) findViewById(R.id.textPORT);
-                    portView.setText("48010");
+                    if (selected.getPort() <= 0) {
+                        portText.setText("48010");
+                    }
                 }
             }
 
@@ -409,7 +403,7 @@ public class aRDP extends MainConfiguration {
         checkboxUseDpadAsArrows.setChecked(selected.getUseDpadAsArrows());
         checkboxRotateDpad.setChecked(selected.getRotateDpad());
         checkboxUseLastPositionToolbar.setChecked((!isNewConnection) ? selected.getUseLastPositionToolbar() : this.useLastPositionToolbarDefault());
-        textNickname.setText(selected.getNickname());
+        nickText.setText(selected.getNickname());
         textUsername.setText(selected.getUserName());
         rdpDomain.setText(selected.getRdpDomain());
         spinnerRdpColor.setSelection(rdpColorArray.indexOf(String.valueOf(selected.getRdpColor())));
@@ -623,9 +617,6 @@ public class aRDP extends MainConfiguration {
     }
 
     public void nvStreamPair(View view) {
-        TextView ipText = (TextView)findViewById(R.id.textIP);
-        TextView portText = (TextView)findViewById(R.id.textPORT);
-
         String address = ipText.getText() +  ":" + portText.getText();
 
         ComputerDetails computerDetails = managerBinder.getComputerByAddress(address);
@@ -639,8 +630,8 @@ public class aRDP extends MainConfiguration {
         }
 
         // Fill in the NickName of this device
-        TextView nickText = findViewById(R.id.textNickname);
         nickText.setText(computerDetails.name);
+        passwordText.setText(computerDetails.uuid);
 
         doPair(computerDetails);
     }
@@ -750,7 +741,7 @@ public class aRDP extends MainConfiguration {
         } catch (NumberFormatException nfe) {
         }
 
-        selected.setNickname(textNickname.getText().toString());
+        selected.setNickname(nickText.getText().toString());
         selected.setSshServer(sshServer.getText().toString());
         selected.setSshUser(sshUser.getText().toString());
 

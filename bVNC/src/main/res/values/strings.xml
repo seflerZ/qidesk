@@ -618,7 +618,7 @@ When you add or edit a connection, you will see a connection configuration page.
    (b) Rotate D-Pad: Phones paired with a Bluetooth keyboard may need the keyboard's D-pad to be rotated anti-clockwise to send correct directions to the server.
    (c) Local mouse pointer: If the pointer is invisible, select this to force it to be drawn by the app."</string>
     <string name="rdp_password_hint">Password</string>
-    <string name="rdp_server_empty">RDP Server or port empty. Cannot connect!</string>
+    <string name="rdp_server_empty">Server or port empty. Cannot connect!</string>
     <string name="rdp_username_hint">Username</string>
 
     <string name="remote_sound_disabled">Sound Disabled</string>
