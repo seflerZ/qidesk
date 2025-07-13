@@ -32,7 +32,9 @@ package com.qihua.bVNC;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.ComponentName;
 import android.content.Context;
+import android.content.ServiceConnection;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -45,6 +47,7 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.SystemClock;
 import android.provider.Settings;
 import android.text.ClipboardManager;
@@ -62,12 +65,18 @@ import android.view.SurfaceView;
 import android.view.inputmethod.BaseInputConnection;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
+import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
+import com.limelight.binding.crypto.AndroidCryptoProvider;
+import com.limelight.computers.ComputerManagerListener;
+import com.limelight.computers.ComputerManagerService;
+import com.limelight.nvstream.http.ComputerDetails;
+import com.limelight.nvstream.http.PairingManager;
 import com.qihua.android.bc.BCFactory;
 import com.qihua.bVNC.dialogs.GetTextFragment;
 import com.qihua.bVNC.exceptions.AnonCipherUnsupportedException;
@@ -254,7 +263,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     };
 
     private boolean touchpad = false;
-    private Activity activity;
+    private RemoteCanvasActivity activity;
 
     /**
      * Constructor used by the inflation apparatus
@@ -335,14 +344,6 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     public void surfaceCreated(@NonNull SurfaceHolder holder) {
         if (!outDisplay && touchpad) {
             drawTouchpadHint();
-        }
-
-        try {
-            if (isNvStream) {
-                startNvStreamConnection(holder);
-            }
-        } catch (Exception e) {
-            Utils.showFatalErrorMessage(getContext(), e.getMessage());
         }
     }
 
@@ -500,28 +501,6 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             handleUncaughtException(e);
         }
 
-        Thread t = new Thread() {
-            public void run() {
-                try {
-//                    sshConnection = new SSHConnection(connection, getContext(), handler);
-//                    sshConnection.changeOrInitializeSshHostKey(false);
-                    if (isSpice) {
-                        startSpiceConnection();
-                    } else if (isRdp) {
-                        startRdpConnection();
-                    } else if (isVnc) {
-                        startVncConnection();
-                    } else {
-                        throw new Exception("unknown connection type");
-                    }
-
-                } catch (Throwable e) {
-                    handleUncaughtException(e);
-                }
-            }
-        };
-        t.start();
-
         clipboardMonitor = new ClipboardMonitor(getContext(), this);
         clipboardMonitorTimer = new Timer();
         try {
@@ -640,14 +619,22 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     private void startNvStreamConnection(SurfaceHolder surfaceHolder) throws Exception {
         Log.i(TAG, "startNvStreamConnection: Starting NvStream connection.");
 
-        String appName = "testApp";
-        int appId = 12345;
-        byte[] certData = connection.getCaCert().getBytes();
+        // We reuse the SSH server as the UUID of the computer
+        String uuid = connection.getSshServer();
+        ComputerDetails computerDetails = activity.getComputerDetail(uuid);
+        if (computerDetails == null) {
+            throw new IllegalStateException("computer not found, UUID: " + uuid);
+        }
 
-        nvcomm.setConnectionParameters(getAddress(), getRemoteProtocolPort(connection.getPort()),
-                getRemoteProtocolPort(connection.getTlsPort()),
-                connection.getUserName(), appName,
-                appId, certData);
+        String appName = connection.getUserName();
+        int appId = Integer.parseInt(connection.getPassword());
+
+        nvcomm.setConnectionParameters(computerDetails.manualAddress.address,
+                computerDetails.manualAddress.port,
+                computerDetails.httpsPort,
+                activity.getUniqueId(), appName,
+                appId, computerDetails.serverCert);
+
         nvcomm.connect(surfaceHolder);
     }
 
@@ -667,6 +654,24 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
         // in order to support fractional sensitivity, we use the integer divide 10 to make it a float.
         pointer.setSensitivity(Utils.querySharedPreferenceInt(getContext(), Constants.touchpadCursorSpeed, 10) / 10);
+    }
+
+    public void startConnection() {
+        try {
+            if (isSpice) {
+                startSpiceConnection();
+            } else if (isRdp) {
+                startRdpConnection();
+            } else if (isVnc) {
+                startVncConnection();
+            } else if (isNvStream) {
+                startNvStreamConnection(surfaceHolder);
+            } else {
+                throw new Exception("unknown connection type");
+            }
+        } catch (Throwable e) {
+            handleUncaughtException(e);
+        }
     }
 
     /**
@@ -1792,7 +1797,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         return bitmapData.mbitmap;
     }
 
-    public void setActivity(Activity activity) {
+    public void setActivity(RemoteCanvasActivity activity) {
         this.activity = activity;
     }
 

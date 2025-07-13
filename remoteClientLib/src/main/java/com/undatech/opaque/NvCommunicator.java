@@ -38,7 +38,8 @@ public class NvCommunicator implements NvConnectionListener, PerfOverlayListener
     }
 
     public void setConnectionParameters(String host, int port, int httpsPort,
-                                        String uniqueId, String appName, int appId, byte[] derCertData) {
+                                        String uniqueId, String appName, int appId,
+                                        X509Certificate serverCert) {
         app = new NvApp(appName != null ? appName : "app", appId, false);
         Context context = this.activity.getApplicationContext();
 
@@ -128,16 +129,6 @@ public class NvCommunicator implements NvConnectionListener, PerfOverlayListener
                 .setColorRange(decoderRenderer.getPreferredColorRange())
                 .setPersistGamepadsAfterDisconnect(!prefConfig.multiController)
                 .build();
-
-        X509Certificate serverCert = null;
-        try {
-            if (derCertData != null) {
-                serverCert = (X509Certificate) CertificateFactory.getInstance("X.509")
-                        .generateCertificate(new ByteArrayInputStream(derCertData));
-            }
-        } catch (CertificateException e) {
-            throw new IllegalArgumentException("Invalid cert data");
-        }
 
         // Initialize the connection
         conn = new NvConnection(context,

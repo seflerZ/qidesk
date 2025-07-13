@@ -306,6 +306,22 @@
                     android:onClick="nvStreamPair"
                     android:textAppearance="?android:attr/textAppearanceLarge" />
             </TableRow>
+            <TableRow>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.2"
+                    android:text="@string/app_to_load"
+                    android:textAppearance="?android:attr/textAppearanceLarge" />
+                <Spinner
+                    android:id="@+id/spinnerNvApp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:dropDownWidth="match_parent"
+                    android:textAppearance="?android:attr/textAppearanceLarge"
+                    android:layout_weight="0.8" />
+            </TableRow>
         </TableLayout>
 
         <LinearLayout

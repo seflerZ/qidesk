@@ -30,6 +30,7 @@ import android.os.IBinder;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
@@ -38,7 +39,6 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.RadioGroup;
 import android.widget.Spinner;
-import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
@@ -47,6 +47,7 @@ import com.limelight.binding.crypto.AndroidCryptoProvider;
 import com.limelight.computers.ComputerManagerListener;
 import com.limelight.computers.ComputerManagerService;
 import com.limelight.nvstream.http.ComputerDetails;
+import com.limelight.nvstream.http.NvApp;
 import com.limelight.nvstream.http.NvHTTP;
 import com.limelight.nvstream.http.PairingManager;
 import com.limelight.nvstream.jni.MoonBridge;
@@ -62,6 +63,7 @@ import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.StringReader;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InterfaceAddress;
@@ -69,10 +71,10 @@ import java.net.NetworkInterface;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * aRDP is the Activity for setting up RDP connections.
@@ -84,11 +86,11 @@ public class aRDP extends MainConfiguration {
     private EditText sshPort;
     private EditText sshUser;
     private EditText portText;
-    private EditText passwordText;
+    private EditText textPassword;
     private ToggleButton toggleAdvancedSettings;
     //private Spinner colorSpinner;
     private Spinner spinnerRdpGeometry;
-
+    private String lastRawApplist;
     private Spinner spinnerRdpZoomLevel;
     private EditText textUsername;
     private EditText rdpDomain;
@@ -115,11 +117,12 @@ public class aRDP extends MainConfiguration {
     private CheckBox checkboxEnableGfxH264;
     private CheckBox checkboxPreferSendingUnicode;
     private Spinner spinnerRdpColor;
+    private Spinner spinnerNvApp;
+    private List<NvApp> lastNvApps;
+    private ArrayAdapter<String> adapterNvAppNames;
     private List<String> rdpColorArray;
-    private Map<String, ComputerDetails> nvComputers = new HashMap<>();
-    private Thread addThread;
     private ComputerManagerService.ComputerManagerBinder managerBinder;
-
+    private ComputerManagerService.ApplistPoller poller;
     private final ServiceConnection serviceConnection = new ServiceConnection() {
         public void onServiceConnected(ComponentName className, final IBinder binder) {
             final ComputerManagerService.ComputerManagerBinder localBinder =
@@ -152,7 +155,21 @@ public class aRDP extends MainConfiguration {
                                         btn.setText("PAIRED & " + details.state.toString());
 
                                         nickText.setText(details.name);
-                                        passwordText.setText(details.uuid);
+                                        sshServer.setText(details.uuid);
+
+                                        // Since the computer is online, start polling the apps
+                                        if (poller == null) {
+                                            poller = managerBinder.createAppListPoller(details);
+                                            poller.start();
+                                        }
+
+                                        if (details.rawAppList != null) {
+                                            try {
+                                                updateUiWithAppList(NvHTTP.getAppListByReader(new StringReader(details.rawAppList)));
+                                            } catch (XmlPullParserException | IOException e) {
+                                                e.printStackTrace();
+                                            }
+                                        }
                                     }
                                 });
                             }
@@ -184,7 +201,7 @@ public class aRDP extends MainConfiguration {
         sshPort = (EditText) findViewById(R.id.sshPort);
         sshUser = (EditText) findViewById(R.id.sshUser);
         portText = (EditText) findViewById(R.id.textPORT);
-        passwordText = (EditText) findViewById(R.id.textPASSWORD);
+        textPassword = (EditText) findViewById(R.id.textPASSWORD);
         textUsername = (EditText) findViewById(R.id.textUsername);
         rdpDomain = (EditText) findViewById(R.id.rdpDomain);
 
@@ -205,6 +222,26 @@ public class aRDP extends MainConfiguration {
                     layoutAdvancedSettings.setVisibility(View.VISIBLE);
                 else
                     layoutAdvancedSettings.setVisibility(View.GONE);
+            }
+        });
+
+        spinnerNvApp = (Spinner) findViewById(R.id.spinnerNvApp);
+        adapterNvAppNames = new ArrayAdapter<>(getApplicationContext(),
+                android.R.layout.simple_spinner_item,
+                new ArrayList<>());
+        adapterNvAppNames.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerNvApp.setAdapter(adapterNvAppNames);
+        spinnerNvApp.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                NvApp nvApp = lastNvApps.get(position);
+                textUsername.setText(nvApp.getAppName());
+                textPassword.setText(String.valueOf(nvApp.getAppId()));
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
             }
         });
 
@@ -365,8 +402,37 @@ public class aRDP extends MainConfiguration {
         super.onDestroy();
 
         if (managerBinder != null) {
+            poller.stop();
             unbindService(serviceConnection);
         }
+    }
+
+    private void updateUiWithAppList(final List<NvApp> appList) {
+        lastNvApps = appList;
+        if (appList == null || appList.isEmpty()) {
+            return;
+        }
+
+        // set the spinner to last selected
+        if (selected.getPassword() != null) {
+            for (int i = 0; i < lastNvApps.size(); i++) {
+                NvApp nvApp = lastNvApps.get(i);
+                int curAppId = Integer.parseInt(selected.getPassword());
+                if (nvApp.getAppId() != curAppId) {
+                    continue;
+                }
+
+                spinnerNvApp.setSelection(i);
+            }
+        }
+
+        List<String> appNames = appList.stream().map(NvApp::getAppName).collect(Collectors.toList());
+
+        adapterNvAppNames.clear();
+        adapterNvAppNames.addAll(appNames);
+
+        // show the spinner
+        spinnerNvApp.setVisibility(View.VISIBLE);
     }
 
     /**
@@ -396,7 +462,7 @@ public class aRDP extends MainConfiguration {
         portText.setText(Integer.toString(selected.getPort()));
 
         if (selected.getKeepPassword() || selected.getPassword().length() > 0) {
-            passwordText.setText(selected.getPassword());
+            textPassword.setText(selected.getPassword());
         }
 
         checkboxKeepPassword.setChecked(selected.getKeepPassword());
@@ -631,7 +697,7 @@ public class aRDP extends MainConfiguration {
 
         // Fill in the NickName of this device
         nickText.setText(computerDetails.name);
-        passwordText.setText(computerDetails.uuid);
+        textPassword.setText(computerDetails.uuid);
 
         doPair(computerDetails);
     }
@@ -748,7 +814,6 @@ public class aRDP extends MainConfiguration {
         // If we are using an SSH key, then the ssh password box is used
         // for the key pass-phrase instead.
         selected.setUseSshPubKey(checkboxUseSshPubkey.isChecked());
-        selected.setUserName(textUsername.getText().toString());
         selected.setRdpDomain(rdpDomain.getText().toString());
         selected.setRdpResType(spinnerRdpGeometry.getSelectedItemPosition());
         try {
@@ -771,7 +836,9 @@ public class aRDP extends MainConfiguration {
         selected.setEnableGfx(checkboxEnableGfx.isChecked());
         selected.setEnableGfxH264(checkboxEnableGfxH264.isChecked());
 
-        selected.setPassword(passwordText.getText().toString());
+        selected.setUserName(textUsername.getText().toString());
+        selected.setPassword(textPassword.getText().toString());
+
         selected.setKeepPassword(checkboxKeepPassword.isChecked());
         selected.setUseDpadAsArrows(checkboxUseDpadAsArrows.isChecked());
         selected.setRotateDpad(checkboxRotateDpad.isChecked());
