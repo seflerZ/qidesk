@@ -610,7 +610,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     private void initializeNvStreamConnection() throws Exception {
         Log.i(TAG, "initializeRdpConnection: Initializing NvStream connection.");
 
-        nvcomm = new NvCommunicator(activity);
+        nvcomm = new NvCommunicator(activity, this, handler);
+        rfbconn = nvcomm;
 
 //        pointer = new RemoteNvStreamPointer(nvcomm, RemoteCanvas.this, handler, App.debugLog);
 //        keyboard = new RemoteNvStreamKeyboard(nvcomm, RemoteCanvas.this, handler, App.debugLog);
@@ -1310,8 +1311,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             useFull = (connection.getForceFull() == BitmapImplHint.FULL);
         }
 
-        if (isRdp) {
-            bitmapData = new UltraCompactBitmapData(rfbconn, this, isSpice | isOpaque | isRdp);
+        if (isRdp | isNvStream) {
+            bitmapData = new UltraCompactBitmapData(rfbconn, this, isSpice | isOpaque | isRdp | isNvStream);
             Log.i(TAG, "Using UltraCompactBufferBitmapData.");
         } else if (!useFull) {
             bitmapData = new LargeBitmapData(rfbconn, this, dx, dy, capacity);

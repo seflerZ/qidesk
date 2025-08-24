@@ -402,8 +402,11 @@ public class aRDP extends MainConfiguration {
         super.onDestroy();
 
         if (managerBinder != null) {
-            poller.stop();
             unbindService(serviceConnection);
+        }
+
+        if (poller != null) {
+            poller.stop();
         }
     }
 

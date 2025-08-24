@@ -2,7 +2,16 @@ package com.undatech.opaque;
 
 import android.app.Activity;
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.ImageFormat;
+import android.graphics.SurfaceTexture;
+import android.media.Image;
+import android.media.ImageReader;
+import android.os.Handler;
+import android.os.Looper;
+import android.view.PixelCopy;
 import android.view.SurfaceHolder;
+import android.view.View;
 
 import com.limelight.LimeLog;
 import com.limelight.binding.PlatformBinding;
@@ -21,20 +30,26 @@ import com.limelight.preferences.GlPreferences;
 import com.limelight.preferences.PreferenceConfiguration;
 
 import java.io.ByteArrayInputStream;
+import java.nio.ByteBuffer;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 
-public class NvCommunicator implements NvConnectionListener, PerfOverlayListener {
+public class NvCommunicator extends RfbConnectable implements NvConnectionListener, PerfOverlayListener {
     private MediaCodecDecoderRenderer decoderRenderer;
     private NvConnection conn;
     private NvApp app;
     private Activity activity;
+    private final Viewable viewable;
     private boolean attemptedConnection;
+    private Handler handler;
 
-    public NvCommunicator(Activity activity) {
+    public NvCommunicator(Activity activity, Viewable viewable, Handler handler) {
+        super(false, handler);
         this.activity = activity;
+        this.viewable = viewable;
         this.attemptedConnection = false;
+        this.handler = handler;
     }
 
     public void setConnectionParameters(String host, int port, int httpsPort,
@@ -48,12 +63,17 @@ public class NvCommunicator implements NvConnectionListener, PerfOverlayListener
         prefConfig.width = 1920;
         prefConfig.height = 1080;
         prefConfig.enableHdr = false;
-        prefConfig.bitrate = 1_000_000;
+        prefConfig.bitrate = 12_000_000;
         prefConfig.absoluteMouseMode = true;
-        prefConfig.enableAudioFx = false;
+        prefConfig.enableAudioFx = true;
         prefConfig.fps = 60;
+        prefConfig.enableSops = true;
+        prefConfig.bindAllUsb = true;
         prefConfig.audioConfiguration = MoonBridge.AUDIO_CONFIGURATION_STEREO;
+        prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_MIN_LATENCY;
         prefConfig.multiController = false;
+
+        viewable.reallocateDrawable(prefConfig.width, prefConfig.height);
 
         // Initialize the MediaCodec helper before creating the decoder
         GlPreferences glPrefs = GlPreferences.readPreferences(context);
@@ -141,6 +161,18 @@ public class NvCommunicator implements NvConnectionListener, PerfOverlayListener
         if (!attemptedConnection) {
             attemptedConnection = true;
             decoderRenderer.setRenderTarget(surfaceHolder);
+            decoderRenderer.setGraphicsListener((surface, x, y, width, height) -> {
+                Bitmap bitmap = viewable.getBitmap();
+                PixelCopy.request(surface, bitmap, (result) -> {
+                    if (result != PixelCopy.SUCCESS) {
+                        return;
+                    }
+
+                    DrawTask drawTask = new DrawTask(x, y, width, height, true);
+
+                    viewable.reDraw(drawTask);
+                }, handler);
+            });
 
             Context context = activity.getApplicationContext();
             conn.start(new AndroidAudioRenderer(context, false),
@@ -150,7 +182,7 @@ public class NvCommunicator implements NvConnectionListener, PerfOverlayListener
 
     @Override
     public void stageStarting(String stage) {
-
+//        android.util.Log.d(TAG, "OnSettingsChanged called, wxh: " + width + "x" + height);
     }
 
     @Override
@@ -215,6 +247,91 @@ public class NvCommunicator implements NvConnectionListener, PerfOverlayListener
 
     @Override
     public void onPerfUpdate(String text) {
+
+    }
+
+    @Override
+    public int framebufferWidth() {
+        return 1920;
+    }
+
+    @Override
+    public int framebufferHeight() {
+        return 1080;
+    }
+
+    @Override
+    public String desktopName() {
+        return "Game";
+    }
+
+    @Override
+    public void requestUpdate(boolean incremental) {
+
+    }
+
+    @Override
+    public void requestResolution(int x, int y) throws Exception {
+
+    }
+
+    @Override
+    public void writeClientCutText(String text) {
+
+    }
+
+    @Override
+    public void setIsInNormalProtocol(boolean state) {
+
+    }
+
+    @Override
+    public boolean isInNormalProtocol() {
+        return false;
+    }
+
+    @Override
+    public String getEncoding() {
+        return null;
+    }
+
+    @Override
+    public void writePointerEvent(int x, int y, int metaState, int pointerMask, boolean relative) {
+
+    }
+
+    @Override
+    public void writeKeyEvent(int key, int metaState, boolean down) {
+
+    }
+
+    @Override
+    public void writeSetPixelFormat(int bitsPerPixel, int depth, boolean bigEndian, boolean trueColour, int redMax, int greenMax, int blueMax, int redShift, int greenShift, int blueShift, boolean fGreyScale) {
+
+    }
+
+    @Override
+    public void writeFramebufferUpdateRequest(int x, int y, int w, int h, boolean b) {
+
+    }
+
+    @Override
+    public void close() {
+
+    }
+
+    @Override
+    public void reconnect() {
+
+    }
+
+    @Override
+    public boolean isCertificateAccepted() {
+        return false;
+    }
+
+    @Override
+    public void setCertificateAccepted(boolean certificateAccepted) {
 
     }
 }
