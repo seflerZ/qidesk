@@ -368,7 +368,7 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
 
     @Override
     public void close() {
-
+        conn.stop();
     }
 
     @Override
