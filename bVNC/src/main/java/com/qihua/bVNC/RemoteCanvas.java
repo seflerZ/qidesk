@@ -84,6 +84,8 @@ import com.qihua.bVNC.input.InputHandler;
 import com.qihua.bVNC.input.InputHandlerTouchpad;
 import com.qihua.bVNC.input.RemoteCanvasHandler;
 import com.qihua.bVNC.input.RemoteKeyboard;
+import com.qihua.bVNC.input.RemoteNvStreamKeyboard;
+import com.qihua.bVNC.input.RemoteNvStreamPointer;
 import com.qihua.bVNC.input.RemotePointer;
 import com.qihua.bVNC.input.RemoteRdpKeyboard;
 import com.qihua.bVNC.input.RemoteRdpPointer;
@@ -613,8 +615,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         nvcomm = new NvCommunicator(activity, this, handler);
         rfbconn = nvcomm;
 
-//        pointer = new RemoteNvStreamPointer(nvcomm, RemoteCanvas.this, handler, App.debugLog);
-//        keyboard = new RemoteNvStreamKeyboard(nvcomm, RemoteCanvas.this, handler, App.debugLog);
+        pointer = new RemoteNvStreamPointer(nvcomm, RemoteCanvas.this, handler, App.debugLog);
+        keyboard = new RemoteNvStreamKeyboard(nvcomm, RemoteCanvas.this, handler, App.debugLog);
     }
 
     private void startNvStreamConnection(SurfaceHolder surfaceHolder) throws Exception {
@@ -1795,6 +1797,10 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
     @Override
     public Bitmap getBitmap() {
+        if (bitmapData == null) {
+            return null;
+        }
+
         return bitmapData.mbitmap;
     }
 

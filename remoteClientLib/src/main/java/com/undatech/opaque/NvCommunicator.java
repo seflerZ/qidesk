@@ -25,6 +25,7 @@ import com.limelight.nvstream.NvConnectionListener;
 import com.limelight.nvstream.StreamConfiguration;
 import com.limelight.nvstream.http.ComputerDetails;
 import com.limelight.nvstream.http.NvApp;
+import com.limelight.nvstream.input.MouseButtonPacket;
 import com.limelight.nvstream.jni.MoonBridge;
 import com.limelight.preferences.GlPreferences;
 import com.limelight.preferences.PreferenceConfiguration;
@@ -43,6 +44,24 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
     private final Viewable viewable;
     private boolean attemptedConnection;
     private Handler handler;
+
+    private final static int PTRFLAGS_HWHEEL = 0x0400;
+    private final static int PTRFLAGS_WHEEL = 0x0200;
+    private final static int PTRFLAGS_WHEEL_NEGATIVE = 0x0100;
+    //private final static int PTRFLAGS_DOWN           = 0x8000;
+
+    public static final int POINTER_DOWN_MASK = 0x8000;
+
+    private final static int MOUSE_BUTTON_NONE = 0x0000;
+    private final static int MOUSE_BUTTON_MOVE = 0x0800;
+    private final static int MOUSE_BUTTON_LEFT = 0x1000;
+    private final static int MOUSE_BUTTON_RIGHT = 0x2000;
+
+    private static final int MOUSE_BUTTON_MIDDLE = 0x4000;
+    private static final int MOUSE_BUTTON_SCROLL_UP = PTRFLAGS_WHEEL | 0x0058;
+    private static final int MOUSE_BUTTON_SCROLL_DOWN = PTRFLAGS_WHEEL | PTRFLAGS_WHEEL_NEGATIVE | 0x00a8;
+    private static final int MOUSE_BUTTON_SCROLL_LEFT = PTRFLAGS_HWHEEL | 0x0058;
+    private static final int MOUSE_BUTTON_SCROLL_RIGHT = PTRFLAGS_HWHEEL | PTRFLAGS_WHEEL_NEGATIVE | 0x00a8;
 
     public NvCommunicator(Activity activity, Viewable viewable, Handler handler) {
         super(false, handler);
@@ -162,7 +181,15 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
             attemptedConnection = true;
             decoderRenderer.setRenderTarget(surfaceHolder);
             decoderRenderer.setGraphicsListener((surface, x, y, width, height) -> {
+                if (viewable == null) {
+                    return;
+                }
+
                 Bitmap bitmap = viewable.getBitmap();
+                if (bitmap == null) {
+                    return;
+                }
+
                 PixelCopy.request(surface, bitmap, (result) -> {
                     if (result != PixelCopy.SUCCESS) {
                         return;
@@ -297,7 +324,31 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
 
     @Override
     public void writePointerEvent(int x, int y, int metaState, int pointerMask, boolean relative) {
+        if ((pointerMask & MOUSE_BUTTON_MOVE) > 0) {
+            if (relative) {
+                MoonBridge.sendMouseMoveAsMousePosition((short) x, (short) y,
+                        (short) framebufferWidth(), (short) framebufferHeight());
+            } else {
+                MoonBridge.sendMousePosition((short) x, (short) y,
+                        (short) framebufferWidth(), (short) framebufferHeight());
+            }
+        }
 
+        if ((pointerMask & MOUSE_BUTTON_LEFT) > 0) {
+            if ((pointerMask & POINTER_DOWN_MASK) > 0) {
+                MoonBridge.sendMouseButton(MouseButtonPacket.PRESS_EVENT, MouseButtonPacket.BUTTON_LEFT);
+            } else {
+                MoonBridge.sendMouseButton(MouseButtonPacket.RELEASE_EVENT, MouseButtonPacket.BUTTON_LEFT);
+            }
+        }
+
+        if ((pointerMask & MOUSE_BUTTON_RIGHT) > 0) {
+            if ((pointerMask & POINTER_DOWN_MASK) > 0) {
+                MoonBridge.sendMouseButton(MouseButtonPacket.PRESS_EVENT, MouseButtonPacket.BUTTON_RIGHT);
+            } else {
+                MoonBridge.sendMouseButton(MouseButtonPacket.RELEASE_EVENT, MouseButtonPacket.BUTTON_RIGHT);
+            }
+        }
     }
 
     @Override
