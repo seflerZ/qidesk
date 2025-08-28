@@ -349,6 +349,29 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
                 MoonBridge.sendMouseButton(MouseButtonPacket.RELEASE_EVENT, MouseButtonPacket.BUTTON_RIGHT);
             }
         }
+
+        if ((pointerMask & PTRFLAGS_WHEEL) == PTRFLAGS_WHEEL) {
+            short distance = (short) (pointerMask & 0x00ff);
+            if ((pointerMask & PTRFLAGS_WHEEL_NEGATIVE) == PTRFLAGS_WHEEL_NEGATIVE) {
+                distance = ((short)((distance - 256) * 3));
+            } else {
+                distance = ((short)(distance * 3));
+            }
+
+            MoonBridge.sendMouseHighResScroll(distance);
+        }
+
+        if ((pointerMask & PTRFLAGS_HWHEEL) == PTRFLAGS_HWHEEL) {
+            short distance = (short) (pointerMask & 0x00ff);
+
+            if ((pointerMask & PTRFLAGS_WHEEL_NEGATIVE) == PTRFLAGS_WHEEL_NEGATIVE) {
+                distance = (short)((distance - 256) * 3);
+            } else {
+                distance = (short)(distance * 3);
+            }
+
+            MoonBridge.sendMouseHighResHScroll(distance);
+        }
     }
 
     @Override
