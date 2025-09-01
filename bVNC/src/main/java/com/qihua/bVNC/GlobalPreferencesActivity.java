@@ -12,7 +12,7 @@ public class GlobalPreferencesActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        setTitle(getString(R.string.settings_default));
+        setTitle(getString(com.freerdp.freerdpcore.R.string.settings_default));
 
         getSupportFragmentManager().beginTransaction()
                 .replace(android.R.id.content, new GlobalPreferencesFragment())

@@ -3,6 +3,8 @@ apply plugin: 'com.android.application'
 android {
     compileSdkVersion compileApi
 
+    namespace 'com.qihua.rmt'
+
     defaultConfig {
         targetSdkVersion targetApi
         minSdkVersion project.getProperties().get("SDK_VERSION")

@@ -6,7 +6,7 @@ buildscript {
         google()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:7.4.2'
+        classpath 'com.android.tools.build:gradle:8.3.2'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
@@ -19,8 +19,8 @@ allprojects {
 }
 
 ext {
-    toolsVersion = properties.get('TOOLS_VERSION', '31.0.0')
-    compileApi = properties.get('COMPILE_API', 34)
-    targetApi = properties.get('TARGET_API', 34)
+    toolsVersion = properties.get('TOOLS_VERSION', '35.0.0')
+    compileApi = properties.get('COMPILE_API', 35)
+    targetApi = properties.get('TARGET_API', 35)
     minApi = properties.get('MIN_API', 26)
 }

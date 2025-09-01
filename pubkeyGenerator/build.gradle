@@ -3,6 +3,8 @@ apply plugin: 'com.android.library'
 android {
     compileSdkVersion compileApi
 
+    namespace 'com.qihua.pubkeygenerator'
+
     defaultConfig {
         minSdkVersion 8
         targetSdkVersion targetApi

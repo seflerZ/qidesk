@@ -4,6 +4,8 @@ apply plugin: 'kotlin-android'
 android {
     compileSdkVersion compileApi
 
+    namespace 'com.undatech.remoteClientUi'
+
     defaultConfig {
         targetSdkVersion targetApi
         minSdkVersion project.getProperties().get("SDK_VERSION")

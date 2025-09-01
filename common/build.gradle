@@ -6,6 +6,8 @@ plugins {
 android {
     compileSdkVersion compileApi
 
+    namespace 'com.morpheusly.common'
+
     defaultConfig {
         minSdkVersion 16
         targetSdkVersion targetApi
