@@ -6,6 +6,7 @@ import android.os.Handler;
 import android.view.KeyCharacterMap;
 import android.view.KeyEvent;
 
+import com.limelight.binding.input.KeyboardTranslator;
 import com.qihua.bVNC.App;
 import com.qihua.bVNC.RemoteCanvas;
 import com.undatech.opaque.NvCommunicator;
@@ -14,6 +15,7 @@ import com.undatech.opaque.input.RdpKeyboardMapper;
 
 public class RemoteNvStreamKeyboard extends RemoteKeyboard {
     private final static String TAG = "RemoteNvStreamKeyboard";
+    protected KeyboardTranslator keyboardTranslator;
     protected RemoteCanvas canvas;
     private NvCommunicator nvcomm;
 
@@ -21,6 +23,7 @@ public class RemoteNvStreamKeyboard extends RemoteKeyboard {
         super(r, v.getContext(), h, debugLog);
         nvcomm = (NvCommunicator) r;
         canvas = v;
+        keyboardTranslator = new KeyboardTranslator();
     }
 
     public boolean processLocalKeyEvent(int keyCode, KeyEvent evt, int additionalMetaState) {
@@ -46,16 +49,26 @@ public class RemoteNvStreamKeyboard extends RemoteKeyboard {
             // Detect whether this event is coming from a default hardware keyboard.
             metaState = onScreenMetaState | metaState;
 
-            // Update the meta-state with writeKeyEvent.
-            if (down) {
-                nvcomm.writeKeyEvent(keyCode, metaState, down);
-                evt = injectMetaState(evt, metaState);
-                lastDownMetaState = metaState;
+            if (keyCode == 0 && evt.getCharacters() != null /*KEYCODE_UNKNOWN*/) {
+                String s = evt.getCharacters();
+                nvcomm.writeClientCutText(s);
+
+                return true;
             } else {
-                nvcomm.writeKeyEvent(keyCode, lastDownMetaState, down);
-                evt = injectMetaState(evt, lastDownMetaState);
-                lastDownMetaState = 0;
+                // Send the key to be processed through the KeyboardMapper.
+                keyCode = keyboardTranslator.translate(evt.getKeyCode(), evt.getDeviceId());
+
+                // Update the meta-state with writeKeyEvent.
+                if (down) {
+                    nvcomm.writeKeyEvent(keyCode, metaState, down);
+                    lastDownMetaState = metaState;
+                } else {
+                    nvcomm.writeKeyEvent(keyCode, lastDownMetaState, down);
+                    lastDownMetaState = 0;
+                }
             }
+
+
 
             return true;
         } else {

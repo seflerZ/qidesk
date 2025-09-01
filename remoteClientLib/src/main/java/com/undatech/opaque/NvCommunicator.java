@@ -16,6 +16,7 @@ import android.view.View;
 import com.limelight.LimeLog;
 import com.limelight.binding.PlatformBinding;
 import com.limelight.binding.audio.AndroidAudioRenderer;
+import com.limelight.binding.input.KeyboardTranslator;
 import com.limelight.binding.video.CrashListener;
 import com.limelight.binding.video.MediaCodecDecoderRenderer;
 import com.limelight.binding.video.MediaCodecHelper;
@@ -25,6 +26,7 @@ import com.limelight.nvstream.NvConnectionListener;
 import com.limelight.nvstream.StreamConfiguration;
 import com.limelight.nvstream.http.ComputerDetails;
 import com.limelight.nvstream.http.NvApp;
+import com.limelight.nvstream.input.KeyboardPacket;
 import com.limelight.nvstream.input.MouseButtonPacket;
 import com.limelight.nvstream.jni.MoonBridge;
 import com.limelight.preferences.GlPreferences;
@@ -43,6 +45,7 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
     private Activity activity;
     private final Viewable viewable;
     private boolean attemptedConnection;
+    private KeyboardTranslator keyboardTranslator;
     private Handler handler;
 
     private final static int PTRFLAGS_HWHEEL = 0x0400;
@@ -69,6 +72,8 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
         this.viewable = viewable;
         this.attemptedConnection = false;
         this.handler = handler;
+
+        this.keyboardTranslator = new KeyboardTranslator();
     }
 
     public void setConnectionParameters(String host, int port, int httpsPort,
@@ -304,7 +309,7 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
 
     @Override
     public void writeClientCutText(String text) {
-
+        conn.sendUtf8Text(text);
     }
 
     @Override
@@ -314,7 +319,7 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
 
     @Override
     public boolean isInNormalProtocol() {
-        return false;
+        return true;
     }
 
     @Override
@@ -376,7 +381,16 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
 
     @Override
     public void writeKeyEvent(int key, int metaState, boolean down) {
+            // handleSpecialKeys() takes the Android keycode
+//            if (handleSpecialKeys(keyCode, buttonDown)) {
+//                return;
+//            }
 
+        if (down) {
+            conn.sendKeyboardInput((short) key, KeyboardPacket.KEY_DOWN, (byte)0, (byte)0);
+        } else {
+            conn.sendKeyboardInput((short) key, KeyboardPacket.KEY_UP, (byte)0, (byte)0);
+        }
     }
 
     @Override
