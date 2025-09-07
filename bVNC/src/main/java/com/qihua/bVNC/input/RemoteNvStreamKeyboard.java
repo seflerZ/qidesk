@@ -68,8 +68,6 @@ public class RemoteNvStreamKeyboard extends RemoteKeyboard {
                 }
             }
 
-
-
             return true;
         } else {
             return false;

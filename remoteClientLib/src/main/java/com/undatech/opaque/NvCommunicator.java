@@ -3,15 +3,10 @@ package com.undatech.opaque;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.ImageFormat;
-import android.graphics.SurfaceTexture;
-import android.media.Image;
-import android.media.ImageReader;
 import android.os.Handler;
-import android.os.Looper;
+import android.view.KeyEvent;
 import android.view.PixelCopy;
 import android.view.SurfaceHolder;
-import android.view.View;
 
 import com.limelight.LimeLog;
 import com.limelight.binding.PlatformBinding;
@@ -31,11 +26,9 @@ import com.limelight.nvstream.input.MouseButtonPacket;
 import com.limelight.nvstream.jni.MoonBridge;
 import com.limelight.preferences.GlPreferences;
 import com.limelight.preferences.PreferenceConfiguration;
+import com.undatech.opaque.input.RemoteKeyboard;
+import com.undatech.opaque.input.RemotePointer;
 
-import java.io.ByteArrayInputStream;
-import java.nio.ByteBuffer;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 
 public class NvCommunicator extends RfbConnectable implements NvConnectionListener, PerfOverlayListener {
@@ -74,6 +67,15 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
         this.handler = handler;
 
         this.keyboardTranslator = new KeyboardTranslator();
+
+        modifierMap.put(RemoteKeyboard.CTRL_MASK, (int) KeyboardPacket.MODIFIER_CTRL);
+        modifierMap.put(RemoteKeyboard.RCTRL_MASK, (int) KeyboardPacket.MODIFIER_CTRL);
+        modifierMap.put(RemoteKeyboard.ALT_MASK, (int) KeyboardPacket.MODIFIER_ALT);
+        modifierMap.put(RemoteKeyboard.RALT_MASK, (int) KeyboardPacket.MODIFIER_ALT);
+        modifierMap.put(RemoteKeyboard.SUPER_MASK, (int) KeyboardPacket.MODIFIER_META);
+        modifierMap.put(RemoteKeyboard.RSUPER_MASK, (int) KeyboardPacket.MODIFIER_META);
+        modifierMap.put(RemoteKeyboard.SHIFT_MASK, (int) KeyboardPacket.MODIFIER_SHIFT);
+        modifierMap.put(RemoteKeyboard.RSHIFT_MASK, (int) KeyboardPacket.MODIFIER_SHIFT);
     }
 
     public void setConnectionParameters(String host, int port, int httpsPort,
@@ -329,6 +331,11 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
 
     @Override
     public void writePointerEvent(int x, int y, int metaState, int pointerMask, boolean relative) {
+        this.metaState = metaState;
+        if ((pointerMask & RemotePointer.POINTER_DOWN_MASK) != 0) {
+            translateModifierKeys(true);
+        }
+
         if ((pointerMask & MOUSE_BUTTON_MOVE) > 0) {
             if (relative) {
                 MoonBridge.sendMouseMoveAsMousePosition((short) x, (short) y,
@@ -377,19 +384,31 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
 
             MoonBridge.sendMouseHighResHScroll(distance);
         }
+
+        if ((pointerMask & RemotePointer.POINTER_DOWN_MASK) == 0) {
+            translateModifierKeys(false);
+        }
     }
 
     @Override
     public void writeKeyEvent(int key, int metaState, boolean down) {
-            // handleSpecialKeys() takes the Android keycode
-//            if (handleSpecialKeys(keyCode, buttonDown)) {
-//                return;
-//            }
+        this.metaState = metaState;
 
-        if (down) {
-            conn.sendKeyboardInput((short) key, KeyboardPacket.KEY_DOWN, (byte)0, (byte)0);
-        } else {
-            conn.sendKeyboardInput((short) key, KeyboardPacket.KEY_UP, (byte)0, (byte)0);
+        translateModifierKeys(down);
+
+        conn.sendKeyboardInput((short) key
+                , down ? KeyboardPacket.KEY_DOWN : KeyboardPacket.KEY_UP
+                , (byte)remoteKeyboardState.getRemoteMetaState()
+                , (byte)0);
+    }
+
+    // Returns true if the key stroke was consumed
+    private void translateModifierKeys(boolean down) {
+        for (int modifierMask : modifierMap.keySet()) {
+            if ((metaState & modifierMask) > 0) {
+                int modifier = modifierMap.get(modifierMask);
+                remoteKeyboardState.updateRemoteMetaState(modifier, down);
+            }
         }
     }
 
