@@ -96,7 +96,7 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
         prefConfig.enableSops = true;
         prefConfig.bindAllUsb = true;
         prefConfig.audioConfiguration = MoonBridge.AUDIO_CONFIGURATION_STEREO;
-        prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_MIN_LATENCY;
+        prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_BALANCED;
         prefConfig.multiController = false;
 
         viewable.reallocateDrawable(prefConfig.width, prefConfig.height);
@@ -311,7 +311,9 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
 
     @Override
     public void writeClientCutText(String text) {
-        conn.sendUtf8Text(text);
+        if (conn != null) {
+            conn.sendUtf8Text(text);
+        }
     }
 
     @Override
