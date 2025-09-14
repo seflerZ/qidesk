@@ -89,8 +89,8 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
         prefConfig.width = 1920;
         prefConfig.height = 1080;
         prefConfig.enableHdr = false;
-        prefConfig.bitrate = 12_000_000;
-        prefConfig.absoluteMouseMode = true;
+        prefConfig.bitrate = 8_000_000;
+        prefConfig.absoluteMouseMode = false;
         prefConfig.enableAudioFx = true;
         prefConfig.fps = 60;
         prefConfig.enableSops = true;
@@ -137,7 +137,7 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
 
         // If the user requested frame pacing using a capped FPS, we will need to change our
         // desired FPS setting here in accordance with the active display refresh rate.
-        int roundedRefreshRate = 90;
+        int roundedRefreshRate = 60;
         int chosenFrameRate = prefConfig.fps;
         if (prefConfig.framePacing == PreferenceConfiguration.FRAME_PACING_CAP_FPS) {
             if (prefConfig.fps >= roundedRefreshRate) {
@@ -163,7 +163,7 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
                 .setRefreshRate(prefConfig.fps)
                 .setApp(app)
                 .setBitrate(prefConfig.bitrate)
-                .setEnableSops(false)
+                .setEnableSops(prefConfig.enableSops)
                 .enableLocalAudioPlayback(false)
                 .setMaxPacketSize(1392)
                 .setRemoteConfiguration(StreamConfiguration.STREAM_CFG_AUTO) // NvConnection will perform LAN and VPN detection
@@ -209,7 +209,7 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
             });
 
             Context context = activity.getApplicationContext();
-            conn.start(new AndroidAudioRenderer(context, false),
+            conn.start(new AndroidAudioRenderer(context, true),
                     decoderRenderer, NvCommunicator.this);
         }
     }
