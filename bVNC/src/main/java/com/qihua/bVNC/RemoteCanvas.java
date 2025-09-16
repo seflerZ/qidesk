@@ -632,9 +632,12 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         String appName = connection.getUserName();
         int appId = Integer.parseInt(connection.getPassword());
 
+        int remoteWidth = getRemoteWidth(getWidth(), getHeight());
+        int remoteHeight = getRemoteHeight(getWidth(), getHeight());
+
         nvcomm.setConnectionParameters(computerDetails.manualAddress.address,
                 computerDetails.manualAddress.port,
-                computerDetails.httpsPort,
+                computerDetails.httpsPort, remoteWidth, remoteHeight,
                 activity.getUniqueId(), appName,
                 appId, computerDetails.serverCert);
 

@@ -41,6 +41,9 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
     private KeyboardTranslator keyboardTranslator;
     private Handler handler;
 
+    private int framebufferWidth;
+    private int framebufferHeight;
+
     private final static int PTRFLAGS_HWHEEL = 0x0400;
     private final static int PTRFLAGS_WHEEL = 0x0200;
     private final static int PTRFLAGS_WHEEL_NEGATIVE = 0x0100;
@@ -78,19 +81,22 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
         modifierMap.put(RemoteKeyboard.RSHIFT_MASK, (int) KeyboardPacket.MODIFIER_SHIFT);
     }
 
-    public void setConnectionParameters(String host, int port, int httpsPort,
+    public void setConnectionParameters(String host, int port, int httpsPort, int remoteWidth, int remoteHeight,
                                         String uniqueId, String appName, int appId,
                                         X509Certificate serverCert) {
         app = new NvApp(appName != null ? appName : "app", appId, false);
         Context context = this.activity.getApplicationContext();
 
+        framebufferWidth = remoteWidth;
+        framebufferHeight = remoteHeight;
+
         // defined here now, can be configured in later versions
         PreferenceConfiguration prefConfig = new PreferenceConfiguration();
-        prefConfig.width = 1920;
-        prefConfig.height = 1080;
+        prefConfig.width = remoteWidth;
+        prefConfig.height = remoteHeight;
         prefConfig.enableHdr = false;
-        prefConfig.bitrate = 8_000_000;
-        prefConfig.absoluteMouseMode = false;
+        prefConfig.bitrate = 8_000_000 * (remoteWidth / 1920);
+        prefConfig.absoluteMouseMode = true;
         prefConfig.enableAudioFx = true;
         prefConfig.fps = 60;
         prefConfig.enableSops = true;
@@ -286,12 +292,12 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
 
     @Override
     public int framebufferWidth() {
-        return 1920;
+        return framebufferWidth;
     }
 
     @Override
     public int framebufferHeight() {
-        return 1080;
+        return framebufferHeight;
     }
 
     @Override

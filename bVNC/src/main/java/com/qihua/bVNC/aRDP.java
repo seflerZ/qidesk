@@ -364,9 +364,9 @@ public class aRDP extends MainConfiguration {
                     findViewById(R.id.checkboxKeepPassword).setVisibility(View.GONE);
                     findViewById(R.id.textUsername).setVisibility(View.GONE);
 
-                    findViewById(R.id.geometryGroup).setVisibility(View.GONE);
+                    findViewById(R.id.geometryGroup).setVisibility(View.VISIBLE);
                     findViewById(R.id.checkboxEnableRecording).setVisibility(View.GONE);
-                    findViewById(R.id.textDescriptGeom).setVisibility(View.GONE);
+                    findViewById(R.id.geometryGroupZoom).setVisibility(View.GONE);
 
                     if (selected.getPort() <= 0) {
                         portText.setText("48010");
