@@ -20,6 +20,7 @@
 
 package com.qihua.bVNC.input;
 
+import android.view.InputDevice;
 import android.view.MotionEvent;
 
 import com.qihua.bVNC.RemoteCanvas;

@@ -23,6 +23,7 @@ package com.qihua.bVNC.input;
 import android.gesture.GestureOverlayView;
 import android.os.Build;
 import android.os.SystemClock;
+import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;

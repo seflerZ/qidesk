@@ -11,6 +11,7 @@ import android.view.SurfaceHolder;
 import com.limelight.LimeLog;
 import com.limelight.binding.PlatformBinding;
 import com.limelight.binding.audio.AndroidAudioRenderer;
+import com.limelight.binding.input.ControllerHandler;
 import com.limelight.binding.input.KeyboardTranslator;
 import com.limelight.binding.video.CrashListener;
 import com.limelight.binding.video.MediaCodecDecoderRenderer;
@@ -32,6 +33,7 @@ import com.undatech.opaque.input.RemotePointer;
 import java.security.cert.X509Certificate;
 
 public class NvCommunicator extends RfbConnectable implements NvConnectionListener, PerfOverlayListener {
+    private PreferenceConfiguration prefConfig;
     private MediaCodecDecoderRenderer decoderRenderer;
     private NvConnection conn;
     private NvApp app;
@@ -92,10 +94,6 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
 
         // defined here now, can be configured in later versions
         PreferenceConfiguration prefConfig = new PreferenceConfiguration();
-        prefConfig.width = remoteWidth;
-        prefConfig.height = remoteHeight;
-        prefConfig.enableHdr = false;
-        prefConfig.bitrate = 8_000_000 * (remoteWidth / 1920);
         prefConfig.absoluteMouseMode = true;
         prefConfig.enableAudioFx = true;
         prefConfig.fps = 60;
@@ -104,6 +102,10 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
         prefConfig.audioConfiguration = MoonBridge.AUDIO_CONFIGURATION_STEREO;
         prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_BALANCED;
         prefConfig.multiController = false;
+        prefConfig.width = remoteWidth;
+        prefConfig.height = remoteHeight;
+        prefConfig.enableHdr = false;
+        prefConfig.bitrate = 8_000_000 * (remoteWidth / 1920);
 
         viewable.reallocateDrawable(prefConfig.width, prefConfig.height);
 
@@ -187,6 +189,8 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
                 new ComputerDetails.AddressTuple(host, port),
                 httpsPort, uniqueId, config,
                 PlatformBinding.getCryptoProvider(context), serverCert);
+
+        this.prefConfig = prefConfig;
     }
 
     public void connect(SurfaceHolder surfaceHolder) {
@@ -448,5 +452,13 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
     @Override
     public void setCertificateAccepted(boolean certificateAccepted) {
 
+    }
+
+    public NvConnection getConnection() {
+        return conn;
+    }
+
+    public PreferenceConfiguration getPrefConfig() {
+        return prefConfig;
     }
 }

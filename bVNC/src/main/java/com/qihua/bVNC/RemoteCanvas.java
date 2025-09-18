@@ -73,10 +73,13 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 
 import com.limelight.binding.crypto.AndroidCryptoProvider;
+import com.limelight.binding.input.ControllerHandler;
 import com.limelight.computers.ComputerManagerListener;
 import com.limelight.computers.ComputerManagerService;
 import com.limelight.nvstream.http.ComputerDetails;
 import com.limelight.nvstream.http.PairingManager;
+import com.limelight.nvstream.jni.MoonBridge;
+import com.limelight.preferences.PreferenceConfiguration;
 import com.qihua.android.bc.BCFactory;
 import com.qihua.bVNC.dialogs.GetTextFragment;
 import com.qihua.bVNC.exceptions.AnonCipherUnsupportedException;
@@ -173,6 +176,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     // The remote pointer and keyboard
     RemotePointer pointer;
     RemoteKeyboard keyboard;
+    ControllerHandler controller;
     boolean useFull = false;
     boolean compact = false;
     // Used to set the contents of the clipboard.
@@ -642,6 +646,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                 appId, computerDetails.serverCert);
 
         nvcomm.connect(surfaceHolder);
+
+        controller = new ControllerHandler(activity, nvcomm.getConnection(), activity, nvcomm.getPrefConfig());
     }
 
     /**
@@ -2061,6 +2067,10 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
     public RemoteKeyboard getKeyboard() {
         return keyboard;
+    }
+
+    public ControllerHandler getController() {
+        return controller;
     }
 
     public float getZoomFactor() {
