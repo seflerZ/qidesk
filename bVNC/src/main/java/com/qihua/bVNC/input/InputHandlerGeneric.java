@@ -140,10 +140,10 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     private boolean immersiveSwipeEnabled = true;
     protected boolean touchpadFeedback = true;
 
-    private View edgeRight;
-    private View edgeLeft;
-    private View edgeTop;
-    private View edgeBottom;
+    private final View edgeRight;
+    private final View edgeLeft;
+    private final View edgeTop;
+    private final View edgeBottom;
 
     InputHandlerGeneric(RemoteCanvasActivity activity, RemoteCanvas canvas, RemoteCanvas touchpad, RemotePointer pointer,
                         boolean debugLogging) {

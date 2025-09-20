@@ -357,6 +357,7 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
                 MoonBridge.sendMousePosition((short) x, (short) y,
                         (short) framebufferWidth(), (short) framebufferHeight());
             }
+            return;
         }
 
         if ((pointerMask & MOUSE_BUTTON_LEFT) > 0) {
@@ -365,6 +366,7 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
             } else {
                 MoonBridge.sendMouseButton(MouseButtonPacket.RELEASE_EVENT, MouseButtonPacket.BUTTON_LEFT);
             }
+            return;
         }
 
         if ((pointerMask & MOUSE_BUTTON_RIGHT) > 0) {
@@ -373,6 +375,7 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
             } else {
                 MoonBridge.sendMouseButton(MouseButtonPacket.RELEASE_EVENT, MouseButtonPacket.BUTTON_RIGHT);
             }
+            return;
         }
 
         if ((pointerMask & PTRFLAGS_WHEEL) == PTRFLAGS_WHEEL) {
@@ -384,6 +387,7 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
             }
 
             MoonBridge.sendMouseHighResScroll(distance);
+            return;
         }
 
         if ((pointerMask & PTRFLAGS_HWHEEL) == PTRFLAGS_HWHEEL) {
@@ -396,6 +400,7 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
             }
 
             MoonBridge.sendMouseHighResHScroll(distance);
+            return;
         }
 
         if ((pointerMask & RemotePointer.POINTER_DOWN_MASK) == 0) {
