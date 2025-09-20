@@ -173,7 +173,8 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
                 .setBitrate(prefConfig.bitrate)
                 .setEnableSops(prefConfig.enableSops)
                 .enableLocalAudioPlayback(false)
-                .setMaxPacketSize(1392)
+                .setAudioEncryption(false)
+                .setMaxPacketSize(1460)
                 .setRemoteConfiguration(StreamConfiguration.STREAM_CFG_AUTO) // NvConnection will perform LAN and VPN detection
                 .setSupportedVideoFormats(supportedVideoFormats)
                 .setAttachedGamepadMask(1)
