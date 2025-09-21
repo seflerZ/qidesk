@@ -2008,7 +2008,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             // Show the cursor.
 //            RectF r = myDrawable.getCursorRect();
 //            reDraw(r.left, r.top, r.width(), r.height());
-//            reDraw(prevR.left, prevR.top, prevR.width(), prevR.height());
+            reDraw(prevR.left, prevR.top, prevR.width(), prevR.height());
         }
     }
 

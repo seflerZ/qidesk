@@ -403,6 +403,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 //        }
 
         canvas.movePanToMakePointerVisible();
+        canvas.setMousePointerPosition(pointer.getX(), pointer.getY());
 
         return used;
     }
