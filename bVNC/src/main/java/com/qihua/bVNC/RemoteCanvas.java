@@ -343,7 +343,11 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
     @Override
     public boolean onCapturedPointerEvent(MotionEvent event) {
-        return inputHandler.onPointerEvent(event);
+        handler.post(() -> {
+            inputHandler.onPointerEvent(event);
+        });
+
+        return true;
     }
 
     @Override
@@ -2008,7 +2012,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             // Show the cursor.
 //            RectF r = myDrawable.getCursorRect();
 //            reDraw(r.left, r.top, r.width(), r.height());
-            reDraw(prevR.left, prevR.top, prevR.width(), prevR.height());
+//            reDraw(prevR.left, prevR.top, prevR.width(), prevR.height());
         }
     }
 
