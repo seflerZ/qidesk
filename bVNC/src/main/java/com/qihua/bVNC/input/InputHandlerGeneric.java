@@ -317,8 +317,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             diffX = 0;
         }
 
-        int x = (int) (computeAcceleration4mouse(diffX) + pointer.pointerX);
-        int y = (int) (computeAcceleration4mouse(diffY) + pointer.pointerY);
+        int x = (int) (diffX + pointer.pointerX);
+        int y = (int) (diffY + pointer.pointerY);
 
         switch (action) {
             // If a mouse button was pressed or mouse was moved.
@@ -403,7 +403,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 //        }
 
         canvas.movePanToMakePointerVisible();
-        canvas.setMousePointerPosition(pointer.getX(), pointer.getY());
+//        canvas.setMousePointerPosition(pointer.getX(), pointer.getY());
 
         return used;
     }

@@ -343,11 +343,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
     @Override
     public boolean onCapturedPointerEvent(MotionEvent event) {
-        handler.post(() -> {
-            inputHandler.onPointerEvent(event);
-        });
-
-        return true;
+        return inputHandler.onPointerEvent(event);
     }
 
     @Override

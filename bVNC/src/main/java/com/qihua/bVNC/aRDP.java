@@ -700,7 +700,7 @@ public class aRDP extends MainConfiguration {
 
         // Fill in the NickName of this device
         nickText.setText(computerDetails.name);
-        textPassword.setText(computerDetails.uuid);
+        textUsername.setText(computerDetails.uuid);
 
         doPair(computerDetails);
     }

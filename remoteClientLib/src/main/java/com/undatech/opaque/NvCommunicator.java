@@ -100,7 +100,7 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
         prefConfig.enableSops = true;
         prefConfig.bindAllUsb = true;
         prefConfig.audioConfiguration = MoonBridge.AUDIO_CONFIGURATION_STEREO;
-        prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_BALANCED;
+        prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_MIN_LATENCY;
         prefConfig.multiController = false;
         prefConfig.width = remoteWidth;
         prefConfig.height = remoteHeight;
