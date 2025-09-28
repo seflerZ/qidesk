@@ -31,13 +31,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class MyGestureDectector
 {
 
-    private static final int TAP_TIMEOUT = 120;
-    private static final int DOUBLE_TAP_TIMEOUT = 1200;
+    private static final int TAP_TIMEOUT = 300;
+    private static final int DOUBLE_TAP_TIMEOUT = 1500;
     // Distance a touch can wander before we think the user is the first touch in a sequence of
     // double tap
     private static final int LARGE_TOUCH_SLOP = 18;
     // Distance between the first touch and second touch to still be considered a double tap
-    private static final int DOUBLE_TAP_SLOP = 100;
+    private static final int DOUBLE_TAP_SLOP = 180;
     // constants for Message.what used by GestureHandler below
     private static final int SHOW_PRESS = 1;
     private static final int LONG_PRESS = 2;

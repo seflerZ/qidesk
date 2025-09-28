@@ -116,7 +116,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     // This is how far the swipe has to travel before a swipe event is generated.
     float startSwipeDist = 5f;
     boolean canSwipeToMove = false;
-    float baseSwipeDist = 8f;
+    float baseSwipeDist = 4f;
     // This is how far from the top and bottom edge to detect immersive swipe.
     float immersiveSwipeRatio = 0.09f;
     boolean immersiveSwipeY = false;
@@ -317,8 +317,10 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             diffX = 0;
         }
 
-        int x = (int) (diffX + pointer.pointerX);
-        int y = (int) (diffY + pointer.pointerY);
+        // Make distanceX/Y display density independent.
+        float sensitivity = pointer.getSensitivity();
+        int x = (int) (diffX * sensitivity + pointer.pointerX);
+        int y = (int) (diffY * sensitivity + pointer.pointerY);
 
         switch (action) {
             // If a mouse button was pressed or mouse was moved.
