@@ -16,7 +16,7 @@
     </style>
 
     <!-- Application theme. -->
-    <style name="AppTheme" parent="Theme.AppCompat.NoActionBar">
+    <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
         <!-- All customizations that are NOT specific to a particular API-level can go here. -->
         <!-- Toolbar background color -->
         <item name="colorPrimary">#808080</item>

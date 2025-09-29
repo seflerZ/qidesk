@@ -319,6 +319,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:dropDownWidth="match_parent"
+                    android:entries="@array/rdp_connection_type"
                     android:textAppearance="?android:attr/textAppearanceLarge"
                     android:layout_weight="0.8" />
             </TableRow>

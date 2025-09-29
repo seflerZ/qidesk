@@ -23,12 +23,17 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Service;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.res.Configuration;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.util.TypedValue;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -39,6 +44,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.RadioGroup;
 import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
@@ -226,7 +232,7 @@ public class aRDP extends MainConfiguration {
         });
 
         spinnerNvApp = (Spinner) findViewById(R.id.spinnerNvApp);
-        adapterNvAppNames = new ArrayAdapter<>(getApplicationContext(),
+        adapterNvAppNames = new ThemedArrayAdapter<>(getApplicationContext(),
                 android.R.layout.simple_spinner_item,
                 new ArrayList<>());
         adapterNvAppNames.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -951,5 +957,47 @@ public class aRDP extends MainConfiguration {
             Toast.makeText(this, R.string.rdp_server_empty, Toast.LENGTH_LONG).show();
         }
 
+    }
+
+    // 在aRDP.java或其他合适的地方添加这个内部类
+    private static class ThemedArrayAdapter<T> extends ArrayAdapter<T> {
+        private Context context;
+
+        public ThemedArrayAdapter(Context context, int resource, List<T> objects) {
+            super(context, resource, objects);
+            this.context = context;
+        }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            View view = super.getView(position, convertView, parent);
+            if (view instanceof TextView) {
+                TextView textView = (TextView) view;
+                int nightModeFlags = getContext().getResources().getConfiguration().uiMode
+                        & Configuration.UI_MODE_NIGHT_MASK;
+                if (nightModeFlags == Configuration.UI_MODE_NIGHT_YES) {
+                    textView.setTextColor(Color.WHITE);
+                } else {
+                    textView.setTextColor(Color.BLACK);
+                }
+            }
+            return view;
+        }
+
+        @Override
+        public View getDropDownView(int position, View convertView, ViewGroup parent) {
+            View view = super.getDropDownView(position, convertView, parent);
+            if (view instanceof TextView) {
+                TextView textView = (TextView) view;
+                int nightModeFlags = getContext().getResources().getConfiguration().uiMode
+                        & Configuration.UI_MODE_NIGHT_MASK;
+                if (nightModeFlags == Configuration.UI_MODE_NIGHT_YES) {
+                    textView.setTextColor(Color.WHITE);
+                } else {
+                    textView.setTextColor(Color.BLACK);
+                }
+            }
+            return view;
+        }
     }
 }
