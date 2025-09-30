@@ -253,6 +253,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
     // Internal bitmap data
     private int capacity;
+    private FpsCounter fpsCounter;
 
     private Runnable showMessage = new Runnable() {
         public void run() {
@@ -278,6 +279,12 @@ public class RemoteCanvas extends SurfaceView implements Viewable
      */
     public RemoteCanvas(final Context context, AttributeSet attrs) {
         super(context, attrs);
+
+        boolean showFps = Utils.querySharedPreferenceBoolean(getContext(),
+                Constants.enableDebugInfo, false);
+        if (showFps) {
+            fpsCounter = new FpsCounter();
+        }
 
         clipboard = (ClipboardManager) getContext().getSystemService(Context.CLIPBOARD_SERVICE);
 
@@ -1818,13 +1825,11 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     }
 
     private class DrawWorker implements Runnable {
-        private FpsCounter fpsCounter;
         private long lastDraw;
         private Thread thread;
         private LinkedBlockingQueue<DrawTask> queue = new LinkedBlockingQueue<DrawTask>();
 
         public DrawWorker() {
-//            fpsCounter = new FpsCounter();
             lastDraw = System.currentTimeMillis();
 
             thread = new Thread(this, "DrawWorker");
@@ -1848,7 +1853,9 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                 try {
                     DrawTask task = queue.take();
 
-//                    lastDraw = System.currentTimeMillis();
+                    if (System.currentTimeMillis() - lastDraw < 16) {
+                        continue;
+                    }
 
                     if (System.currentTimeMillis() - task.getInTimeMs() > 16) {
                         // drop frame, lagging
@@ -1856,6 +1863,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                         fpsCounter.frameDrop();
                         continue;
                     }
+
+                    lastDraw = System.currentTimeMillis();
 
                     if (isShowFps()) {
                         fpsCounter.count();
@@ -2302,6 +2311,10 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
     public float getZoomLevelFactor() {
         return connection.getZoomLevel() / 100;
+    }
+
+    public FpsCounter getFpsCounter() {
+        return fpsCounter;
     }
 
     public void drawTouchpadHint() {

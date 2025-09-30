@@ -417,6 +417,7 @@ Known issues:
     <string name="keys_caption">Keys</string>
 
     <string name="landscape_force">Force Landscape Orientation</string>
+    <string name="enable_debug_info">Turn on debug information on screen</string>
 
     <string name="left_handed_mode">Left-Handed Mode</string>
 

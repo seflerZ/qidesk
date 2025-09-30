@@ -34,6 +34,7 @@ import androidx.core.view.InputDeviceCompat;
 
 import com.freerdp.freerdpcore.domain.ManualBookmark;
 import com.qihua.bVNC.Constants;
+import com.qihua.bVNC.FpsCounter;
 import com.qihua.bVNC.RemoteCanvas;
 import com.qihua.bVNC.RemoteCanvasActivity;
 import com.qihua.bVNC.Utils;
@@ -310,15 +311,20 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         float diffX = e.getX();
         float diffY = e.getY();
 
-        // position stabilize
-        if (Math.abs(diffX) / Math.abs(diffY) > 10) {
-            diffY = 0;
-        } else if (Math.abs(diffY) / Math.abs(diffX) > 10) {
-            diffX = 0;
+        FpsCounter fpsCounter = canvas.getFpsCounter();
+        if (fpsCounter != null) {
+            fpsCounter.countInput();
         }
 
+        // position stabilize
+//        if (Math.abs(diffX) / Math.abs(diffY) > 10) {
+//            diffY = 0;
+//        } else if (Math.abs(diffY) / Math.abs(diffX) > 10) {
+//            diffX = 0;
+//        }
+
         // Make distanceX/Y display density independent.
-        float sensitivity = pointer.getSensitivity();
+        float sensitivity = pointer.getSensitivity() / 2;
         int x = (int) (diffX * sensitivity + pointer.pointerX);
         int y = (int) (diffY * sensitivity + pointer.pointerY);
 
@@ -692,6 +698,11 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         final int index = e.getActionIndex();
         final int pointerID = e.getPointerId(index);
         final int meta = e.getMetaState();
+
+        FpsCounter fpsCounter = canvas.getFpsCounter();
+        if (fpsCounter != null) {
+            fpsCounter.countInput();
+        }
 
         GestureOverlayView gestureOverlay = activity.findViewById(R.id.gestureOverlay);
 

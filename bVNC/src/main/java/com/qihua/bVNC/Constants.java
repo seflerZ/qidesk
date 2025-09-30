@@ -192,6 +192,7 @@ public class Constants {
     public static final String showOnlyConnectionNicknames = "showOnlyConnectionNicknames";
     public static final String touchpadLongPressAction = "touchpadLongPressAction";
     public static final String touchpadCursorSpeed = "touchpadCursorSpeed";
+    public static final String enableDebugInfo = "enableDebugInfo";
     public static final String themeModeType = "themeModeType";
     public static final String touchpadFeedback = "touchpadFeedback";
     public static final String touchpadEdgeWheel = "touchpadEdgeWheel";

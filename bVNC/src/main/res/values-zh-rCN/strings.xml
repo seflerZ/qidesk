@@ -357,6 +357,7 @@ bVNC对应的功能如下：
 已知的问题：
 &lt;br&gt;
   </string>
+    <string name="enable_debug_info">开启调试信息</string>
     <string name="intro_title">隐私政策</string>
     <string name="intro_version_text" />
     <string name="keep_password_button">保存</string>

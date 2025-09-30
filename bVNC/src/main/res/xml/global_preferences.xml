@@ -14,6 +14,11 @@
         android:key="forceLandscape"
         android:title="@string/landscape_force" />
 
+    <SwitchPreferenceCompat
+        android:defaultValue="false"
+        android:key="enableDebugInfo"
+        android:title="@string/enable_debug_info" />
+
     <ListPreference
         android:entries="@array/pref_theme_mode_label"
         android:summary="@string/theme_mode_restart"
