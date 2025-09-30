@@ -273,10 +273,10 @@ public class MyGestureDectector
 
                 mLastMotionX = x;
                 mLastMotionY = y;
-                if (mCurrentDownEvent != null)
-                {
-                    mCurrentDownEvent.recycle();
-                }
+//                if (mCurrentDownEvent != null)
+//                {
+//                    mCurrentDownEvent.recycle();
+//                }
                 mCurrentDownEvent = MotionEvent.obtain(ev);
                 mAlwaysInTapRegion = true;
                 mAlwaysInBiggerTapRegion = true;
@@ -370,7 +370,7 @@ public class MyGestureDectector
                 }
                 if (mPreviousUpEvent != null)
                 {
-                    mPreviousUpEvent.recycle();
+//                    mPreviousUpEvent.recycle();
                 }
                 // Hold the event we obtained above - listeners may have changed the original.
                 mPreviousUpEvent = currentUpEvent;

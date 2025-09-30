@@ -388,7 +388,7 @@ public class ConnectionGridActivity extends AppCompatActivity implements GetText
     protected void onResumeFragments() {
         Log.i(TAG, "onResumeFragments called");
         super.onResumeFragments();
-        System.gc();
+//        System.gc();
         if (Utils.querySharedPreferenceBoolean(this, Constants.masterPasswordEnabledTag)) {
             showGetTextFragment(getPassword);
         } else {

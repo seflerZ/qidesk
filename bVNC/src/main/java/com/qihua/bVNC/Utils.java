@@ -490,7 +490,7 @@ public class Utils {
                 Bitmap tmp = Bitmap.createScaledBitmap(drawable.mbitmap, dstWidth, dstHeight, true);
                 tmp.compress(Bitmap.CompressFormat.PNG, 100, out);
                 out.close();
-                tmp.recycle();
+//                tmp.recycle();
             }
         } catch (Exception e) {
             e.printStackTrace();

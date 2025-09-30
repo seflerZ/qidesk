@@ -145,8 +145,8 @@ public class AbstractBitmapDrawable extends DrawableContainer {
 
     public void dispose() {
         drawing = false;
-        if (softCursor != null)
-            softCursor.recycle();
+//        if (softCursor != null)
+//            softCursor.recycle();
         softCursor = null;
         cursorRect = null;
         clipRect = null;
