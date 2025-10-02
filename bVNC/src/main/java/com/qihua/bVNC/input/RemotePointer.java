@@ -99,10 +99,10 @@ public abstract class RemotePointer {
      */
     public void movePointer(int x, int y) {
         //android.util.Log.d("RemotePointer", "movePointer");
-        canvas.invalidateMousePosition();
+//        canvas.invalidateMousePosition();
         pointerX = x;
         pointerY = y;
-        canvas.invalidateMousePosition();
+//        canvas.invalidateMousePosition();
         moveMouseButtonUp(x, y, 0);
     }
 

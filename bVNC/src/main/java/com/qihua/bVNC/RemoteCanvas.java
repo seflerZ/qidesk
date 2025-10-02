@@ -1843,6 +1843,12 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         }
 
         public void addTask(DrawTask task) {
+            DrawTask lastTask = queue.peek();
+            if (lastTask != null
+                    && System.currentTimeMillis() - lastTask.getInTimeMs() < 13) {
+                return;
+            }
+
             queue.add(task);
         }
 
@@ -1852,10 +1858,6 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                 Canvas canvas = null;
                 try {
                     DrawTask task = queue.take();
-
-                    if (System.currentTimeMillis() - lastDraw < 16) {
-                        continue;
-                    }
 
                     if (System.currentTimeMillis() - task.getInTimeMs() > 16) {
                         // drop frame, lagging

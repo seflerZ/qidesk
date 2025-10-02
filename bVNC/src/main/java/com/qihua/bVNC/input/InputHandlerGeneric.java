@@ -734,7 +734,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
         if (e.getDeviceId() > 10) {
             if (e.getButtonState() == MotionEvent.BUTTON_PRIMARY) {
-                touchpad.startPointerCapture();
+                touchpad.post(()-> touchpad.startPointerCapture());
             }
 
             return true;
