@@ -37,7 +37,7 @@ public class MyGestureDectector
     // double tap
     private static final int LARGE_TOUCH_SLOP = 18;
     // Distance between the first touch and second touch to still be considered a double tap
-    private static final int DOUBLE_TAP_SLOP = 180;
+    private static final int DOUBLE_TAP_SLOP = 300;
     // constants for Message.what used by GestureHandler below
     private static final int SHOW_PRESS = 1;
     private static final int LONG_PRESS = 2;
@@ -167,7 +167,7 @@ public class MyGestureDectector
         }
         mTouchSlopSquare = 10;
         mLargeTouchSlopSquare = largeTouchSlop;
-        mDoubleTapSlopSquare = 5000;
+        mDoubleTapSlopSquare = 6000;
     }
 
     /**
@@ -404,10 +404,10 @@ public class MyGestureDectector
     private boolean isConsideredDoubleTap(MotionEvent firstDown, MotionEvent firstUp,
                                           MotionEvent secondDown)
     {
-        if (!mAlwaysInBiggerTapRegion)
-        {
-            return false;
-        }
+//        if (!mAlwaysInBiggerTapRegion)
+//        {
+//            return false;
+//        }
 
         if (secondDown.getEventTime() - firstUp.getEventTime() > DOUBLE_TAP_TIMEOUT)
         {

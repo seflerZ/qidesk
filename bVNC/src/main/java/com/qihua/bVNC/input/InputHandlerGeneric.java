@@ -461,7 +461,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             activity.sendShortVibration();
         }
 
-        SystemClock.sleep(50);
+        SystemClock.sleep(100);
         pointer.releaseButton(getX(e), getY(e), 0);
 //        canvas.movePanToMakePointerVisible();
 
@@ -944,7 +944,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                     activity.sendShortVibration();
                 }
 
-                SystemClock.sleep(50);
+                SystemClock.sleep(100);
                 pointer.releaseButton(getX(e), getY(e), meta);
 
                 secondPointerWasDown = false;
@@ -979,9 +979,9 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
                 // if the double tap performed without any movement, perform a additional click
                 // to form a double click. note that the first click is performed during the drag
-                if (totalDragX < 5 && totalDragY < 5) {
+                if (totalDragX < 8 && totalDragY < 8) {
                     pointer.leftButtonDown(getX(e), getY(e), meta);
-                    SystemClock.sleep(50);
+                    SystemClock.sleep(100);
                     pointer.releaseButton(getX(e), getY(e), meta);
 
                     if (touchpadFeedback) {

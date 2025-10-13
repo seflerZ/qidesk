@@ -242,7 +242,7 @@ public class RemoteSpiceKeyboard extends RemoteKeyboard {
                     break;
             }
             try {
-                Thread.sleep(50);
+                Thread.sleep(100);
             } catch (InterruptedException e) {
             }
             pointer.releaseButton(x, y, meta.getMetaFlags() | onScreenMetaState);
