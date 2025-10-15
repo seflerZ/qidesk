@@ -296,6 +296,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         return origSign * delta;
     }
 
+    private long lastPointerEventTime = 0;
+
     /**
      * Handles actions performed by a mouse-like device.
      * @param e touch or generic motion event
@@ -310,6 +312,21 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
         float diffX = e.getX();
         float diffY = e.getY();
+
+        if (System.currentTimeMillis() - lastPointerEventTime < 13 && action == MotionEvent.ACTION_MOVE) {
+            cumulatedX += diffX;
+            cumulatedY += diffY;
+
+            return true;
+        }
+
+        cumulatedX = 0;
+        cumulatedY = 0;
+
+        diffX += cumulatedX;
+        diffY += cumulatedY;
+
+        lastPointerEventTime = System.currentTimeMillis();
 
         FpsCounter fpsCounter = canvas.getFpsCounter();
         if (fpsCounter != null) {
@@ -334,25 +351,23 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             case MotionEvent.ACTION_MOVE:
                 switch (bstate) {
                     case MotionEvent.BUTTON_PRIMARY:
-                        canvas.movePanToMakePointerVisible();
                         pointer.leftButtonDown(x, y, meta);
 
                         break;
                     case MotionEvent.BUTTON_SECONDARY:
                     case MotionEvent.BUTTON_STYLUS_PRIMARY:
-                        canvas.movePanToMakePointerVisible();
                         pointer.rightButtonDown(x, y, meta);
 
                         break;
                     case MotionEvent.BUTTON_TERTIARY:
                     case MotionEvent.BUTTON_STYLUS_SECONDARY:
-                        canvas.movePanToMakePointerVisible();
                         pointer.middleButtonDown(x, y, meta);
 
                         break;
                     default:
                         // move only
                         pointer.moveMouse(x, y, meta);
+                        canvas.movePanToMakePointerVisible();
                 }
                 used = true;
                 break;
@@ -368,7 +383,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                     case MotionEvent.BUTTON_TERTIARY:
                     case MotionEvent.BUTTON_STYLUS_PRIMARY:
                     case MotionEvent.BUTTON_STYLUS_SECONDARY:
-                        canvas.movePanToMakePointerVisible();
                         pointer.releaseButton(x, y, meta);
                         used = true;
                         break;
@@ -409,8 +423,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 //                touchpad.releasePointerCapture();
 //            }
 //        }
-
-        canvas.movePanToMakePointerVisible();
 //        canvas.setMousePointerPosition(pointer.getX(), pointer.getY());
 
         return used;

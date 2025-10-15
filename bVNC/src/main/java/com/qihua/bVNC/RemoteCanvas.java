@@ -1845,7 +1845,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         public void addTask(DrawTask task) {
             DrawTask lastTask = queue.peek();
             if (lastTask != null
-                    && System.currentTimeMillis() - lastTask.getInTimeMs() < 13) {
+                    && System.currentTimeMillis() - lastTask.getInTimeMs() < 10) {
                 return;
             }
 
