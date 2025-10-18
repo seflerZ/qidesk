@@ -313,7 +313,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         float diffX = e.getX();
         float diffY = e.getY();
 
-        if (System.currentTimeMillis() - lastPointerEventTime < 13 && action == MotionEvent.ACTION_MOVE) {
+        if (System.currentTimeMillis() - lastPointerEventTime < 16 && action == MotionEvent.ACTION_MOVE) {
             cumulatedX += diffX;
             cumulatedY += diffY;
 
@@ -466,12 +466,12 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             return true;
         }
 
-        int metaState = e.getMetaState() | canvas.getKeyboard().getMetaState();
-        pointer.leftButtonDown(getX(e), getY(e), metaState);
-
         if (touchpadFeedback) {
             activity.sendShortVibration();
         }
+
+        int metaState = e.getMetaState() | canvas.getKeyboard().getMetaState();
+        pointer.leftButtonDown(getX(e), getY(e), metaState);
 
         SystemClock.sleep(100);
         pointer.releaseButton(getX(e), getY(e), 0);
