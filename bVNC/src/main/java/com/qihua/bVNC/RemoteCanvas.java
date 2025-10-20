@@ -1905,33 +1905,20 @@ public class RemoteCanvas extends SurfaceView implements Viewable
      * Causes a redraw of the myDrawable to happen at the indicated coordinates.
      */
     public void reDraw(int x, int y, int w, int h) {
-        if (System.currentTimeMillis() - lastDraw < 8) {
-            return;
-        }
+        reDraw(new DrawTask(x, y, w, h));
+    }
 
+    public void reDraw(DrawTask drawTask) {
         if (progressDialog != null && progressDialog.isShowing()) {
             progressDialog.dismiss();
         }
 
         //android.util.Log.i(TAG, "reDraw called: " + x +", " + y + " + " + w + "x" + h);
-        float scale = getZoomFactor();
-        float shiftedX = x - shiftX;
-        float shiftedY = y - shiftY;
+//        float scale = getZoomFactor();
+//        float shiftedX = x - shiftX;
+//        float shiftedY = y - shiftY;
 
-        reDraw(new DrawTask((int) shiftedX, (int) shiftedY, (int) (w * scale), (int) (h * scale)));
-    }
-
-    @Override
-    public void reDraw(DrawTask task) {
-        if (System.currentTimeMillis() - lastDraw < 8) {
-            return;
-        }
-
-        if (progressDialog != null && progressDialog.isShowing()) {
-            progressDialog.dismiss();
-        }
-
-        drawWorker.addTask(task);
+        drawWorker.addTask(drawTask);
     }
 
     /**
