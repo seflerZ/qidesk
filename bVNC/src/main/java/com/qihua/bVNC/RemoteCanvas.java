@@ -1899,6 +1899,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         }
     };
 
+    long lastDraw;
+
     /**
      * Causes a redraw of the myDrawable to happen at the indicated coordinates.
      */
@@ -1916,7 +1918,20 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         float shiftedX = x - shiftX;
         float shiftedY = y - shiftY;
 
-        drawWorker.addTask(drawTask);
+        reDraw(new DrawTask((int) shiftedX, (int) shiftedY, (int) (w * scale), (int) (h * scale)));
+    }
+
+    @Override
+    public void reDraw(DrawTask task) {
+        if (System.currentTimeMillis() - lastDraw < 8) {
+            return;
+        }
+
+        if (progressDialog != null && progressDialog.isShowing()) {
+            progressDialog.dismiss();
+        }
+
+        drawWorker.addTask(task);
     }
 
     /**
