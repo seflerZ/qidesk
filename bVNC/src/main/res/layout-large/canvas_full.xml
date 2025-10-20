@@ -10,13 +10,10 @@
         android:layout_height="fill_parent"
         android:layout_gravity="bottom|center"/>
 
-<!--    <ImageView-->
-<!--        android:layout_width="wrap_content"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:layout_gravity="bottom|center"-->
-<!--        android:src="@drawable/redo"-->
-<!--        android:layout_marginBottom="20dp"-->
-<!--        />-->
+    <!-- prevent surface view overlay -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
 
     <!-- prevent surface view overlay -->
     <View

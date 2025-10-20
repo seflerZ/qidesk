@@ -41,7 +41,7 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 public class GetTextFragment extends DialogFragment {
     public static final int Plaintext = 1;

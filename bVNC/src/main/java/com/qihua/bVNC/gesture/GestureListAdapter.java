@@ -10,7 +10,7 @@ import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 import java.util.List;
 

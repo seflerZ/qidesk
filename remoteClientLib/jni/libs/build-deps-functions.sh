@@ -17,7 +17,7 @@ install_cmake() {
     VER=$2
 
     pushd ${DIR} >&/dev/null
-    if [ ! -e cmake-${VER}-Linux-x86_64 ]
+    if [ ! -e cmake-${VER}-linux-x86_64 ]
     then
         wget https://github.com/Kitware/CMake/releases/download/v${VER}/cmake-${VER}-Linux-x86_64.tar.gz >& /dev/null
         tar xzf cmake-${VER}-Linux-x86_64.tar.gz >& /dev/null

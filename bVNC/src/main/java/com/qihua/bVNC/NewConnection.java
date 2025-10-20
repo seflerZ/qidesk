@@ -5,9 +5,7 @@ import android.content.Context;
 import android.os.PersistableBundle;
 import android.widget.ImageView;
 
-import com.google.android.gms.common.internal.ResourceUtils;
 import com.undatech.opaque.Connection;
-import com.undatech.remoteClientUi.R;
 
 public class NewConnection implements Connection {
     @Override

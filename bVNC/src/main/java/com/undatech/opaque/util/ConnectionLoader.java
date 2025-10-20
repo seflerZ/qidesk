@@ -21,7 +21,7 @@ import com.qihua.bVNC.Utils;
 import com.undatech.opaque.Connection;
 import com.undatech.opaque.ConnectionGridActivity;
 import com.undatech.opaque.ConnectionSettings;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 import net.sqlcipher.database.SQLiteDatabase;
 

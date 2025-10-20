@@ -14,7 +14,6 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewConfiguration;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -26,11 +25,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.fragment.app.FragmentActivity;
 
 import com.qihua.pubkeygenerator.GeneratePubkeyActivity;
 import com.undatech.opaque.util.LogcatReader;
-import com.undatech.remoteClientUi.R;
 
 import net.sqlcipher.database.SQLiteDatabase;
 
@@ -42,7 +39,7 @@ public abstract class MainConfiguration extends AppCompatActivity {
 
     protected ConnectionBean selected;
     protected Database database;
-    protected EditText textNickname;
+    protected EditText nickText;
     protected int layoutID;
     protected Spinner connectionType;
     protected int selectedConnType;
@@ -136,8 +133,6 @@ public abstract class MainConfiguration extends AppCompatActivity {
 
         setTitle(R.string.configure_connection);
 
-        textNickname = (EditText) findViewById(R.id.textNickname);
-
         // Here we say what happens when the Pubkey Generate button is pressed.
         buttonGeneratePubkey = (Button) findViewById(R.id.buttonGeneratePubkey);
         buttonGeneratePubkey.setOnClickListener(new View.OnClickListener() {
@@ -175,7 +170,9 @@ public abstract class MainConfiguration extends AppCompatActivity {
         // Define what happens when somebody selects different connection types.
         connectionType = (Spinner) findViewById(R.id.connectionType);
 
+        nickText = (EditText) findViewById(R.id.textNickname);
         ipText = (EditText) findViewById(R.id.textIP);
+
         checkboxKeepSshPass = (CheckBox) findViewById(R.id.checkboxKeepSshPass);
     }
 
@@ -412,8 +409,8 @@ public abstract class MainConfiguration extends AppCompatActivity {
 
     public void saveAsCopy(MenuItem item) {
         Log.d(TAG, "saveAsCopy called");
-        if (selected.getNickname().equals(textNickname.getText().toString()))
-            textNickname.setText(new String(getString(R.string.copy_of) + " " + selected.getNickname()));
+        if (selected.getNickname().equals(nickText.getText().toString()))
+            nickText.setText(new String(getString(R.string.copy_of) + " " + selected.getNickname()));
         selected.setScreenshotFilename(Utils.newScreenshotFileName());
         updateSelectedFromView();
         selected.set_Id(0);

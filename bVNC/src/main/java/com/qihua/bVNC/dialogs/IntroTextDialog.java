@@ -39,8 +39,8 @@ import android.widget.TextView;
 import com.qihua.bVNC.Constants;
 import com.qihua.bVNC.Database;
 import com.qihua.bVNC.Utils;
+import com.qihua.bVNC.R;
 //import com.umeng.commonsdk.UMConfigure;
-import com.undatech.remoteClientUi.R;
 
 import kotlin.UNumbersKt;
 

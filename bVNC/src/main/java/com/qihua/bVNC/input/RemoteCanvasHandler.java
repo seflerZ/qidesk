@@ -28,7 +28,7 @@ import com.undatech.opaque.dialogs.ChoiceFragment;
 import com.undatech.opaque.dialogs.MessageFragment;
 import com.undatech.opaque.dialogs.SelectTextElementFragment;
 import com.undatech.opaque.util.SslUtils;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateEncodingException;

@@ -41,6 +41,7 @@
     <string name="hide_toolbar">Hide toolbar</string>
     <string name="manage_custom_ca_title">Manage custom CA</string>
     <string name="save_button">Save</string>
+    <string name="send_pin_to_pair">Pair</string>
     <string name="select_vm_title">Select Virtual Machine</string>
     <string name="vv_file_not_found">The .vv file was not found!</string>
     <string name="vv_file_error">The .vv file is either missing or corrupt!</string>
@@ -85,7 +86,7 @@
     <string name="usb">USB (plug in OTG cable first)</string>
 
     <string name="address_caption">VNC Server</string>
-    <string name="address_caption_hint">VNC Server</string>
+    <string name="address_caption_hint">Server Domain or IP</string>
     <string name="address_caption_hint_tunneled">VNC Server</string>
     <string name="address_caption_ssh">SSH Server</string>
     <string name="address_caption_ssh_hint">SSH Server</string>
@@ -409,6 +410,7 @@ Known issues:
     <string name="keys_caption">Keys</string>
 
     <string name="landscape_force">Force Landscape Orientation</string>
+    <string name="enable_debug_info">Turn on debug information on screen</string>
 
     <string name="left_handed_mode">Left-Handed Mode</string>
 
@@ -520,6 +522,7 @@ If you are looking for a quick performance boost, try setting the Color mode to 
     <string-array name="rdp_connection_type">
         <item>@string/connection_type_rdp</item>
         <item>@string/connection_type_vnc</item>
+        <item>@string/connection_type_nvstream</item>
     </string-array>
     <string name="rdp_descript_geom">Remote Desktop Size (WxH)</string>
     <string name="rdp_domain_hint">RDP Domain(Optional)</string>
@@ -605,7 +608,7 @@ If you are looking for a quick performance boost, try setting the Color mode to 
     <string name="rdp_connection_screen_help_text" tools:ignore="TypographyOther">"
     </string>
     <string name="rdp_password_hint">Password</string>
-    <string name="rdp_server_empty">RDP Server or port empty. Cannot connect!</string>
+    <string name="rdp_server_empty">Server or port empty. Cannot connect!</string>
     <string name="rdp_username_hint">Username</string>
 
     <string name="remote_sound_disabled">Sound Disabled</string>
@@ -759,8 +762,8 @@ When you add or edit a connection, you will see a connection configuration page.
     <string name="tap_enable">Enable</string>
 
     <string name="username_caption">VNC User</string>
-    <string name="username_hint">UltraVNC MS Logon Username</string>
-    <string name="username_hint_optional">VNC Username (optional)</string>
+    <string name="username_hint">Remote Login Username</string>
+    <string name="username_hint_optional">Username (optional)</string>
     <string name="username_hint_ssh">SSH Username</string>
     <string name="username_hint_vencrypt">VNC Username</string>
     <string name="verification_code">Verification Code</string>
@@ -869,7 +872,7 @@ Below that is where you configure your connection.
     <string name="pref_keyboard_type_label_TYPE_CLASS_TEXT">Text With Suggestions (TYPE_CLASS_TEXT)</string>
     <string name="rdp_geom_full_hd">1080p</string>
     <string name="warn_disconnect_will_reconnect">Connection lost due to network error or logged in from another computer, will reconnect now.</string>
-    <string name="show_privacy_policy">Show Privacy Policy</string>
+    <string name="show_privacy_policy">Show privacy policy</string>
     <string name="request_recording_parameter_title">Will request recoding permission</string>
     <string name="request_recording_parameter_description">"This permission is used to redirect local microphone to remote devices, especially useful in net meetings. "</string>
     <string name="spice_main_screen_help_text">spice intro</string>
@@ -919,4 +922,39 @@ Below that is where you configure your connection.
     <string name="delete">Delete</string>
     <string name="saved">Saved</string>
     <string name="save_fail">Save Failed</string>
+    <string name="theme_mode">Theme Mode</string>
+    <string name="theme_mode_restart">Need restart the application to take effect.</string>
+    <string name="use_as_touchpad">USE AS TOUCHPAD</string>
+
+    <string name="delete_gesture">Delete Gesture</string>
+    <string name="gesture_name">Gesture Name</string>
+    <string name="create_new_gesture">New Gesture</string>
+    <string name="add_some_gesture">Add a gesture first</string>
+    <string name="gesture_name_required">Gesture name required</string>
+
+    <string name="gesture_copy_to">Copy to which?</string>
+
+    <string name="my_connections">My Connections</string>
+    <string name="gesture_key_required">Shortcut key needed</string>
+
+    <string name="gesture_copied">Gesture Copied</string>
+
+    <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
+    <string name="saved">Saved</string>
+    <string name="save_fail">Save Failed</string>
+
+    <string name="connection_type_nvstream">NvStream(Sunshine)</string>
+
+    <!-- NVStream specific values -->
+    <string name="title_add_pc">Add PC Manually</string>
+    <string name="msg_add_pc">Connecting to the PC…</string>
+    <string name="addpc_fail">Unable to connect to the specified computer. Make sure the required ports are allowed through the firewall.</string>
+    <string name="addpc_success">Successfully added computer</string>
+    <string name="addpc_unknown_host">Unable to resolve PC address. Make sure you didn\'t make a typo in the address.</string>
+    <string name="addpc_enter_ip">You must enter an IP address</string>
+    <string name="addpc_wrong_sitelocal">That address doesn\'t look right. You must use your router\'s public IP address for streaming over the Internet.</string>
+    <string name="conn_error_title">Connection Error</string>
+    <string name="nettest_text_blocked">Your device\'s current network connection is blocking Moonlight. Streaming over the Internet may not work while connected to this network.</string>
+    <string name="app_to_load">Launch App</string>
 </resources>

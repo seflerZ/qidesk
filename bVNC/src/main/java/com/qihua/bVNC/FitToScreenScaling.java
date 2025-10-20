@@ -23,7 +23,7 @@ package com.qihua.bVNC;
 import android.graphics.Matrix;
 import android.widget.ImageView.ScaleType;
 
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 /**
  * @author Michael A. MacDonald

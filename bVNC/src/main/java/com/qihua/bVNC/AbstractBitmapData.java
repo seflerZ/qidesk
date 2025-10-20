@@ -241,8 +241,8 @@ abstract public class AbstractBitmapData {
             drawable.dispose();
         drawable = null;
 
-        if (mbitmap != null)
-            mbitmap.recycle();
+//        if (mbitmap != null)
+//            mbitmap.recycle();
         mbitmap = null;
 
         memGraphics = null;

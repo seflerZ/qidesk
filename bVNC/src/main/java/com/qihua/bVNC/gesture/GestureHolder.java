@@ -2,10 +2,7 @@ package com.qihua.bVNC.gesture;
 
 import android.gesture.Gesture;
 
-import com.google.android.gms.common.util.CollectionUtils;
-
 import java.util.List;
-import java.util.Set;
 
 public class GestureHolder {
     private Gesture gesture;

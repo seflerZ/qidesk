@@ -34,7 +34,7 @@ import android.widget.TextView;
 
 import androidx.fragment.app.DialogFragment;
 
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 import java.util.ArrayList;
 import java.util.ListIterator;

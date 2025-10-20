@@ -3,17 +3,15 @@ package com.qihua.bVNC;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Typeface;
-import android.text.TextPaint;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class FpsCounter {
     private int fps = 0;
     private int avg = 0;
     private int max = 0;
     private int lst = 0;
+    private int inputFps = 0;
     private long lastCountMs = 0;
+    private int inputCount = 0;
     private long maxlatency = 0;
     private long avglatency = 0;
     private long maxlastMs = 0;
@@ -34,6 +32,13 @@ public class FpsCounter {
 
     public synchronized void count() {
         fps += 1;
+    }
+    public synchronized void countInput() {
+        inputCount += 1;
+    }
+
+    public long getLastCountMs() {
+        return lastCountMs;
     }
 
     public void finish(long inFpsMs) {
@@ -60,19 +65,24 @@ public class FpsCounter {
 
             avg = (avg + fps)/ 2;
             lst = fps;
+            inputFps = inputCount;
 
             lastCountMs = System.currentTimeMillis();
 
             fps = 0;
+            inputCount = 0;
         }
     }
 
     public void drawFps(Canvas canvas) {
-        char[] text = ("FPS-D:" + lst + ", AVG:" + avg).toCharArray();
+        char[] text = ("FPS-DRAW:" + lst + ", AVG:" + avg).toCharArray();
         canvas.drawText(text, 0, text.length, 100f, 100f, _textPaint);
 
         char[] latText = ("DRAW COST: MAX-5:" + maxlatency + ", AVG:" + avglatency).toCharArray();
         canvas.drawText(latText, 0, latText.length, 100f, 140f, _textPaint);
+
+        char[] inputText = ("INPUT-FREQ: " + inputFps).toCharArray();
+        canvas.drawText(inputText, 0, inputText.length, 100f, 180f, _textPaint);
     }
 
     public synchronized void frameDrop() {

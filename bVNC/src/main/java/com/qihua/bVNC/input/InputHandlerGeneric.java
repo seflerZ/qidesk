@@ -23,6 +23,7 @@ package com.qihua.bVNC.input;
 import android.gesture.GestureOverlayView;
 import android.os.Build;
 import android.os.SystemClock;
+import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
@@ -33,11 +34,12 @@ import androidx.core.view.InputDeviceCompat;
 
 import com.freerdp.freerdpcore.domain.ManualBookmark;
 import com.qihua.bVNC.Constants;
+import com.qihua.bVNC.FpsCounter;
 import com.qihua.bVNC.RemoteCanvas;
 import com.qihua.bVNC.RemoteCanvasActivity;
 import com.qihua.bVNC.Utils;
 import com.undatech.opaque.util.GeneralUtils;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 import java.util.LinkedList;
 import java.util.Queue;
@@ -115,7 +117,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     // This is how far the swipe has to travel before a swipe event is generated.
     float startSwipeDist = 5f;
     boolean canSwipeToMove = false;
-    float baseSwipeDist = 8f;
+    float baseSwipeDist = 4f;
     // This is how far from the top and bottom edge to detect immersive swipe.
     float immersiveSwipeRatio = 0.09f;
     boolean immersiveSwipeY = false;
@@ -139,10 +141,10 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     private boolean immersiveSwipeEnabled = true;
     protected boolean touchpadFeedback = true;
 
-    private View edgeRight;
-    private View edgeLeft;
-    private View edgeTop;
-    private View edgeBottom;
+    private final View edgeRight;
+    private final View edgeLeft;
+    private final View edgeTop;
+    private final View edgeBottom;
 
     InputHandlerGeneric(RemoteCanvasActivity activity, RemoteCanvas canvas, RemoteCanvas touchpad, RemotePointer pointer,
                         boolean debugLogging) {
@@ -294,6 +296,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         return origSign * delta;
     }
 
+    private long lastPointerEventTime = 0;
+
     /**
      * Handles actions performed by a mouse-like device.
      * @param e touch or generic motion event
@@ -309,15 +313,37 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         float diffX = e.getX();
         float diffY = e.getY();
 
-        // position stabilize
-        if (Math.abs(diffX) / Math.abs(diffY) > 10) {
-            diffY = 0;
-        } else if (Math.abs(diffY) / Math.abs(diffX) > 10) {
-            diffX = 0;
+        if (System.currentTimeMillis() - lastPointerEventTime < 16 && action == MotionEvent.ACTION_MOVE) {
+            cumulatedX += diffX;
+            cumulatedY += diffY;
+
+            return true;
         }
 
-        int x = (int) (computeAcceleration4mouse(diffX) + pointer.pointerX);
-        int y = (int) (computeAcceleration4mouse(diffY) + pointer.pointerY);
+        cumulatedX = 0;
+        cumulatedY = 0;
+
+        diffX += cumulatedX;
+        diffY += cumulatedY;
+
+        lastPointerEventTime = System.currentTimeMillis();
+
+        FpsCounter fpsCounter = canvas.getFpsCounter();
+        if (fpsCounter != null) {
+            fpsCounter.countInput();
+        }
+
+        // position stabilize
+//        if (Math.abs(diffX) / Math.abs(diffY) > 10) {
+//            diffY = 0;
+//        } else if (Math.abs(diffY) / Math.abs(diffX) > 10) {
+//            diffX = 0;
+//        }
+
+        // Make distanceX/Y display density independent.
+        float sensitivity = pointer.getSensitivity() / 2;
+        int x = (int) (diffX * sensitivity + pointer.pointerX);
+        int y = (int) (diffY * sensitivity + pointer.pointerY);
 
         switch (action) {
             // If a mouse button was pressed or mouse was moved.
@@ -325,25 +351,23 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             case MotionEvent.ACTION_MOVE:
                 switch (bstate) {
                     case MotionEvent.BUTTON_PRIMARY:
-                        canvas.movePanToMakePointerVisible();
                         pointer.leftButtonDown(x, y, meta);
 
                         break;
                     case MotionEvent.BUTTON_SECONDARY:
                     case MotionEvent.BUTTON_STYLUS_PRIMARY:
-                        canvas.movePanToMakePointerVisible();
                         pointer.rightButtonDown(x, y, meta);
 
                         break;
                     case MotionEvent.BUTTON_TERTIARY:
                     case MotionEvent.BUTTON_STYLUS_SECONDARY:
-                        canvas.movePanToMakePointerVisible();
                         pointer.middleButtonDown(x, y, meta);
 
                         break;
                     default:
                         // move only
                         pointer.moveMouse(x, y, meta);
+                        canvas.movePanToMakePointerVisible();
                 }
                 used = true;
                 break;
@@ -359,7 +383,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                     case MotionEvent.BUTTON_TERTIARY:
                     case MotionEvent.BUTTON_STYLUS_PRIMARY:
                     case MotionEvent.BUTTON_STYLUS_SECONDARY:
-                        canvas.movePanToMakePointerVisible();
                         pointer.releaseButton(x, y, meta);
                         used = true;
                         break;
@@ -400,8 +423,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 //                touchpad.releasePointerCapture();
 //            }
 //        }
-
-        canvas.movePanToMakePointerVisible();
+//        canvas.setMousePointerPosition(pointer.getX(), pointer.getY());
 
         return used;
     }
@@ -444,14 +466,14 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             return true;
         }
 
-        int metaState = e.getMetaState() | canvas.getKeyboard().getMetaState();
-        pointer.leftButtonDown(getX(e), getY(e), metaState);
-
         if (touchpadFeedback) {
             activity.sendShortVibration();
         }
 
-        SystemClock.sleep(50);
+        int metaState = e.getMetaState() | canvas.getKeyboard().getMetaState();
+        pointer.leftButtonDown(getX(e), getY(e), metaState);
+
+        SystemClock.sleep(100);
         pointer.releaseButton(getX(e), getY(e), 0);
 //        canvas.movePanToMakePointerVisible();
 
@@ -689,6 +711,11 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         final int pointerID = e.getPointerId(index);
         final int meta = e.getMetaState();
 
+        FpsCounter fpsCounter = canvas.getFpsCounter();
+        if (fpsCounter != null) {
+            fpsCounter.countInput();
+        }
+
         GestureOverlayView gestureOverlay = activity.findViewById(R.id.gestureOverlay);
 
         // 当手势层可见时，直接转发事件，这样可以无缝将触摸事件转至手势层
@@ -719,7 +746,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
         if (e.getDeviceId() > 10) {
             if (e.getButtonState() == MotionEvent.BUTTON_PRIMARY) {
-                touchpad.startPointerCapture();
+                touchpad.post(()-> touchpad.startPointerCapture());
             }
 
             return true;
@@ -929,7 +956,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                     activity.sendShortVibration();
                 }
 
-                SystemClock.sleep(50);
+                SystemClock.sleep(100);
                 pointer.releaseButton(getX(e), getY(e), meta);
 
                 secondPointerWasDown = false;
@@ -964,9 +991,9 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
                 // if the double tap performed without any movement, perform a additional click
                 // to form a double click. note that the first click is performed during the drag
-                if (totalDragX < 5 && totalDragY < 5) {
+                if (totalDragX < 8 && totalDragY < 8) {
                     pointer.leftButtonDown(getX(e), getY(e), meta);
-                    SystemClock.sleep(50);
+                    SystemClock.sleep(100);
                     pointer.releaseButton(getX(e), getY(e), meta);
 
                     if (touchpadFeedback) {

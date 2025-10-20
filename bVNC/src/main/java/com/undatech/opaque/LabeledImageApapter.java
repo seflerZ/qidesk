@@ -38,7 +38,7 @@ import androidx.appcompat.widget.AppCompatImageView;
 import com.qihua.bVNC.Constants;
 import com.qihua.bVNC.NewConnection;
 import com.qihua.bVNC.Utils;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 import java.io.File;
 import java.util.ArrayList;

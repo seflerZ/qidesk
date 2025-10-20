@@ -33,7 +33,7 @@ import android.view.View;
 import android.widget.ListView;
 import android.widget.SimpleCursorAdapter;
 
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 /**
  * @author Michael A. MacDonald

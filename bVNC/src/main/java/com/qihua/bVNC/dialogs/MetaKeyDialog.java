@@ -52,7 +52,7 @@ import com.qihua.bVNC.input.MetaKeyBase;
 import com.qihua.bVNC.input.MetaKeyBean;
 import com.undatech.opaque.Connection;
 import com.undatech.opaque.input.RemoteKeyboard;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 import net.sqlcipher.database.SQLiteDatabase;
 

@@ -39,7 +39,7 @@ import androidx.fragment.app.DialogFragment;
 import com.morpheusly.common.Utilities;
 import com.undatech.opaque.ConnectionSettings;
 import com.undatech.opaque.util.HttpsFileDownloader;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 import java.io.File;
 

@@ -34,7 +34,7 @@ import com.qihua.bVNC.Database;
 import com.qihua.bVNC.RemoteCanvasActivity;
 import com.qihua.bVNC.SentTextBean;
 import com.undatech.opaque.input.RemoteKeyboard;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 import net.sqlcipher.database.SQLiteDatabase;
 

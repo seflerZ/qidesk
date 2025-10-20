@@ -41,7 +41,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.qihua.bVNC.Utils;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 import java.util.Arrays;
 import java.util.List;

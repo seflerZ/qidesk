@@ -220,4 +220,12 @@ public class RemoteKeyboardState {
             remoteKeyboardMetaState &= ~modifier;
         }
     }
+
+    public int getRemoteMetaState() {
+        return remoteKeyboardMetaState;
+    }
+
+    public void cleanRemoteMetaState() {
+        remoteKeyboardMetaState = 0;
+    }
 }

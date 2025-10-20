@@ -36,7 +36,7 @@ import com.trilead.ssh2.KnownHosts;
 import com.trilead.ssh2.Session;
 import com.undatech.opaque.MessageDialogs;
 import com.undatech.opaque.RemoteClientLibConstants;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;

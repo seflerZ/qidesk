@@ -99,10 +99,10 @@ public abstract class RemotePointer {
      */
     public void movePointer(int x, int y) {
         //android.util.Log.d("RemotePointer", "movePointer");
-        canvas.invalidateMousePosition();
+//        canvas.invalidateMousePosition();
         pointerX = x;
         pointerY = y;
-        canvas.invalidateMousePosition();
+//        canvas.invalidateMousePosition();
         moveMouseButtonUp(x, y, 0);
     }
 
@@ -137,7 +137,7 @@ public abstract class RemotePointer {
 
         if (shouldBeRightClick(e)) {
             rightButtonDown(getX(), getY(), combinedMetastate);
-            SystemClock.sleep(50);
+            SystemClock.sleep(100);
             releaseButton(getX(), getY(), combinedMetastate);
             used = true;
         } else if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP) {

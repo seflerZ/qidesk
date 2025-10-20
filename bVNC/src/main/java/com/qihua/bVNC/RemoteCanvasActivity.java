@@ -26,9 +26,12 @@ package com.qihua.bVNC;
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.app.Service;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
@@ -45,6 +48,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.PersistableBundle;
 import android.os.StrictMode;
 import android.os.SystemClock;
@@ -62,6 +66,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnKeyListener;
 import android.view.View.OnTouchListener;
+import android.view.View.OnGenericMotionListener;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
@@ -80,6 +85,10 @@ import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.button.MaterialButton;
+import com.limelight.binding.input.ControllerHandler;
+import com.limelight.computers.ComputerManagerService;
+import com.limelight.nvstream.http.ComputerDetails;
+import com.limelight.ui.GameGestures;
 import com.qihua.bVNC.dialogs.EnterTextDialog;
 import com.qihua.bVNC.dialogs.MetaKeyDialog;
 import com.qihua.bVNC.extrakeys.ExtraKeyButton;
@@ -104,7 +113,7 @@ import com.undatech.opaque.RemoteClientLibConstants;
 import com.undatech.opaque.util.FileUtils;
 import com.undatech.opaque.util.OnTouchViewMover;
 import com.undatech.opaque.util.RemoteToolbar;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 import org.json.JSONException;
 
@@ -122,7 +131,7 @@ import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
-public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyListener {
+public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyListener, OnGenericMotionListener, GameGestures {
 
     public static final int[] inputModeIds = {R.id.itemInputTouchpad};
     public static final Map<Integer, String> inputModeMap;
@@ -135,6 +144,35 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         temp.put(R.id.itemInputTouchpad, InputHandlerTouchpad.ID);
         inputModeMap = Collections.unmodifiableMap(temp);
     }
+
+
+    private ComputerManagerService.ComputerManagerBinder managerBinder;
+
+    private final ServiceConnection serviceConnection = new ServiceConnection() {
+        public void onServiceConnected(ComponentName className, final IBinder binder) {
+            final ComputerManagerService.ComputerManagerBinder localBinder =
+                    ((ComputerManagerService.ComputerManagerBinder)binder);
+
+            // Wait in a separate thread to avoid stalling the UI
+            new Thread() {
+                @Override
+                public void run() {
+                    // Wait for the binder to be ready
+                    localBinder.waitForReady();
+
+                    // Now make the binder visible
+                    managerBinder = localBinder;
+
+                    // start the connection
+                    canvas.startConnection();
+                }
+            }.start();
+        }
+
+        public void onServiceDisconnected(ComponentName className) {
+            managerBinder = null;
+        }
+    };
 
     final long hideToolbarDelay = 1000;
     InputHandler inputHandler;
@@ -164,7 +202,6 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     private GestureActionLibrary gestureActionLibrary;
     private float lastPanDist = 0f;
     private ExtraKeysView extraKeysView;
-
     private MetaKeyBean lastSentKey;
 
     /**
@@ -213,9 +250,9 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         Log.d(TAG, "OnCreate called");
         super.onCreate(icicle);
 
-        // TODO: Implement left-icon
-        //requestWindowFeature(Window.FEATURE_LEFT_ICON);
-        //setFeatureDrawableResource(Window.FEATURE_LEFT_ICON, R.drawable.icon);
+        // Bind to the ComputerManager service
+        bindService(new Intent(RemoteCanvasActivity.this,
+                ComputerManagerService.class), serviceConnection, Service.BIND_AUTO_CREATE);
 
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
@@ -287,6 +324,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 
         canvas.setOutDisplay(canvas != touchpad);
         canvas.setTouchpad(false);
+        canvas.setActivity(this);
 
         StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
         StrictMode.setThreadPolicy(policy);
@@ -360,10 +398,11 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         gestureActionLibrary = new GestureActionLibrary(canvas.connection.getId());
         gestureActionLibrary.load(getApplicationContext());
 
-        gestureOverlayView.setOrientation(GestureOverlayView.ORIENTATION_VERTICAL);
+//        gestureOverlayView.setOrientation(GestureOverlayView.ORIENTATION_VERTICAL);
         gestureOverlayView.setGestureStrokeWidth(20f);
         gestureOverlayView.setGestureColor(getColor(R.color.theme));
         gestureOverlayView.setEventsInterceptionEnabled(true);
+        gestureOverlayView.setUncertainGestureColor(getColor(R.color.grey_overlay));
         gestureOverlayView.setFadeEnabled(false);
         gestureOverlayView.setFadeOffset(0);
         gestureOverlayView.setGestureStrokeType(GestureOverlayView.GESTURE_STROKE_TYPE_SINGLE);
@@ -381,7 +420,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 
             // if highest score is less than 2.5, not recognized
             Prediction pre = predictions.get(0);
-            if (pre.score * 6 < 15) {
+            if (pre.score * 6 < 25) {
                 Toast.makeText(RemoteCanvasActivity.this, getString(R.string.gesture_not_recognized), Toast.LENGTH_SHORT).show();
                 hideToolbar();
 
@@ -672,6 +711,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         initializeOnScreenKeys();
 
         touchpad.setOnKeyListener(this);
+        touchpad.setOnGenericMotionListener(this);
         touchpad.setFocusableInTouchMode(true);
         canvas.setDrawingCacheEnabled(true);
 
@@ -940,7 +980,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 
     public void sendShortVibration() {
         if (myVibrator != null) {
-            myVibrator.vibrate(VibrationEffect.createOneShot(25, 80));
+            myVibrator.vibrate(VibrationEffect.createOneShot(12, 8));
         } else {
             Log.i(TAG, "Device cannot vibrate, not sending vibration");
         }
@@ -1488,10 +1528,14 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     @Override
     protected void onDestroy() {
         super.onDestroy();
+
         Log.i(TAG, "onDestroy called.");
         if (canvas != null)
             canvas.closeConnection();
-        System.gc();
+
+        if (managerBinder != null) {
+            unbindService(serviceConnection);
+        }
     }
 
     @Override
@@ -1499,6 +1543,17 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         readSpecialKeysState();
 
         boolean consumed = false;
+
+        if (ControllerHandler.isGameControllerDevice(evt.getDevice()) && canvas.isNvStream) {
+            // Always try the controller handler first, unless it's an alphanumeric keyboard device.
+            // Otherwise, controller handler will eat keyboard d-pad events.
+            if (evt.getAction() == KeyEvent.ACTION_DOWN)
+                consumed = canvas.getController().handleButtonDown(evt);
+            else
+                consumed = canvas.getController().handleButtonUp(evt);
+
+            return consumed;
+        }
 
         if (keyCode == KeyEvent.KEYCODE_MENU) {
             if (evt.getAction() == KeyEvent.ACTION_DOWN)
@@ -1748,6 +1803,22 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         return connection;
     }
 
+    public ComputerDetails getComputerDetail(String uuid) {
+        if (managerBinder == null) {
+            return null;
+        }
+
+        return managerBinder.getComputer(uuid);
+    }
+
+    public String getUniqueId() {
+        if (managerBinder == null) {
+            return null;
+        }
+
+        return managerBinder.getUniqueId();
+    }
+
     // Returns whether we are using D-pad/Trackball to send arrow key events.
     public boolean getUseDpadAsArrows() {
         return connection.getUseDpadAsArrows();
@@ -1798,6 +1869,18 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         } else {
             gestureOverlayView.setVisibility(View.VISIBLE);
         }
+    }
+
+    @Override
+    public boolean onGenericMotion(View v, MotionEvent event) {
+        int eventSource = event.getSource();
+        if ((eventSource & InputDevice.SOURCE_CLASS_JOYSTICK) != 0) {
+            if (canvas.getController().handleMotionEvent(event)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private class ToolbarHiderRunnable implements Runnable {

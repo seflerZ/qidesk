@@ -5,7 +5,7 @@ import android.util.Log
 import com.qihua.bVNC.Constants
 import com.qihua.bVNC.Database
 import com.qihua.bVNC.Utils
-import com.undatech.remoteClientUi.R
+import com.qihua.bVNC.R
 
 class MasterPasswordDelegate(val context: Context, val database: Database) {
     private val TAG: String? = "MasterPasswordDelegate"

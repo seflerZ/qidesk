@@ -7,12 +7,18 @@ android {
 
     defaultConfig {
         targetSdkVersion targetApi
-        minSdkVersion project.getProperties().get("SDK_VERSION")
+        minSdkVersion minApi
         multiDexEnabled true
         applicationId "com.qihua.rmt"
     }
 
+    namespace "com.qihua.rmt"
+
     buildTypes {
+        debug {
+            debuggable true
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'

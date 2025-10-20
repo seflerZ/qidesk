@@ -22,7 +22,7 @@ import androidx.core.content.ContextCompat;
 import com.google.android.material.button.MaterialButton;
 import com.qihua.bVNC.input.RemoteKeyboard;
 import com.qihua.bVNC.theme.ThemeUtils;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 import java.util.ArrayList;
 import java.util.HashMap;

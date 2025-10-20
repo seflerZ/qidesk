@@ -9,11 +9,10 @@
 <!--    <uses-permission tools:node="removeAll" />-->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
-<!--    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>-->
-<!--    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>-->
 
     <uses-feature
         android:name="android.hardware.touchscreen"
@@ -27,12 +26,13 @@
 
     <application
         android:name="com.qihua.bVNC.App"
-        android:allowBackup="false"
+        android:allowBackup="true"
         android:banner="@drawable/banner"
         android:icon="@drawable/app_icon"
         android:label="@string/ardp_app_name"
         android:theme="@style/QiHua"
         android:hardwareAccelerated="true"
+        android:extractNativeLibs="true"
         tools:replace="android:label,android:theme">
         <activity
             android:name="com.undatech.opaque.ConnectionGridActivity"

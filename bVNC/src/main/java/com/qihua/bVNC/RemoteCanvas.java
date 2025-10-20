@@ -32,7 +32,9 @@ package com.qihua.bVNC;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.ComponentName;
 import android.content.Context;
+import android.content.ServiceConnection;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -45,6 +47,7 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.SystemClock;
 import android.provider.Settings;
 import android.text.ClipboardManager;
@@ -62,12 +65,21 @@ import android.view.SurfaceView;
 import android.view.inputmethod.BaseInputConnection;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
+import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
+import com.limelight.binding.crypto.AndroidCryptoProvider;
+import com.limelight.binding.input.ControllerHandler;
+import com.limelight.computers.ComputerManagerListener;
+import com.limelight.computers.ComputerManagerService;
+import com.limelight.nvstream.http.ComputerDetails;
+import com.limelight.nvstream.http.PairingManager;
+import com.limelight.nvstream.jni.MoonBridge;
+import com.limelight.preferences.PreferenceConfiguration;
 import com.qihua.android.bc.BCFactory;
 import com.qihua.bVNC.dialogs.GetTextFragment;
 import com.qihua.bVNC.exceptions.AnonCipherUnsupportedException;
@@ -75,6 +87,8 @@ import com.qihua.bVNC.input.InputHandler;
 import com.qihua.bVNC.input.InputHandlerTouchpad;
 import com.qihua.bVNC.input.RemoteCanvasHandler;
 import com.qihua.bVNC.input.RemoteKeyboard;
+import com.qihua.bVNC.input.RemoteNvStreamKeyboard;
+import com.qihua.bVNC.input.RemoteNvStreamPointer;
 import com.qihua.bVNC.input.RemotePointer;
 import com.qihua.bVNC.input.RemoteRdpKeyboard;
 import com.qihua.bVNC.input.RemoteRdpPointer;
@@ -86,6 +100,7 @@ import com.tigervnc.rfb.AuthFailureException;
 import com.undatech.opaque.Connection;
 import com.undatech.opaque.DrawTask;
 import com.undatech.opaque.MessageDialogs;
+import com.undatech.opaque.NvCommunicator;
 import com.undatech.opaque.RdpCommunicator;
 import com.undatech.opaque.RemoteClientLibConstants;
 import com.undatech.opaque.RfbConnectable;
@@ -97,7 +112,7 @@ import com.undatech.opaque.proxmox.pojo.PveResource;
 import com.undatech.opaque.proxmox.pojo.SpiceDisplay;
 import com.undatech.opaque.proxmox.pojo.VmStatus;
 import com.undatech.opaque.util.FileUtils;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 import org.apache.http.HttpException;
 import org.json.JSONException;
@@ -126,10 +141,14 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     // Connection parameters
     public Connection connection;
     public SSHConnection sshConnection = null;
-    // VNC protocol connection
+
+    // The communicators for different protocols
     public RfbConnectable rfbconn = null;
     public RfbProto rfb = null;
     public SpiceCommunicator spicecomm = null;
+    private RdpCommunicator rdpcomm = null;
+    private NvCommunicator nvcomm = null;
+
     public boolean maintainConnection = true;
     public AbstractBitmapData bitmapData;
     // Progress dialog shown at connection time.
@@ -157,6 +176,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     // The remote pointer and keyboard
     RemotePointer pointer;
     RemoteKeyboard keyboard;
+    ControllerHandler controller;
     boolean useFull = false;
     boolean compact = false;
     // Used to set the contents of the clipboard.
@@ -231,9 +251,9 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         }
     };
 
-    private RdpCommunicator rdpcomm = null;
     // Internal bitmap data
     private int capacity;
+    private FpsCounter fpsCounter;
 
     private Runnable showMessage = new Runnable() {
         public void run() {
@@ -250,6 +270,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     };
 
     private boolean touchpad = false;
+    private RemoteCanvasActivity activity;
 
     /**
      * Constructor used by the inflation apparatus
@@ -258,6 +279,12 @@ public class RemoteCanvas extends SurfaceView implements Viewable
      */
     public RemoteCanvas(final Context context, AttributeSet attrs) {
         super(context, attrs);
+
+        boolean showFps = Utils.querySharedPreferenceBoolean(getContext(),
+                Constants.enableDebugInfo, false);
+        if (showFps) {
+            fpsCounter = new FpsCounter();
+        }
 
         clipboard = (ClipboardManager) getContext().getSystemService(Context.CLIPBOARD_SERVICE);
 
@@ -468,6 +495,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
         isVnc = conn.getConnectionType() == Constants.CONN_TYPE_VNC;
         isRdp = conn.getConnectionType() == Constants.CONN_TYPE_RDP;
+        isNvStream  = conn.getConnectionType() == Constants.CONN_TYPE_NVSTREAM;
+        isSpice = false;
 
         try {
             if (isSpice) {
@@ -476,34 +505,14 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                 initializeRdpConnection();
             } else if (isVnc) {
                 initializeVncConnection();
+            } else if (isNvStream) {
+                initializeNvStreamConnection();
             } else {
                 throw new Exception("unknown connection type");
             }
         } catch (Throwable e) {
             handleUncaughtException(e);
         }
-
-        Thread t = new Thread() {
-            public void run() {
-                try {
-//                    sshConnection = new SSHConnection(connection, getContext(), handler);
-//                    sshConnection.changeOrInitializeSshHostKey(false);
-                    if (isSpice) {
-                        startSpiceConnection();
-                    } else if (isRdp) {
-                        startRdpConnection();
-                    } else if (isVnc) {
-                        startVncConnection();
-                    } else {
-                        throw new Exception("unknown connection type");
-                    }
-
-                } catch (Throwable e) {
-                    handleUncaughtException(e);
-                }
-            }
-        };
-        t.start();
 
         clipboardMonitor = new ClipboardMonitor(getContext(), this);
         clipboardMonitorTimer = new Timer();
@@ -610,6 +619,44 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                 connection.getCertSubject(), connection.getEnableSound());
     }
 
+
+    private void initializeNvStreamConnection() throws Exception {
+        Log.i(TAG, "initializeRdpConnection: Initializing NvStream connection.");
+
+        nvcomm = new NvCommunicator(activity, this, handler);
+        rfbconn = nvcomm;
+
+        pointer = new RemoteNvStreamPointer(nvcomm, RemoteCanvas.this, handler, App.debugLog);
+        keyboard = new RemoteNvStreamKeyboard(nvcomm, RemoteCanvas.this, handler, App.debugLog);
+    }
+
+    private void startNvStreamConnection(SurfaceHolder surfaceHolder) throws Exception {
+        Log.i(TAG, "startNvStreamConnection: Starting NvStream connection.");
+
+        // We reuse the SSH server as the UUID of the computer
+        String uuid = connection.getSshServer();
+        ComputerDetails computerDetails = activity.getComputerDetail(uuid);
+        if (computerDetails == null) {
+            throw new IllegalStateException("computer not found, UUID: " + uuid);
+        }
+
+        String appName = connection.getUserName();
+        int appId = Integer.parseInt(connection.getPassword());
+
+        int remoteWidth = getRemoteWidth(getWidth(), getHeight());
+        int remoteHeight = getRemoteHeight(getWidth(), getHeight());
+
+        nvcomm.setConnectionParameters(computerDetails.manualAddress.address,
+                computerDetails.manualAddress.port,
+                computerDetails.httpsPort, remoteWidth, remoteHeight,
+                activity.getUniqueId(), appName,
+                appId, computerDetails.serverCert);
+
+        nvcomm.connect(surfaceHolder);
+
+        controller = new ControllerHandler(activity, nvcomm.getConnection(), activity, nvcomm.getPrefConfig());
+    }
+
     /**
      * Initializes an RDP connection.
      */
@@ -626,6 +673,24 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
         // in order to support fractional sensitivity, we use the integer divide 10 to make it a float.
         pointer.setSensitivity(Utils.querySharedPreferenceInt(getContext(), Constants.touchpadCursorSpeed, 10) / 10);
+    }
+
+    public void startConnection() {
+        try {
+            if (isSpice) {
+                startSpiceConnection();
+            } else if (isRdp) {
+                startRdpConnection();
+            } else if (isVnc) {
+                startVncConnection();
+            } else if (isNvStream) {
+                startNvStreamConnection(surfaceHolder);
+            } else {
+                throw new Exception("unknown connection type");
+            }
+        } catch (Throwable e) {
+            handleUncaughtException(e);
+        }
     }
 
     /**
@@ -1264,8 +1329,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             useFull = (connection.getForceFull() == BitmapImplHint.FULL);
         }
 
-        if (isRdp) {
-            bitmapData = new UltraCompactBitmapData(rfbconn, this, isSpice | isOpaque | isRdp);
+        if (isRdp | isNvStream) {
+            bitmapData = new UltraCompactBitmapData(rfbconn, this, isSpice | isOpaque | isRdp | isNvStream);
             Log.i(TAG, "Using UltraCompactBufferBitmapData.");
         } else if (!useFull) {
             bitmapData = new LargeBitmapData(rfbconn, this, dx, dy, capacity);
@@ -1748,17 +1813,23 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
     @Override
     public Bitmap getBitmap() {
+        if (bitmapData == null) {
+            return null;
+        }
+
         return bitmapData.mbitmap;
     }
 
+    public void setActivity(RemoteCanvasActivity activity) {
+        this.activity = activity;
+    }
+
     private class DrawWorker implements Runnable {
-        private FpsCounter fpsCounter;
         private long lastDraw;
         private Thread thread;
         private LinkedBlockingQueue<DrawTask> queue = new LinkedBlockingQueue<DrawTask>();
 
         public DrawWorker() {
-//            fpsCounter = new FpsCounter();
             lastDraw = System.currentTimeMillis();
 
             thread = new Thread(this, "DrawWorker");
@@ -1772,6 +1843,12 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         }
 
         public void addTask(DrawTask task) {
+            DrawTask lastTask = queue.peek();
+            if (lastTask != null
+                    && System.currentTimeMillis() - lastTask.getInTimeMs() < 10) {
+                return;
+            }
+
             queue.add(task);
         }
 
@@ -1782,14 +1859,14 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                 try {
                     DrawTask task = queue.take();
 
-//                    lastDraw = System.currentTimeMillis();
-
                     if (System.currentTimeMillis() - task.getInTimeMs() > 16) {
                         // drop frame, lagging
                         fpsCounter.finish(task.getInTimeMs());
                         fpsCounter.frameDrop();
                         continue;
                     }
+
+                    lastDraw = System.currentTimeMillis();
 
                     if (isShowFps()) {
                         fpsCounter.count();
@@ -1826,18 +1903,18 @@ public class RemoteCanvas extends SurfaceView implements Viewable
      * Causes a redraw of the myDrawable to happen at the indicated coordinates.
      */
     public void reDraw(int x, int y, int w, int h) {
-        reDraw(new DrawTask(x, y, w, h));
-    }
+        if (System.currentTimeMillis() - lastDraw < 8) {
+            return;
+        }
 
-    public void reDraw(DrawTask drawTask) {
         if (progressDialog != null && progressDialog.isShowing()) {
             progressDialog.dismiss();
         }
 
         //android.util.Log.i(TAG, "reDraw called: " + x +", " + y + " + " + w + "x" + h);
-//        float scale = getZoomFactor();
-//        float shiftedX = x - shiftX;
-//        float shiftedY = y - shiftY;
+        float scale = getZoomFactor();
+        float shiftedX = x - shiftX;
+        float shiftedY = y - shiftY;
 
         drawWorker.addTask(drawTask);
     }
@@ -2001,6 +2078,10 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
     public RemoteKeyboard getKeyboard() {
         return keyboard;
+    }
+
+    public ControllerHandler getController() {
+        return controller;
     }
 
     public float getZoomFactor() {
@@ -2232,6 +2313,10 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
     public float getZoomLevelFactor() {
         return connection.getZoomLevel() / 100;
+    }
+
+    public FpsCounter getFpsCounter() {
+        return fpsCounter;
     }
 
     public void drawTouchpadHint() {

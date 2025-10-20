@@ -20,12 +20,13 @@
 
 package com.qihua.bVNC.input;
 
+import android.view.InputDevice;
 import android.view.MotionEvent;
 
 import com.qihua.bVNC.RemoteCanvas;
 import com.qihua.bVNC.RemoteCanvasActivity;
 import com.undatech.opaque.util.GeneralUtils;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 public class InputHandlerDirectSwipePan extends InputHandlerGeneric {
     public static final String ID = "TOUCH_ZOOM_MODE";

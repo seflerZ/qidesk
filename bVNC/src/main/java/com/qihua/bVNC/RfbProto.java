@@ -35,7 +35,7 @@ import com.tigervnc.rfb.CSecurityRSAAES;
 import com.undatech.opaque.RfbConnectable;
 import com.undatech.opaque.input.RemoteKeyboard;
 import com.undatech.opaque.util.GeneralUtils;
-import com.undatech.remoteClientUi.R;
+import com.qihua.bVNC.R;
 
 import java.io.IOException;
 import java.net.Socket;
