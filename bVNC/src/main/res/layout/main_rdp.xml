@@ -13,6 +13,7 @@
         <TableLayout
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
             android:padding="5dip">
 
             <TableRow>
@@ -23,7 +24,8 @@
                     android:layout_weight="1"
                     android:hint="@string/nickname_caption_hint"
                     android:singleLine="true"
-                    android:paddingBottom="3sp"
+                    android:textAlignment="center"
+                    android:gravity="center"
                     android:textAppearance="?android:attr/textAppearanceLarge" />
             </TableRow>
 
@@ -307,11 +309,11 @@
                     android:textAppearance="?android:attr/textAppearanceLarge" />
             </TableRow>
             <TableRow>
-
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_weight="0.2"
+                    android:id="@+id/spinnerNvAppText"
                     android:text="@string/app_to_load"
                     android:textAppearance="?android:attr/textAppearanceLarge" />
                 <Spinner

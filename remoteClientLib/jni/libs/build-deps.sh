@@ -126,10 +126,8 @@ do_configure() {
             CXXFLAGS=\"${cxxflags}\" \
             LDFLAGS=\"${ldflags} -L${root}/lib -L${gst}/lib\" \
             "$@"
-
     echo Environment:
     env
-
     ./configure \
             --host=${build_host} \
             --build=${build_system} \
@@ -151,14 +149,11 @@ build_one() {
     # Build the specified package if not already built
     # $1  = package shortname
     local basedir builddir
-
     if is_built "$1" ; then
         echo "Dependency ${1} already built, skipping."
         return
     fi
-
     unpack "$1"
-
     echo "Building ${1}..."
     basedir="$(pwd)"
     builddir="${build}/$(expand ${1}_build)"
@@ -203,12 +198,9 @@ build_one() {
             exit 1
             ;;
         esac
-
         export PATH=${ndkdir}/toolchains/llvm/prebuilt/linux-x86_64/bin/:${PATH}
-
         echo Environment:
         env
-
         echo Executing:
         echo ./Configure \
                 "${os}" \
@@ -221,7 +213,6 @@ build_one() {
                 ${cppflags} \
                 ${cflags} \
                 ${ldflags}
-
         echo Current working directory: $(pwd)
         ./Configure \
                 "${os}" \
@@ -254,31 +245,25 @@ build_one() {
                 --disable-celt051 \
                 --enable-opus \
                 LIBS="-lm"
-
 	# Disable tests and tools
         sed -i 's/tests//' subprojects/spice-common/Makefile || true
         sed -i 's/tests//' spice-common/Makefile || true
         sed -i 's/tests//' Makefile
         sed -i 's/tools//' Makefile
-
         patch -p0 < "${basedir}/spice-gtk-log.patch"
         patch -p1 < "${basedir}/spice-gtk-exit.patch"
         patch -p1 < "${basedir}/spice-gtk-disable-agent-sync-audio-calls.patch"
         patch -p0 < "${basedir}/spice-gtk-disable-mm-time-reset.patch"
         make $parallel
-
         # Patch to avoid SIGBUS due to unaligned accesses on ARM7
         patch -p1 < "${basedir}/spice-marshaller-sigbus.patch"
         make $parallel
-
         make install
-
         # Put some header files in a version-independent location.
         for f in config.h _builddir/subprojects/spice-common/common _builddir/config.h tools/*.h src/*.h spice-common/common subprojects/spice-common/common
         do
             rsync -a $f ${root}/include/spice-1/ || true
         done
-
         ;;
     soup)
         #gtkdocize
@@ -355,7 +340,6 @@ build_one() {
                 --with-included-unistring
         make $parallel || /bin/true
         make install || /bin/true
-
         # Build again over top of gstreamer's gnutls to upgrade it
         do_configure install_in_gst \
                 --disable-crywrap \
@@ -367,7 +351,6 @@ build_one() {
         make install || /bin/true
         ;;
     esac
-
     popd >/dev/null
 }
 
@@ -394,18 +377,18 @@ setup() {
     if [ -z "${origpath}" ] ; then
         origpath="$PATH"
     fi
-
     cppflags=""
     cflags="-O2 -std=gnu99 -Dtypeof=__typeof__ -fPIC"
     cxxflags="${cflags}"
     ldflags=""
-
     abi="${1}"
     case "$abi" in
     armeabi)
         gstarch=arm
         arch=arm
         build_host="arm-linux-androideabi"
+        export CC="armv7a-linux-androideabi${android_api}-clang"
+        export CXX="armv7a-linux-androideabi${android_api}-clang++"
         ;;
     armeabi-v7a)
         gstarch=armv7
@@ -413,71 +396,56 @@ setup() {
         build_host="arm-linux-androideabi"
         cflags="${cflags} -march=armv7-a -mfloat-abi=softfp -mfpu=neon"
         ldflags="${ldflags} -march=armv7-a -Wl,--fix-cortex-a8"
+        export CC="armv7a-linux-androideabi${android_api}-clang"
+        export CXX="armv7a-linux-androideabi${android_api}-clang++"
         ;;
     arm64-v8a)
         gstarch=arm64
         arch=arm64
         build_host="aarch64-linux-android"
+        export CC="aarch64-linux-android${android_api}-clang"
+        export CXX="aarch64-linux-android${android_api}-clang++"
         ;;
     x86)
         gstarch=x86
         arch=x86
         build_host="i686-linux-android"
+        export CC="i686-linux-android${android_api}-clang"
+        export CXX="i686-linux-android${android_api}-clang++"
         ;;
     x86_64)
         gstarch=x86_64
         arch=x86_64
         build_host="x86_64-linux-android"
+        export CC="x86_64-linux-android${android_api}-clang"
+        export CXX="x86_64-linux-android${android_api}-clang++"
         ;;
     *)
         echo "Unknown ABI: $abi"
         exit 1
     esac
-
     build="deps/${abi}/build"
     root="$(pwd)/deps/${abi}/root"
-    toolchain="$(pwd)/deps/${abi}/toolchain"
+    # Use NDK's built-in LLVM toolchain directly (no standalone toolchain needed)
+    toolchain="${ndkdir}/toolchains/llvm/prebuilt/linux-x86_64"
     gst="$(pwd)/deps/${abi}/gstreamer"
     mkdir -p "${root}"
     [ -e ${gst} ] && mkdir -p ${gst}/etc/ssl/certs/ && cp /etc/ssl/certs/ca-certificates.crt ${gst}/etc/ssl/certs/ || /bin/true
-
     fetch configguess
     build_system=$(sh tar/config.guess)
-
-    # Set up build environment
-    if ! [ -e "${toolchain}/bin/${build_host}-gcc" ] ; then
-        if [ -z "${ndkdir}" ] ; then
-            echo "No toolchain configured and NDK directory not set."
-            exit 1
-        fi
-        echo "Toolchain for ${arch} not found, building it."
-        ${ndkdir}/build/tools/make_standalone_toolchain.py \
-                --api "${android_api}" \
-                --arch "${arch}" \
-                --install-dir "${toolchain}"
-#                --deprecated-headers \
-    fi
-    if ! [ -e "${toolchain}/bin/${build_host}-gcc" ] ; then
-        echo "Couldn't configure compiler."
-        exit 1
-    fi
+    # Set PATH to include NDK clang binaries
     PATH="${toolchain}/bin:${origpath}"
-    git clone ${setuptools_url} -b ${setuptools_ver} || true
-    pushd setuptools
-    python bootstrap.py
-    python setup.py install
-    popd
+    # NOTE: setuptools installation removed to avoid permission errors in containers
+    # Original code caused: "error: can't create or remove files in install directory"
 }
 
 build() {
     # Build binaries
     # $1 = ABI
     local package pkgstr origroot
-
     # Set up build environment
     setup "$1"
     fetch configsub
-
     if [ -f CERBERO_BUILT_${1} ]
     then
         echo ; echo
@@ -490,39 +458,37 @@ build() {
             pushd cerbero
             git checkout ${gstreamer_ver}
             patch -p1 < ../cerbero-disable-assrender.patch
+            patch -p1 < ../cerbero-version-check-fixes.patch
             popd
+
             cerbero/cerbero-uninstalled bootstrap
             echo "allow_parallel_build = True" >>  cerbero/config/cross-android-universal.cbc
             echo "toolchain_prefix = \"${ndkdir}\"" >> cerbero/config/cross-android-universal.cbc
+            echo "android_ndk_path = \"${ndkdir}\"" >> cerbero/config/cross-android-universal.cbc
+            # 将 NDK 版本号修改为 r25c 对应的版本号 25.1.8183156
+            echo "android_ndk_version = \"25.1.8183156\"" >> cerbero/config/cross-android-universal.cbc
         fi
-
         echo "Copying local recipes into cerbero"
         git clone https://github.com/iiordanov/remote-desktop-clients-cerbero-recipes.git recipes || true
         pushd recipes
         git pull
         popd
         rsync -avP recipes/ cerbero/recipes/
-
         echo "Running cerbero build for $1 in $(pwd)"
         cerbero/cerbero-uninstalled -c cerbero/config/cross-android-universal.cbc build \
-          gstreamer-1.0 glib glib-networking libxml2 pixman libsoup openssl cairo json-glib gst-android-1.0 gst-plugins-bad-1.0 gst-plugins-good-1.0 gst-plugins-base-1.0 gst-plugins-ugly-1.0 gst-libav-1.0 spiceglue
-
-#        echo "Copying spice-gtk header files that it does not install automatically"
-#        SPICEDIR=$(ls -d1 cerbero/build/sources/android_universal/${gstarch}/spice-gtk-* | tail -n 1)
-
-        # Workaround for non-existent lib-pthread.la dpendency snaking its way into some of the libraries.
+                  glib glib-networking libxml2 pixman libsoup openssl cairo json-glib spiceglue
+        # Workaround for non-existent lib-pthread.la dependency
         sed -i 's/[^ ]*lib-pthread.la//' cerbero/build/dist/android_universal/*/lib/*la
 
         # Prepare gstreamer for current architecture
-#        if [ ! -e "${gst}/lib/libglib-2.0.a" ] ; then
-#            echo "Linking ../../cerbero/build/dist/android_universal/${gstarch} to ${gst}"
-#            ln -sf "../../cerbero/build/dist/android_universal/${gstarch}" "${gst}"
-#            ls -ld "${gst}"
-#        fi
+        if [ ! -e "${gst}/lib/libglib-2.0.a" ] ; then
+            echo "Linking ../../cerbero/build/dist/android_universal/${gstarch} to ${gst}"
+            ln -sf "../../cerbero/build/dist/android_universal/${gstarch}" "${gst}"
+            ls -ld "${gst}"
+        fi
 
         touch CERBERO_BUILT_${1}
     fi
-
     # Build
     for package in $packages
     do
@@ -565,7 +531,6 @@ updates() {
                 sed -nr "s%.*$(expand ${package}_upregex).*%\\1%p" | \
                 sort -uV | \
                 tail -n 1)
-
         if [ "${curver}" != "${newver}" ] ; then
             printf "%-15s %10s  => %10s\n" "${package}" "${curver}" "${newver}"
         fi
@@ -579,20 +544,16 @@ fail_handler() {
 }
 
 build_moonlight() {
-
     if [ -f MOONLIGHT_BUILT ]
     then
       echo ; echo
-      echo "Moonlight was previously built. Remove $(realpath FREERDP_BUILT) if you want to rebuild it."
+      echo "Moonlight was previously built. Remove $(realpath MOONLIGHT_BUILT) if you want to rebuild it."
       echo ; echo
       return
     fi
-
     pushd deps
     basedir="$(pwd)"
-
     missing_artifact="true"
-
     if [ $missing_artifact == "true" ]
     then
         if [ ! -d ${moonlight_build}/.git/ ]
@@ -600,35 +561,25 @@ build_moonlight() {
             rm -rf ${moonlight_build}/
             git clone ${moonlight_url}
         fi
-
         pushd ${moonlight_build}
         git submodule update --init --recursive
         git fetch
         git checkout ${moonlight_ver}
         git reset --hard
-
-        # Prepare the Moonlight project for use as a library
-#        cp "${basedir}/../moonlight_build.gradle" "${basedir}/moonlight-android/app/build.gradle"
-#        rm "${basedir}/moonlight-android/app/src/main/AndroidManifest.xml"
-
         # link to native lib to start compile
         rm -f "${basedir}/../../../jni/moonlight-core"
         rm -f "${basedir}/../../../jni/evdev_reader"
         ln -s "${basedir}/${moonlight_build}/app/src/main/jni/moonlight-core" "${basedir}/../../../jni/moonlight-core"
         ln -s "${basedir}/${moonlight_build}/app/src/main/jni/evdev_reader" "${basedir}/../../../jni/evdev_reader"
-
         export NDK_LIBS_OUT="${basedir}/../../../src/main/jniLibs"
         ${ANDROID_NDK}/ndk-build -j 2
-
         popd
     fi
-
     popd
     touch MOONLIGHT_BUILT
 }
 
 build_freerdp() {
-
     if [ -f FREERDP_BUILT ]
     then
       echo ; echo
@@ -636,23 +587,9 @@ build_freerdp() {
       echo ; echo
       return
     fi
-
     pushd deps
     basedir="$(pwd)"
-
     missing_artifact="true"
-#    for abi in $abis
-#    do
-#      for f in ${freerdp_artifacts}
-#      do
-#        if [ ! -f ${freerdp_build}/client/Android/Studio/freeRDPCore/src/main/jniLibs/${abi}/${f} -a \
-#             ! -f ${freerdp_build}/client/Android/Studio/freeRDPCore/src/main/jniLibs.DISABLED/${abi}/${f} ]
-#        then
-#          missing_artifact="true"
-#        fi
-#      done
-#    done
-
     if [ $missing_artifact == "true" ]
     then
         if [ ! -d ${freerdp_build}/.git/ ]
@@ -660,35 +597,17 @@ build_freerdp() {
             rm -rf ${freerdp_build}/
             git clone ${freerdp_url}
         fi
-
         pushd ${freerdp_build}
         git fetch
         git checkout ${freerdp_ver}
         git reset --hard
-
         # Patch the config
-        sed -i -e 's/CMAKE_BUILD_TYPE=.*/CMAKE_BUILD_TYPE=Release/'\
-               -e 's/WITH_JPEG=.*/WITH_JPEG=0/'\
-               -e 's/WITH_OPENH264=.*/WITH_OPENH264=1/'\
-               -e 's/WITH_MEDIACODEC=.*/WITH_MEDIACODEC=0/'\
-               -e 's/WITH_FFMPEG=.*/WITH_FFMPEG=0/'\
-               -e 's/OPENH264_TAG=.*/OPENH264_TAG=v2.5.0/'\
-               -e 's/OPENSSL_TAG=.*/OPENSSL_TAG=openssl-1.1.1w/'\
-               -e 's/NDK_TARGET=26/NDK_TARGET=21/'\
-               -e 's/8ffbe944e74043d0d3fb53d4a2a14c94de71f58dbea6a06d0dc92369542958ea/94c8ca364db990047ec4ec3481b04ce0d791e62561ef5601443011bdc00825e3/'\
+        sed -i -e 's/8ffbe944e74043d0d3fb53d4a2a14c94de71f58dbea6a06d0dc92369542958ea/94c8ca364db990047ec4ec3481b04ce0d791e62561ef5601443011bdc00825e3/'\
                -e 's/d7939ce614029cdff0b6c20f0e2e5703158a489a72b2507b8bd51bf8c8fd10ca/cf3098950cb4d853ad95c0841f1f9c6d3dc102dccfcacd521d93925208b76ac8/'\
                -e "s/BUILD_ARCH=.*/BUILD_ARCH=\"${abis}\"/"\
                 ./scripts/android-build.conf
-
-#        for f in ${basedir}/../*_freerdp_*.patch
-#        do
-#            echo "Applying $f"
-#            patch -N -p1 < ${f}
-#        done
-
-        sed -i 's/implementationSdkVersion/compileSdkVersion/; s/.*rootProject.ext.versionName.*//; s/.*rootProject.ext.versionCode.*//; s/.*.*buildToolsVersion.*.*//; s/compile /implementation /; s/minSdkVersion .*/minSdkVersion 14/;' \
-               client/Android/Studio/freeRDPCore/build.gradle
-
+#        sed -i 's/implementationSdkVersion/compileSdkVersion/; s/.*rootProject.ext.versionName.*//; s/.*rootProject.ext.versionCode.*//; s/.*.*buildToolsVersion.*.*//; s/compile /implementation /; s/minSdkVersion .*/minSdkVersion 14/;' \
+#               client/Android/Studio/freeRDPCore/build.gradle
         echo "Installing android NDK ${freerdp_ndk_version} for FreeRDP build compatibility"
         export ANDROID_NDK=$(install_ndk ../../ ${freerdp_ndk_version})
         export OPENH264_NDK=$(install_ndk ../../ ${freerdp_openh264_ndk_version})
@@ -698,14 +617,11 @@ build_freerdp() {
         export PATH=${CMAKE_PATH}:${PATH}
         export CMAKE_PROGRAM=${CMAKE_PATH}/cmake
         ./scripts/android-build-freerdp.sh
-
         popd
     fi
-
     popd
     touch FREERDP_BUILT
 }
-
 
 # Set up error handling
 trap fail_handler ERR
@@ -716,7 +632,6 @@ export ANDROID_NDK=$(install_ndk ./ ${ndk_version})
 echo "Android NDK version ${ndk_version} is installed at ${ANDROID_NDK}"
 ndkdir="${ANDROID_NDK}"
 origdir="$(pwd)"
-
 while getopts "j:n:" opt
 do
     case "$opt" in
@@ -736,21 +651,12 @@ sdist)
     sdist
     ;;
 build)
-    for curabi in $abis
-    do
-        build "$curabi"
-    done
-
+#    for curabi in $abis
+#    do
+#        build "$curabi"
+#    done
     build_freerdp
     build_moonlight
-
-#    echo
-#    echo "Now you can run ndk-build if building aSPICE."
-#    echo
-#    echo "Run the following command:"
-#    echo "cd ../../ ; ndk-build"
-#    echo
-
     ;;
 clean)
     shift
@@ -765,12 +671,10 @@ Usage: $0 sdist
        $0 [-j<parallelism>] [-n<ndk-dir>] build
        $0 clean [package...]
        $0 updates
-
 Packages:
 $packages
 EOF
     exit 1
     ;;
 esac
-
 exit 0

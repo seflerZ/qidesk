@@ -326,11 +326,14 @@ public class aRDP extends MainConfiguration {
                     rdpDomain.setVisibility(View.VISIBLE);
 
                     findViewById(R.id.nvstream_pair).setVisibility(View.GONE);
+                    findViewById(R.id.spinnerNvApp).setVisibility(View.GONE);
+                    findViewById(R.id.spinnerNvAppText).setVisibility(View.GONE);
 
                     findViewById(R.id.textPASSWORD).setVisibility(View.VISIBLE);
                     findViewById(R.id.checkboxKeepPassword).setVisibility(View.VISIBLE);
                     findViewById(R.id.textUsername).setVisibility(View.VISIBLE);
-                    findViewById(R.id.textNickname).setVisibility(View.VISIBLE);
+                    nickText.setEnabled(true);
+                    nickText.setHint(getString(R.string.nickname_caption_hint));
 
                     findViewById(R.id.geometryGroup).setVisibility(View.VISIBLE);
                     findViewById(R.id.checkboxEnableRecording).setVisibility(View.VISIBLE);
@@ -343,11 +346,14 @@ public class aRDP extends MainConfiguration {
                     rdpDomain.setVisibility(View.GONE);
 
                     findViewById(R.id.nvstream_pair).setVisibility(View.GONE);
+                    findViewById(R.id.spinnerNvApp).setVisibility(View.GONE);
+                    findViewById(R.id.spinnerNvAppText).setVisibility(View.GONE);
 
                     findViewById(R.id.textPASSWORD).setVisibility(View.VISIBLE);
                     findViewById(R.id.checkboxKeepPassword).setVisibility(View.VISIBLE);
                     findViewById(R.id.textUsername).setVisibility(View.VISIBLE);
-                    findViewById(R.id.textNickname).setVisibility(View.VISIBLE);
+                    nickText.setEnabled(true);
+                    nickText.setHint(getString(R.string.nickname_caption_hint));
 
                     findViewById(R.id.geometryGroup).setVisibility(View.GONE);
                     findViewById(R.id.checkboxEnableRecording).setVisibility(View.GONE);
@@ -360,11 +366,15 @@ public class aRDP extends MainConfiguration {
                     rdpDomain.setVisibility(View.GONE);
 
                     findViewById(R.id.nvstream_pair).setVisibility(View.VISIBLE);
+                    findViewById(R.id.spinnerNvApp).setVisibility(View.VISIBLE);
+                    findViewById(R.id.spinnerNvAppText).setVisibility(View.VISIBLE);
 
                     findViewById(R.id.geometryGroup).setVisibility(View.GONE);
                     findViewById(R.id.checkboxEnableRecording).setVisibility(View.GONE);
                     findViewById(R.id.textDescriptGeom).setVisibility(View.GONE);
-                    findViewById(R.id.textNickname).setVisibility(View.GONE);
+                    findViewById(R.id.textNickname).setEnabled(false);
+                    nickText.setEnabled(false);
+                    nickText.setHint(getString(R.string.nickname_caption_hint_auto));
 
                     findViewById(R.id.textPASSWORD).setVisibility(View.GONE);
                     findViewById(R.id.checkboxKeepPassword).setVisibility(View.GONE);

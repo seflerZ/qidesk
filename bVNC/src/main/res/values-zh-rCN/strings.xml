@@ -105,7 +105,7 @@
     <string name="address_caption_ssh">SSH服务器</string>
     <string name="address_caption_ssh_hint">SSH服务器</string>
     <string name="alt_check">Alt</string>
-    <string name="ardp_app_name">奇花远程桌面</string>
+    <string name="ardp_app_name">奇花远程</string>
     <string name="arrow_down">向下箭头</string>
     <string name="arrow_left">向左箭头</string>
     <string name="arrow_right">向右箭头</string>
@@ -169,7 +169,7 @@
     <string name="auto_x_xvnc">使用Xvnc搜索或创建</string>
     <string name="button_send_text">发送文字</string>
     <string name="button_send_without_saving">发送文字/不保存</string>
-    <string name="bvnc_app_name">奇花远程桌面</string>
+    <string name="bvnc_app_name">奇花远程</string>
     <string name="center_mouse">鼠标@</string>
     <string name="close">关闭</string>
     <string name="color_format_caption">彩色模式</string>
@@ -440,6 +440,7 @@ bVNC对应的功能如下：
     <string name="new_list_button">新一览表</string>
     <string name="nickname_caption">昵称</string>
     <string name="nickname_caption_hint">标题（可选）</string>
+    <string name="nickname_caption_hint_auto">标题将自动设置</string>
 
     <string name="off">Off</string>
 
