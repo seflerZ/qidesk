@@ -97,7 +97,7 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
         prefConfig.absoluteMouseMode = true;
         prefConfig.enableAudioFx = true;
         prefConfig.fps = 60;
-        prefConfig.enableSops = true;
+        prefConfig.enableSops = false;
         prefConfig.bindAllUsb = true;
         prefConfig.audioConfiguration = MoonBridge.AUDIO_CONFIGURATION_STEREO;
         prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_MIN_LATENCY;
@@ -105,7 +105,8 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
         prefConfig.width = remoteWidth;
         prefConfig.height = remoteHeight;
         prefConfig.enableHdr = false;
-        prefConfig.bitrate = 8_000_000 * (remoteWidth / 1920);
+        prefConfig.bitrate = 8000 * (remoteWidth / 1920);
+        prefConfig.disableWarnings = false;
 
         viewable.reallocateDrawable(prefConfig.width, prefConfig.height);
 
