@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:installLocation="auto"
-    android:versionCode="3020"
+    android:versionCode="3024"
     android:versionName="v2.0.1">
 
 <!--    <uses-permission tools:node="removeAll" />-->

@@ -19,6 +19,12 @@ android {
 
     namespace "com.qihua.rmt"
 
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging true
+        }
+    }
+
     buildTypes {
         debug {
             debuggable true
