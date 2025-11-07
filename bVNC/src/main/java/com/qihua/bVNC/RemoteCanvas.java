@@ -30,8 +30,11 @@
 
 package com.qihua.bVNC;
 
+import static com.qihua.bVNC.App.getContext;
+
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Application;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.ServiceConnection;
@@ -646,11 +649,46 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         int remoteWidth = getRemoteWidth(getWidth(), getHeight());
         int remoteHeight = getRemoteHeight(getWidth(), getHeight());
 
-        nvcomm.setConnectionParameters(computerDetails.manualAddress.address,
-                computerDetails.manualAddress.port,
+        boolean isOnRemoteNetwork = Utils.isWrongSubnetSiteLocalAddress(computerDetails.localAddress.address);
+        if (!isOnRemoteNetwork) {
+            computerDetails.activeAddress = computerDetails.localAddress;
+        } else {
+            computerDetails.activeAddress = computerDetails.remoteAddress;
+        }
+
+        // defined here now, can be configured in later versions
+        PreferenceConfiguration prefConfig = new PreferenceConfiguration();
+        prefConfig.absoluteMouseMode = true;
+        prefConfig.enableAudioFx = true;
+        prefConfig.fps = 60;
+        prefConfig.enableSops = false;
+        prefConfig.bindAllUsb = true;
+        prefConfig.audioConfiguration = MoonBridge.AUDIO_CONFIGURATION_STEREO;
+        prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_BALANCED;
+        prefConfig.multiController = false;
+        prefConfig.width = remoteWidth;
+        prefConfig.height = remoteHeight;
+        prefConfig.enableHdr = false;
+        prefConfig.bitrate = 10000 * (remoteWidth / 1920);
+        prefConfig.disableWarnings = false;
+        prefConfig.incomingFrameQueueSize = 2;
+
+        // reduce bitrate if on cellular connection
+        if (isOnRemoteNetwork) {
+            prefConfig.bitrate = 5000 * (remoteWidth / 1920);
+            prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_BALANCED;
+            prefConfig.incomingFrameQueueSize = 5;
+
+            activity.runOnUiThread(() -> Toast.makeText(activity.getApplicationContext()
+                    , R.string.cellular_connection_warning, Toast.LENGTH_SHORT).show());
+        }
+
+        nvcomm.setConnectionParameters(computerDetails.activeAddress.address,
+                computerDetails.activeAddress.port,
                 computerDetails.httpsPort, remoteWidth, remoteHeight,
                 activity.getUniqueId(), appName,
-                appId, computerDetails.serverCert);
+                appId, computerDetails.serverCert,
+                prefConfig);
 
         nvcomm.connect(surfaceHolder);
 

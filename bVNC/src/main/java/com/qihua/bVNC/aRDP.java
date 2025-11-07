@@ -158,7 +158,14 @@ public class aRDP extends MainConfiguration {
                                         btn.setEnabled(false);
                                         btn.setBackgroundColor(getColor(R.color.grey_overlay));
                                         btn.setTextColor(getColor(R.color.theme));
-                                        btn.setText("PAIRED & " + details.state.toString());
+
+                                        if (details.state == ComputerDetails.State.ONLINE) {
+                                            btn.setText(getString(R.string.connection_paired_online));
+                                        } else if (details.state == ComputerDetails.State.OFFLINE) {
+                                            btn.setText(getString(R.string.connection_paired_offline));
+                                        } else {
+                                            btn.setText(getString(R.string.connection_paired_unknown));
+                                        }
 
                                         nickText.setText(details.name);
                                         sshServer.setText(details.uuid);
@@ -576,49 +583,6 @@ public class aRDP extends MainConfiguration {
         return null;
     }
 
-    private boolean isWrongSubnetSiteLocalAddress(String address) {
-        try {
-            InetAddress targetAddress = InetAddress.getByName(address);
-            if (!(targetAddress instanceof Inet4Address) || !targetAddress.isSiteLocalAddress()) {
-                return false;
-            }
-
-            // We have a site-local address. Look for a matching local interface.
-            for (NetworkInterface iface : Collections.list(NetworkInterface.getNetworkInterfaces())) {
-                for (InterfaceAddress addr : iface.getInterfaceAddresses()) {
-                    if (!(addr.getAddress() instanceof Inet4Address) || !addr.getAddress().isSiteLocalAddress()) {
-                        // Skip non-site-local or non-IPv4 addresses
-                        continue;
-                    }
-
-                    byte[] targetAddrBytes = targetAddress.getAddress();
-                    byte[] ifaceAddrBytes = addr.getAddress().getAddress();
-
-                    // Compare prefix to ensure it's the same
-                    boolean addressMatches = true;
-                    for (int i = 0; i < addr.getNetworkPrefixLength(); i++) {
-                        if ((ifaceAddrBytes[i / 8] & (1 << (i % 8))) != (targetAddrBytes[i / 8] & (1 << (i % 8)))) {
-                            addressMatches = false;
-                            break;
-                        }
-                    }
-
-                    if (addressMatches) {
-                        return false;
-                    }
-                }
-            }
-
-            // Couldn't find a matching interface
-            return true;
-        } catch (Exception e) {
-            // Catch all exceptions because some broken Android devices
-            // will throw an NPE from inside getNetworkInterfaces().
-            e.printStackTrace();
-            return false;
-        }
-    }
-
     private ComputerDetails doAddPc(String rawUserInput) {
         boolean wrongSiteLocal = false;
         boolean invalidInput = false;
@@ -645,7 +609,7 @@ public class aRDP extends MainConfiguration {
                 computerDetails.manualAddress = new ComputerDetails.AddressTuple(host, port);
                 success = managerBinder.addComputerBlocking(computerDetails);
                 if (!success){
-                    wrongSiteLocal = isWrongSubnetSiteLocalAddress(host);
+                    wrongSiteLocal = Utils.isWrongSubnetSiteLocalAddress(host);
                 }
             } else {
                 // Invalid user input

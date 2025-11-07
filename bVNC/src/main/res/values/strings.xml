@@ -937,4 +937,10 @@ Below that is where you configure your connection.
     <string name="conn_error_title">Connection Error</string>
     <string name="nettest_text_blocked">Your device\'s current network connection is blocking Moonlight. Streaming over the Internet may not work while connected to this network.</string>
     <string name="app_to_load">Launch App</string>
+    <string name="connection_pair">Pair</string>
+    <string name="cellular_connection_warning">Celluar network detected, decreasing bitrate.</string>
+
+    <string name="connection_paired_online">Paired (Online)</string>
+    <string name="connection_paired_offline">Paired (Offline)</string>
+    <string name="connection_paired_unknown">Paired (Unknown)</string>
 </resources>

@@ -4,14 +4,13 @@ import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.Handler;
-import android.view.KeyEvent;
 import android.view.PixelCopy;
 import android.view.SurfaceHolder;
+import android.widget.Toast;
 
 import com.limelight.LimeLog;
 import com.limelight.binding.PlatformBinding;
 import com.limelight.binding.audio.AndroidAudioRenderer;
-import com.limelight.binding.input.ControllerHandler;
 import com.limelight.binding.input.KeyboardTranslator;
 import com.limelight.binding.video.CrashListener;
 import com.limelight.binding.video.MediaCodecDecoderRenderer;
@@ -29,6 +28,7 @@ import com.limelight.preferences.GlPreferences;
 import com.limelight.preferences.PreferenceConfiguration;
 import com.undatech.opaque.input.RemoteKeyboard;
 import com.undatech.opaque.input.RemotePointer;
+import com.undatech.remoteClientLib.R;
 
 import java.security.cert.X509Certificate;
 
@@ -85,28 +85,12 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
 
     public void setConnectionParameters(String host, int port, int httpsPort, int remoteWidth, int remoteHeight,
                                         String uniqueId, String appName, int appId,
-                                        X509Certificate serverCert) {
+                                        X509Certificate serverCert, PreferenceConfiguration prefConfig) {
         app = new NvApp(appName != null ? appName : "app", appId, false);
         Context context = this.activity.getApplicationContext();
 
         framebufferWidth = remoteWidth;
         framebufferHeight = remoteHeight;
-
-        // defined here now, can be configured in later versions
-        PreferenceConfiguration prefConfig = new PreferenceConfiguration();
-        prefConfig.absoluteMouseMode = true;
-        prefConfig.enableAudioFx = true;
-        prefConfig.fps = 60;
-        prefConfig.enableSops = false;
-        prefConfig.bindAllUsb = true;
-        prefConfig.audioConfiguration = MoonBridge.AUDIO_CONFIGURATION_STEREO;
-        prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_MIN_LATENCY;
-        prefConfig.multiController = false;
-        prefConfig.width = remoteWidth;
-        prefConfig.height = remoteHeight;
-        prefConfig.enableHdr = false;
-        prefConfig.bitrate = 8000 * (remoteWidth / 1920);
-        prefConfig.disableWarnings = false;
 
         viewable.reallocateDrawable(prefConfig.width, prefConfig.height);
 
@@ -117,12 +101,7 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
         decoderRenderer = new MediaCodecDecoderRenderer(
                 activity,
                 prefConfig,
-                new CrashListener() {
-                    @Override
-                    public void notifyCrash(Exception e) {
-
-                    }
-                },
+                e -> {},
                 0,
                 false,
                 prefConfig.enableHdr,
@@ -443,6 +422,10 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
     @Override
     public void writeSetPixelFormat(int bitsPerPixel, int depth, boolean bigEndian, boolean trueColour, int redMax, int greenMax, int blueMax, int redShift, int greenShift, int blueShift, boolean fGreyScale) {
 
+    }
+
+    public void setPrefConfig(PreferenceConfiguration prefConfig) {
+        this.prefConfig = prefConfig;
     }
 
     @Override

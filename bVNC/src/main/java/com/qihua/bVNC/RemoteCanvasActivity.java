@@ -23,6 +23,8 @@
 //
 package com.qihua.bVNC;
 
+import static com.qihua.bVNC.App.getContext;
+
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.app.Dialog;

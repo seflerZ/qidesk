@@ -9,3 +9,4 @@ libs/armeabi-v7a
 obj
 *~
 /src/main/jniLibs/arm64-v8a/
+/jni/libs/MOONLIGHT_BUILT

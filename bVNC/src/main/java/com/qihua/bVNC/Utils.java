@@ -38,6 +38,9 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -73,9 +76,13 @@ import java.io.Reader;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.reflect.Field;
+import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.net.InterfaceAddress;
+import java.net.NetworkInterface;
 import java.net.UnknownHostException;
+import java.util.Collections;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -140,6 +147,61 @@ public class Utils {
         MemoryInfo info = new MemoryInfo();
         getActivityManager(_context).getMemoryInfo(info);
         return info;
+    }
+
+    public static boolean isCellularNetwork(Context context) {
+        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        if (cm == null) return false;
+
+        Network network = cm.getActiveNetwork();
+        if (network == null) return false;
+
+        NetworkCapabilities nc = cm.getNetworkCapabilities(network);
+        return nc != null && nc.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR);
+    }
+
+    public static boolean isWrongSubnetSiteLocalAddress(String address) {
+        try {
+            InetAddress targetAddress = InetAddress.getByName(address);
+            if (!(targetAddress instanceof Inet4Address) || !targetAddress.isSiteLocalAddress()) {
+                return false;
+            }
+
+            // We have a site-local address. Look for a matching local interface.
+            for (NetworkInterface iface : Collections.list(NetworkInterface.getNetworkInterfaces())) {
+                for (InterfaceAddress addr : iface.getInterfaceAddresses()) {
+                    if (!(addr.getAddress() instanceof Inet4Address) || !addr.getAddress().isSiteLocalAddress()) {
+                        // Skip non-site-local or non-IPv4 addresses
+                        continue;
+                    }
+
+                    byte[] targetAddrBytes = targetAddress.getAddress();
+                    byte[] ifaceAddrBytes = addr.getAddress().getAddress();
+
+                    // Compare prefix to ensure it's the same
+                    boolean addressMatches = true;
+                    for (int i = 0; i < addr.getNetworkPrefixLength(); i++) {
+                        if ((ifaceAddrBytes[i / 8] & (1 << (i % 8))) != (targetAddrBytes[i / 8] & (1 << (i % 8)))) {
+                            addressMatches = false;
+                            break;
+                        }
+                    }
+
+                    if (addressMatches) {
+                        return false;
+                    }
+                }
+            }
+
+            // Couldn't find a matching interface
+            return true;
+        } catch (Exception e) {
+            // Catch all exceptions because some broken Android devices
+            // will throw an NPE from inside getNetworkInterfaces().
+            e.printStackTrace();
+            return false;
+        }
     }
 
     public static void showDocumentation(Context c) {
