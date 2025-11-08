@@ -145,6 +145,7 @@ public class ConnectionBean extends AbstractConnectionBean implements Connection
         setConsoleMode(false);
         setRedirectSdCard(false);
         setEnableGesture(true);
+        setGestureConfig("");
         setEnableSound(false);
         setEnableRecording(false);
         setRemoteSoundType(Constants.REMOTE_SOUND_ON_DEVICE);
@@ -243,16 +244,6 @@ public class ConnectionBean extends AbstractConnectionBean implements Connection
             }
         }
         return address;
-    }
-
-    @Override
-    public String getRuntimeId() {
-        return id;
-    }
-
-    @Override
-    public void setRuntimeId(String id) {
-        this.id = id;
     }
 
     @Override

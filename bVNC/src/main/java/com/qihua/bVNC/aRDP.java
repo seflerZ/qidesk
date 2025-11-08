@@ -30,7 +30,6 @@ import android.content.res.Configuration;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.util.TypedValue;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
@@ -48,6 +47,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
+import androidx.annotation.NonNull;
+
 import com.limelight.binding.PlatformBinding;
 import com.limelight.binding.crypto.AndroidCryptoProvider;
 import com.limelight.computers.ComputerManagerListener;
@@ -64,22 +65,21 @@ import com.qihua.bVNC.gesture.GestureEditorActivity;
 import com.qihua.util.PermissionGroups;
 import com.qihua.util.PermissionsManager;
 import com.morpheusly.common.Utilities;
+import com.undatech.opaque.Connection;
+import com.undatech.opaque.util.ConnectionLoader;
 
 import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.StringReader;
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.InterfaceAddress;
-import java.net.NetworkInterface;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -98,6 +98,7 @@ public class aRDP extends MainConfiguration {
     private Spinner spinnerRdpGeometry;
     private String lastRawApplist;
     private Spinner spinnerRdpZoomLevel;
+    private Spinner spinnerGestureConfig;
     private EditText textUsername;
     private EditText rdpDomain;
     private EditText rdpWidth;
@@ -129,6 +130,7 @@ public class aRDP extends MainConfiguration {
     private List<String> rdpColorArray;
     private ComputerManagerService.ComputerManagerBinder managerBinder;
     private ComputerManagerService.ApplistPoller poller;
+    private ArrayList<String> gestureFileArray;
     private final ServiceConnection serviceConnection = new ServiceConnection() {
         public void onServiceConnected(ComponentName className, final IBinder binder) {
             final ComputerManagerService.ComputerManagerBinder localBinder =
@@ -199,6 +201,7 @@ public class aRDP extends MainConfiguration {
             managerBinder = null;
         }
     };
+    private ConnectionLoader connectionLoader;
 
     @Override
     public void onCreate(Bundle icicle) {
@@ -274,8 +277,46 @@ public class aRDP extends MainConfiguration {
         // The geometry type and dimensions boxes.
         spinnerRdpGeometry = (Spinner) findViewById(R.id.spinnerRdpGeometry);
         spinnerRdpZoomLevel = (Spinner) findViewById(R.id.spinnerRdpZoomLevel);
+        spinnerGestureConfig = (Spinner) findViewById(R.id.spinnerGestureConfig);
         rdpWidth = (EditText) findViewById(R.id.rdpWidth);
         rdpHeight = (EditText) findViewById(R.id.rdpHeight);
+
+        connectionLoader = new ConnectionLoader(getApplicationContext()
+                , this, false);
+
+        Map<String, Connection> connMap = connectionLoader.loadConnectionsById();
+        Map<String, Connection> nameConMap = connMap.values().stream()
+                .collect(Collectors.toMap(aRDP::getGestureEntryName, connection -> connection));
+
+        gestureFileArray = new ArrayList<>(nameConMap.keySet());
+        gestureFileArray.add(0, "(NEW FILE)");
+
+        // 创建适配器
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                this, // 当前上下文
+                R.layout.gesture_connection_item, // 列表项布局
+                R.id.connectionName, // 列表项中的 TextView ID（如果使用默认布局）
+                gestureFileArray // 数据
+        );
+
+        spinnerGestureConfig.setAdapter(adapter);
+        spinnerGestureConfig.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> arg0, View view, int itemIndex, long id) {
+                Connection connection = nameConMap.get(adapter.getItem(itemIndex));
+                if (connection == null) {
+                    return;
+                }
+
+                String fileName = connection.getId();
+                selected.setGestureConfig(fileName);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> arg0) {
+            }
+        });
+
         spinnerRdpGeometry.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> arg0, View view, int itemIndex, long id) {
@@ -420,6 +461,16 @@ public class aRDP extends MainConfiguration {
 //        setConnectionTypeSpinnerAdapter(R.array.rdp_connection_type);
     }
 
+    @NonNull
+    private static String getGestureEntryName(Connection connection) {
+        String nickName = connection.getNickname();
+        if (nickName != null && !nickName.isEmpty()) {
+            return nickName;
+        }
+
+        return connection.getUserName() + "@" + connection.getAddress();
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -501,8 +552,9 @@ public class aRDP extends MainConfiguration {
         spinnerRdpColor.setSelection(rdpColorArray.indexOf(String.valueOf(selected.getRdpColor())));
         spinnerRdpGeometry.setSelection(selected.getRdpResType());
         spinnerRdpZoomLevel.setSelection(convert2ZoomIndex(selected.getZoomLevel()));
-        rdpWidth.setText(Integer.toString(selected.getRdpWidth()));
-        rdpHeight.setText(Integer.toString(selected.getRdpHeight()));
+        spinnerGestureConfig.setSelection(convert2GestureIndex(selected));
+        rdpWidth.setText(String.format(Locale.CHINA, "%d", selected.getRdpWidth()));
+        rdpHeight.setText(String.format(Locale.CHINA, "%d", selected.getRdpHeight()));
         setRemoteWidthAndHeight();
         setRemoteSoundTypeFromSettings(selected.getRemoteSoundType());
         checkboxEnableRecording.setChecked(selected.getEnableRecording());
@@ -519,22 +571,20 @@ public class aRDP extends MainConfiguration {
         checkboxEnableGfx.setChecked(selected.getEnableGfx());
         checkboxEnableGfxH264.setChecked(selected.getEnableGfxH264());
         checkboxPreferSendingUnicode.setChecked(selected.getPreferSendingUnicode());
+    }
 
-        /* TODO: Reinstate color spinner but for RDP settings.
-        colorSpinner = (Spinner)findViewById(R.id.colorformat);
-        COLORMODEL[] models=COLORMODEL.values();
-        ArrayAdapter<COLORMODEL> colorSpinnerAdapter = new ArrayAdapter<COLORMODEL>(this, R.layout.connection_list_entry, models);
-        colorSpinner.setAdapter(colorSpinnerAdapter);
-        colorSpinner.setSelection(0);
-        COLORMODEL cm = COLORMODEL.valueOf(selected.getColorModel());
-        COLORMODEL[] colors=COLORMODEL.values();
-        for (int i=0; i<colors.length; ++i)
-        {
-            if (colors[i] == cm) {
-                colorSpinner.setSelection(i);
-                break;
-            }
-        }*/
+    private int convert2GestureIndex(ConnectionBean selected) {
+        Connection connection = connectionLoader.getConnectionById(selected.getGestureConfig());
+        if (connection != null) {
+            selected = (ConnectionBean) connection;
+        }
+
+        String legacyGestureName = getGestureEntryName(selected);
+        if (gestureFileArray.contains(legacyGestureName)) {
+            return gestureFileArray.indexOf(legacyGestureName);
+        }
+
+        return 0;
     }
 
     private int convert2ZoomIndex(int zoomLevel) {
@@ -802,8 +852,8 @@ public class aRDP extends MainConfiguration {
         try {
             selected.setRdpWidth(Integer.parseInt(rdpWidth.getText().toString()));
             selected.setRdpHeight(Integer.parseInt(rdpHeight.getText().toString()));
-        } catch (NumberFormatException nfe) {
-        }
+        } catch (NumberFormatException ignored) {}
+
         setRemoteSoundTypeFromView(groupRemoteSoundType);
         selected.setEnableRecording(checkboxEnableRecording.isChecked());
         selected.setEnableGesture(checkboxEnableGesture.isChecked());
@@ -864,7 +914,13 @@ public class aRDP extends MainConfiguration {
     public void editGesture(View view) {
         Intent intent = new Intent(this, GestureEditorActivity.class);
         selected.save(this);
-        intent.putExtra("connId", selected.getId());
+
+        String connId = selected.getGestureConfig();
+        if (connId.isEmpty()) {
+            connId = selected.getId();
+        }
+
+        intent.putExtra("connId", connId);
         startActivity(intent);
     }
 

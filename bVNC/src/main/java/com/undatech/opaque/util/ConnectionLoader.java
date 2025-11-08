@@ -3,23 +3,17 @@ package com.undatech.opaque.util;
 import static androidx.core.content.ContextCompat.getSystemService;
 
 import android.app.Activity;
-import android.content.ComponentName;
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ShortcutInfo;
 import android.content.pm.ShortcutManager;
-import android.database.Cursor;
 import android.graphics.drawable.Icon;
-import android.os.Bundle;
-import android.os.PersistableBundle;
 
 import com.qihua.bVNC.ConnectionBean;
 import com.qihua.bVNC.Database;
 import com.qihua.bVNC.Utils;
 import com.undatech.opaque.Connection;
-import com.undatech.opaque.ConnectionGridActivity;
 import com.undatech.opaque.ConnectionSettings;
 import com.qihua.bVNC.R;
 
@@ -66,13 +60,12 @@ public class ConnectionLoader {
         ConnectionBean.getAll(db, ConnectionBean.GEN_TABLE_NAME, connections, ConnectionBean.newInstance);
         Collections.sort(connections);
         numConnections = connections.size();
-        if (connections.size() == 0) {
+        if (connections.isEmpty()) {
             android.util.Log.i(TAG, "No connections in the database");
         } else {
             for (int i = 0; i < connections.size(); i++) {
                 Connection connection = connections.get(i);
-                connection.setRuntimeId(Integer.toString(i));
-                connectionsById.put(Integer.toString(i), connection);
+                connectionsById.put(connection.getId(), connection);
             }
         }
 
@@ -128,10 +121,8 @@ public class ConnectionLoader {
             numConnections = connectionPreferenceFiles.length;
             for (int i = 0; i < numConnections; i++) {
                 Connection cs = new ConnectionSettings(connectionPreferenceFiles[i]);
-                cs.setRuntimeId(Integer.toString(i));
                 cs.load(appContext);
                 android.util.Log.d(TAG, "Adding label: " + cs.getLabel());
-                connectionsById.put(Integer.toString(i), cs);
             }
         }
     }
@@ -148,7 +139,11 @@ public class ConnectionLoader {
         return numConnections;
     }
 
-    public Map<String, Connection> getConnectionsById() {
+    public Map<String, Connection> getConnections() {
         return connectionsById;
+    }
+
+    public Connection getConnectionById(String id) {
+        return connectionsById.get(id);
     }
 }

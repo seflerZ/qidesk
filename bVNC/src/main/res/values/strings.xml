@@ -943,4 +943,5 @@ Below that is where you configure your connection.
     <string name="connection_paired_online">Paired (Online)</string>
     <string name="connection_paired_offline">Paired (Offline)</string>
     <string name="connection_paired_unknown">Paired (Unknown)</string>
+    <string name="gesture_config_file">Config File:</string>
 </resources>

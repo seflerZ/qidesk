@@ -28,15 +28,13 @@ public interface Connection {
 
     String getId();
 
-    String getRuntimeId();
-
-    void setRuntimeId(String id);
-
     String getNickname();
 
     void setNickname(String nickname);
 
     int getConnectionType();
+
+    String getGestureConfig();
 
     void setConnectionType(int connectionType);
 

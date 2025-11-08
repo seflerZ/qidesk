@@ -21,7 +21,6 @@
 package com.undatech.opaque;
 
 import static com.qihua.bVNC.Utils.createMainScreenDialog;
-import static com.qihua.bVNC.Utils.messageAndStackTraceAsString;
 import static com.qihua.bVNC.Utils.setClipboard;
 import static com.qihua.bVNC.Utils.startUriIntent;
 
@@ -56,7 +55,6 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.AppCompatImageButton;
-import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
@@ -134,8 +132,8 @@ public class ConnectionGridActivity extends AppCompatActivity implements GetText
             public boolean onItemLongClick(AdapterView<?> parent, View v, int position, long id) {
                 AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(ConnectionGridActivity.this);
                 String gridItemText = (String) ((TextView) v.findViewById(R.id.grid_item_text)).getText();
-                String viewID = (String) ((TextView) v.findViewById(R.id.grid_item_id)).getText();
-                if (viewID.equals("$NC")) {
+                String connID = (String) ((TextView) v.findViewById(R.id.grid_item_id)).getText();
+                if (connID.equals("$NC")) {
                     return true;
                 }
 
@@ -252,10 +250,10 @@ public class ConnectionGridActivity extends AppCompatActivity implements GetText
             System.gc();
 
         isConnecting = true;
-        String runtimeId = (String) ((TextView) v.findViewById(R.id.grid_item_id)).getText();
+        String id = (String) ((TextView) v.findViewById(R.id.grid_item_id)).getText();
 
         // Treat connection with id "$NC" as add new connection button
-        if (runtimeId.equals("$NC")) {
+        if (id.equals("$NC")) {
             addNewConnection();
             return;
         }
@@ -263,11 +261,11 @@ public class ConnectionGridActivity extends AppCompatActivity implements GetText
         Intent intent = new Intent(ConnectionGridActivity.this, GeneralUtils.getClassByName("com.qihua.bVNC.RemoteCanvasActivity"));
         ConnectionLoader connectionLoader = getConnectionLoader(this);
         if (Utils.isOpaque(this)) {
-            ConnectionSettings cs = (ConnectionSettings) connectionLoader.getConnectionsById().get(runtimeId);
+            ConnectionSettings cs = (ConnectionSettings) connectionLoader.getConnections().get(id);
             cs.loadFromSharedPreferences(appContext);
             intent.putExtra("com.undatech.opaque.ConnectionSettings", cs);
         } else {
-            ConnectionBean conn = (ConnectionBean) connectionLoader.getConnectionsById().get(runtimeId);
+            ConnectionBean conn = (ConnectionBean) connectionLoader.getConnections().get(id);
             intent.putExtra(Utils.getConnectionString(appContext), conn.gen_getPersistentBundle());
         }
 
@@ -276,14 +274,13 @@ public class ConnectionGridActivity extends AppCompatActivity implements GetText
 
     private void editConnection(View v) {
         android.util.Log.d(TAG, "Modify Connection");
-        String runtimeId = (String) ((TextView) v.findViewById(R.id.grid_item_id)).getText();
+        String id = (String) ((TextView) v.findViewById(R.id.grid_item_id)).getText();
         ConnectionLoader connectionLoader = getConnectionLoader(this);
-        Connection conn = connectionLoader.getConnectionsById().get(runtimeId);
+        Connection conn = connectionLoader.getConnectionById(id);
         Intent intent = new Intent(ConnectionGridActivity.this, Utils.getConnectionSetupClass(this));
         if (Utils.isOpaque(this)) {
-            ConnectionSettings cs = (ConnectionSettings) connectionLoader.getConnectionsById().get(runtimeId);
+            ConnectionSettings cs = (ConnectionSettings) connectionLoader.getConnections().get(id);
             intent.putExtra("com.undatech.opaque.connectionToEdit", cs.getFilename());
-
         } else {
             intent.putExtra("isNewConnection", false);
             intent.putExtra("connID", conn.getId());
@@ -293,7 +290,7 @@ public class ConnectionGridActivity extends AppCompatActivity implements GetText
 
     private void deleteConnection(View v) {
         android.util.Log.d(TAG, "Delete Connection");
-        String runtimeId = (String) ((TextView) v.findViewById(R.id.grid_item_id)).getText();
+        String id = (String) ((TextView) v.findViewById(R.id.grid_item_id)).getText();
         String gridItemText = (String) ((TextView) v.findViewById(R.id.grid_item_text)).getText();
         Utils.showYesNoPrompt(this, getString(R.string.delete_connection) + "?", getString(R.string.delete_connection) + " " + gridItemText + " ?",
                 new DialogInterface.OnClickListener() {
@@ -307,7 +304,7 @@ public class ConnectionGridActivity extends AppCompatActivity implements GetText
                             SharedPreferences sp = appContext.getSharedPreferences("generalSettings", Context.MODE_PRIVATE);
                             String currentConnectionsStr = sp.getString("connections", null);
 
-                            ConnectionSettings cs = (ConnectionSettings) connectionLoader.getConnectionsById().get(runtimeId);
+                            ConnectionSettings cs = (ConnectionSettings) connectionLoader.getConnections().get(id);
                             if (sp != null) {
                                 String[] currentConnections = currentConnectionsStr.split(" ");
                                 for (String connection : currentConnections) {
@@ -323,7 +320,7 @@ public class ConnectionGridActivity extends AppCompatActivity implements GetText
                                 toDelete.delete();
                             }
                         } else {
-                            ConnectionBean conn = (ConnectionBean) connectionLoader.getConnectionsById().get(runtimeId);
+                            ConnectionBean conn = (ConnectionBean) connectionLoader.getConnections().get(id);
                             conn.Gen_delete(database.getWritableDatabase());
                             database.close();
                         }
@@ -333,10 +330,10 @@ public class ConnectionGridActivity extends AppCompatActivity implements GetText
     }
 
     private void addFavConnection(View v) {
-        String runtimeId = (String) ((TextView) v.findViewById(R.id.grid_item_id)).getText();
+        String id = (String) ((TextView) v.findViewById(R.id.grid_item_id)).getText();
 
         ConnectionLoader connectionLoader = getConnectionLoader(ConnectionGridActivity.this);
-        ConnectionBean conn = (ConnectionBean) connectionLoader.getConnectionsById().get(runtimeId);
+        ConnectionBean conn = (ConnectionBean) connectionLoader.getConnections().get(id);
         if (conn == null) {
             return;
         }
@@ -348,10 +345,10 @@ public class ConnectionGridActivity extends AppCompatActivity implements GetText
     }
 
     private void cancelFavConnection(View v) {
-        String runtimeId = (String) ((TextView) v.findViewById(R.id.grid_item_id)).getText();
+        String id = (String) ((TextView) v.findViewById(R.id.grid_item_id)).getText();
 
         ConnectionLoader connectionLoader = getConnectionLoader(ConnectionGridActivity.this);
-        ConnectionBean conn = (ConnectionBean) connectionLoader.getConnectionsById().get(runtimeId);
+        ConnectionBean conn = (ConnectionBean) connectionLoader.getConnections().get(id);
         if (conn == null) {
             return;
         }

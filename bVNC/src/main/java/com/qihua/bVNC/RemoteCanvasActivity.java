@@ -140,6 +140,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     private final static String TAG = "RemoteCanvasActivity";
     private static final int[] scalingModeIds = {R.id.itemZoomable, R.id.itemFitToScreen,
             R.id.itemOneToOne};
+    public static final String GESTURES_DAT_SUFFIX = "_gestures.dat";
 
     static {
         Map<Integer, String> temp = new HashMap<>();
@@ -392,12 +393,18 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 
         gestureOverlayView = findViewById(R.id.gestureOverlay);
 
+        // make it compatible with old gesture file names which is the connection id
+        String gestureFileId = canvas.connection.getGestureConfig();
+        if (gestureFileId == null || gestureFileId.isEmpty()) {
+            gestureFileId = canvas.connection.getId();
+        }
+
         File gesturesDir = getDir("gestures", Context.MODE_PRIVATE);
-        File gestureFile = new File(gesturesDir, canvas.connection.getId() + "_gestures.dat");
+        File gestureFile = new File(gesturesDir, gestureFileId + GESTURES_DAT_SUFFIX);
         gestureLibrary = GestureLibraries.fromFile(gestureFile);
         gestureLibrary.load();
 
-        gestureActionLibrary = new GestureActionLibrary(canvas.connection.getId());
+        gestureActionLibrary = new GestureActionLibrary(gestureFileId);
         gestureActionLibrary.load(getApplicationContext());
 
 //        gestureOverlayView.setOrientation(GestureOverlayView.ORIENTATION_VERTICAL);

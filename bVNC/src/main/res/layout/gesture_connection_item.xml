@@ -7,12 +7,15 @@
 
     <TextView
         android:id="@+id/connectionName"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="50dp"
         android:textAppearance="@style/Base.TextAppearance.AppCompat.Medium"
         android:layout_weight="1"
-        android:gravity="center_vertical"
-        android:text="Smple Text"
+        android:paddingStart="15dp"
+        android:paddingEnd="15dp"
+        android:gravity="center"
+        android:singleLine="true"
+        android:textAlignment="center"
         />
 
 </LinearLayout>

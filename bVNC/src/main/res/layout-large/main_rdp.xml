@@ -469,33 +469,6 @@
                     android:textAppearance="?android:attr/textAppearanceLarge" />
             </RadioGroup>
 
-            <LinearLayout
-                android:id="@+id/gestureGroup"
-                android:layout_width="fill_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <CheckBox
-                    android:id="@+id/checkboxEnableGesture"
-                    android:layout_width="wrap_content"
-                    android:layout_height="match_parent"
-                    android:gravity="start|center_vertical"
-                    android:onClick="toggleEnableGesture"
-                    android:layout_weight="8"
-                    android:text="@string/enable_gesture"
-                    android:textAppearance="?android:attr/textAppearanceMedium" />
-
-                <Button
-                    android:layout_width="wrap_content"
-                    android:layout_height="match_parent"
-                    android:gravity="center|center_vertical"
-                    android:onClick="editGesture"
-                    android:layout_weight="2"
-                    android:text="@string/configure_gesture" />
-
-            </LinearLayout>
-
-
             <CheckBox
                 android:id="@+id/checkboxEnableRecording"
                 android:layout_width="wrap_content"
@@ -612,6 +585,50 @@
                 android:text="@string/position_toolbar_last_used"
                 android:textAppearance="?android:attr/textAppearanceLarge"
                 android:checked="true"/>
+
+            <CheckBox
+                android:id="@+id/checkboxEnableGesture"
+                android:layout_width="90pt"
+                android:layout_height="match_parent"
+                android:gravity="start|center_vertical"
+                android:onClick="toggleEnableGesture"
+                android:text="@string/enable_gesture"
+                android:textAppearance="?android:attr/textAppearanceMedium" />
+
+            <LinearLayout
+                android:id="@+id/gestureGroup"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/gestureConfigLabel"
+                    android:layout_width="0dp"
+                    android:layout_weight="0.4"
+                    android:layout_height="match_parent"
+                    android:gravity="center|center_vertical"
+                    android:textAlignment="center"
+                    android:text="@string/gesture_config_file"
+                    android:textAppearance="?android:attr/textAppearanceMedium"
+                    />
+
+                <Spinner
+                    android:id="@+id/spinnerGestureConfig"
+                    android:layout_width="0dp"
+                    android:layout_weight="0.6"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:textAlignment="center"/>
+
+            </LinearLayout>
+
+            <Button
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:gravity="center|center_vertical"
+                android:onClick="editGesture"
+                android:layout_weight="2"
+                android:text="@string/configure_gesture" />
 
             <TextView
                 android:layout_width="wrap_content"

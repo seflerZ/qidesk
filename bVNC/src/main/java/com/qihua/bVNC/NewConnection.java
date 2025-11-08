@@ -15,17 +15,7 @@ public class NewConnection implements Connection {
 
     @Override
     public String getId() {
-        return "NC";
-    }
-
-    @Override
-    public String getRuntimeId() {
         return "$NC";
-    }
-
-    @Override
-    public void setRuntimeId(String id) {
-
     }
 
     @Override
@@ -41,6 +31,11 @@ public class NewConnection implements Connection {
     @Override
     public int getConnectionType() {
         return 0;
+    }
+
+    @Override
+    public String getGestureConfig() {
+        return "";
     }
 
     @Override

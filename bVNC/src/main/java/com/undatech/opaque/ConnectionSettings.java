@@ -227,17 +227,7 @@ public class ConnectionSettings implements Connection, Serializable {
 
     @Override
     public String getId() {
-        return getRuntimeId();
-    }
-
-    @Override
-    public String getRuntimeId() {
         return id;
-    }
-
-    @Override
-    public void setRuntimeId(String id) {
-        this.id = id;
     }
 
     @Override
@@ -263,6 +253,11 @@ public class ConnectionSettings implements Connection, Serializable {
     @Override
     public int getConnectionType() {
         return 0;
+    }
+
+    @Override
+    public String getGestureConfig() {
+        return "";
     }
 
     @Override

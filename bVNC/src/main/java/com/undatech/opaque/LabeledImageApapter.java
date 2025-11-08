@@ -159,8 +159,8 @@ public class LabeledImageApapter extends BaseAdapter {
 
         // This ID in a hidden TextView is used to send the right connection for editing or connection establishment
         // when the item is long-tapped or tapped respectively.
-        TextView gridItemId = (TextView) gridView.findViewById(R.id.grid_item_id);
-        gridItemId.setText(c.getRuntimeId());
+        TextView gridItemId = gridView.findViewById(R.id.grid_item_id);
+        gridItemId.setText(c.getId());
 
         return gridView;
     }
