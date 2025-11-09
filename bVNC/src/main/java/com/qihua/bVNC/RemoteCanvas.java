@@ -1195,6 +1195,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             remoteWidth = Math.max(viewWidth, viewHeight);
         } else if (connection.getRdpResType() == Constants.RDP_GEOM_FULL_HD) {
             remoteWidth = 1920;
+        } else if (connection.getRdpResType() == Constants.RDP_GEOM_2K) {
+            remoteWidth = 2560;
         } else {
             remoteWidth = viewWidth;
         }
@@ -1219,6 +1221,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             remoteHeight = Math.min(viewWidth, viewHeight);
         } else if (connection.getRdpResType() == Constants.RDP_GEOM_FULL_HD) {
             remoteHeight = 1080;
+        } else if (connection.getRdpResType() == Constants.RDP_GEOM_2K) {
+            remoteHeight = 1440;
         } else {
             remoteHeight = viewHeight;
         }

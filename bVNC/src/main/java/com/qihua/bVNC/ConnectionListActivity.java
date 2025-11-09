@@ -26,6 +26,7 @@ import android.content.Intent;
 import android.content.Intent.ShortcutIconResource;
 import android.content.SharedPreferences;
 import android.database.Cursor;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
@@ -58,44 +59,44 @@ public class ConnectionListActivity extends ListActivity {
         // Query for all people contacts using the Contacts.People convenience class.
         // Put a managed wrapper around the retrieved cursor so we don't have to worry about
         // requerying or closing it as the activity changes state.
-        Cursor mCursor = database.getReadableDatabase().query(
-                ConnectionBean.GEN_TABLE_NAME, new String[]{
-                        ConnectionBean.GEN_FIELD__ID,
-                        ConnectionBean.GEN_FIELD_NICKNAME,
-                        ConnectionBean.GEN_FIELD_USERNAME,
-                        ConnectionBean.GEN_FIELD_ADDRESS,
-                        ConnectionBean.GEN_FIELD_PORT,
-                        ConnectionBean.GEN_FIELD_REPEATERID,
-                        ConnectionBean.GEN_FIELD_LASTZOOMFACTOR},
-                ConnectionBean.GEN_FIELD_KEEPPASSWORD + " <> 0",
-                null,
-                null,
-                null,
-                ConnectionBean.GEN_FIELD_NICKNAME
-        );
+//        Cursor mCursor = database.getReadableDatabase().query(
+//                ConnectionBean.GEN_TABLE_NAME, new String[]{
+//                        ConnectionBean.GEN_FIELD__ID,
+//                        ConnectionBean.GEN_FIELD_NICKNAME,
+//                        ConnectionBean.GEN_FIELD_USERNAME,
+//                        ConnectionBean.GEN_FIELD_ADDRESS,
+//                        ConnectionBean.GEN_FIELD_PORT,
+//                        ConnectionBean.GEN_FIELD_REPEATERID,
+//                        ConnectionBean.GEN_FIELD_LASTZOOMFACTOR},
+//                ConnectionBean.GEN_FIELD_KEEPPASSWORD + " <> 0",
+//                null,
+//                null,
+//                null,
+//                ConnectionBean.GEN_FIELD_NICKNAME
+//        );
 
-        startManagingCursor(mCursor);
+//        startManagingCursor(mCursor);
 
         // Now create a new list adapter bound to the cursor. 
         // SimpleListAdapter is designed for binding to a Cursor.
-        SimpleCursorAdapter adapter = new SimpleCursorAdapter(
-                this, // Context.
-                R.layout.connection_list,
-                mCursor,                                    // Pass in the cursor to bind to.
-                new String[]{
-                        ConnectionBean.GEN_FIELD_NICKNAME,
-                        ConnectionBean.GEN_FIELD_ADDRESS,
-                        ConnectionBean.GEN_FIELD_PORT,
-                        ConnectionBean.GEN_FIELD_REPEATERID}, // Array of cursor columns to bind to.
-                new int[]{
-                        R.id.list_text_nickname,
-                        R.id.list_text_address,
-                        R.id.list_text_port,
-                        R.id.list_text_repeater
-                });                                 // Parallel array of which template objects to bind to those columns.
+//        SimpleCursorAdapter adapter = new SimpleCursorAdapter(
+//                this, // Context.
+//                R.layout.connection_list,
+//                mCursor,                                    // Pass in the cursor to bind to.
+//                new String[]{
+//                        ConnectionBean.GEN_FIELD_NICKNAME,
+//                        ConnectionBean.GEN_FIELD_ADDRESS,
+//                        ConnectionBean.GEN_FIELD_PORT,
+//                        ConnectionBean.GEN_FIELD_REPEATERID}, // Array of cursor columns to bind to.
+//                new int[]{
+//                        R.id.list_text_nickname,
+//                        R.id.list_text_address,
+//                        R.id.list_text_port,
+//                        R.id.list_text_repeater
+//                });                                 // Parallel array of which template objects to bind to those columns.
 
         // Bind to our new adapter.
-        setListAdapter(adapter);
+//        setListAdapter(adapter);
     }
 
     /* (non-Javadoc)

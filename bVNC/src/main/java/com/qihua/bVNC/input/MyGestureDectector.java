@@ -47,7 +47,7 @@ public class MyGestureDectector
     private int mTouchSlopSquare;
     private int mLargeTouchSlopSquare;
     private int mDoubleTapSlopSquare;
-    private int mLongpressTimeout = 680;
+    private int mLongpressTimeout = 450;
     private long lastTapTime = 0;
     private OnDoubleTapListener mDoubleTapListener;
     private boolean mStillDown;

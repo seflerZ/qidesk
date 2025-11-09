@@ -411,12 +411,15 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         gestureOverlayView.setGestureStrokeWidth(20f);
         gestureOverlayView.setGestureColor(getColor(R.color.theme));
         gestureOverlayView.setEventsInterceptionEnabled(true);
-        gestureOverlayView.setUncertainGestureColor(getColor(R.color.grey_overlay));
+        gestureOverlayView.setUncertainGestureColor(getColor(R.color.black_overlay));
         gestureOverlayView.setFadeEnabled(false);
         gestureOverlayView.setFadeOffset(0);
         gestureOverlayView.setGestureStrokeType(GestureOverlayView.GESTURE_STROKE_TYPE_SINGLE);
-        gestureOverlayView.setGestureStrokeAngleThreshold(90);
-        gestureOverlayView.setGestureStrokeLengthThreshold(150);
+
+        // 1. 降低角度阈值（允许更大方向偏差）
+        gestureOverlayView.setGestureStrokeAngleThreshold(90.0f);
+        // 2. 降低点间距离阈值（允许轻微抖动）
+        gestureOverlayView.setGestureStrokeLengthThreshold(50f); // 默认 100f
 
         gestureOverlayView.addOnGesturePerformedListener((overlay, gesture) -> {
             ArrayList<Prediction> predictions = gestureLibrary.recognize(gesture);
@@ -427,9 +430,9 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
                 return;
             }
 
-            // if highest score is less than 2.5, not recognized
+            // if highest score is less than 2.3, not recognized
             Prediction pre = predictions.get(0);
-            if (pre.score * 6 < 25) {
+            if (pre.score < 0.3f) {
                 Toast.makeText(RemoteCanvasActivity.this, getString(R.string.gesture_not_recognized), Toast.LENGTH_SHORT).show();
                 hideToolbar();
 

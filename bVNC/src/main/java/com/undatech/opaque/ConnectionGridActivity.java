@@ -34,6 +34,8 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
+import android.content.res.Configuration;
+import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.Editable;
@@ -43,6 +45,8 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
@@ -110,58 +114,47 @@ public class ConnectionGridActivity extends AppCompatActivity implements GetText
         appContext = getApplicationContext();
         setContentView(R.layout.grid_view_activity);
 
-        View decorView = getWindow().getDecorView();
-        int option = View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
-        decorView.setSystemUiVisibility(option);
+//        View decorView = getWindow().getDecorView();
+//        int option = View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
+//        decorView.setSystemUiVisibility(option);
 
-        if (Build.VERSION.SDK_INT >= 28) {
-            WindowManager.LayoutParams params = getWindow().getAttributes();
-            params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
-            getWindow().setAttributes(params);
-        }
+//        if (Build.VERSION.SDK_INT >= 28) {
+//            WindowManager.LayoutParams params = getWindow().getAttributes();
+//            params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+//            getWindow().setAttributes(params);
+//        }
 
-        gridView = (GridView) findViewById(R.id.gridView);
-        gridView.setOnItemClickListener(new OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View v, int position, long id) {
-                launchConnection(v);
-            }
-        });
-        gridView.setOnItemLongClickListener(new OnItemLongClickListener() {
-            @Override
-            public boolean onItemLongClick(AdapterView<?> parent, View v, int position, long id) {
-                AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(ConnectionGridActivity.this);
-                String gridItemText = (String) ((TextView) v.findViewById(R.id.grid_item_text)).getText();
-                String connID = (String) ((TextView) v.findViewById(R.id.grid_item_id)).getText();
-                if (connID.equals("$NC")) {
-                    return true;
-                }
-
-                alertDialogBuilder.setTitle(getString(R.string.connection_edit_delete_prompt) + " " + gridItemText + " ?");
-
-                CharSequence[] cs = {getString(R.string.connection_edit), getString(R.string.connection_delete), getString(R.string.connection_favorite)};
-                if (gridItemText.contains("★")) {
-                    cs[2] = getString(R.string.connection_cancel_favorite);
-                }
-
-                alertDialogBuilder.setItems(cs, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int item) {
-                        if (cs[item].toString().equals(getString(R.string.connection_edit))) {
-                            editConnection(v);
-                        } else if (cs[item].toString().equals(getString(R.string.connection_delete))) {
-                            deleteConnection(v);
-                        } else if (cs[item].toString().equals(getString(R.string.connection_favorite))) {
-                            addFavConnection(v);
-                        } else if (cs[item].toString().equals(getString(R.string.connection_cancel_favorite))) {
-                            cancelFavConnection(v);
-                        }
-                    }
-                });
-                AlertDialog alertDialog = alertDialogBuilder.create();
-                alertDialog.show();
+        gridView = findViewById(R.id.gridView);
+        gridView.setOnItemClickListener((parent, v, position, id) -> launchConnection(v));
+        gridView.setOnItemLongClickListener((parent, v, position, id) -> {
+            AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(ConnectionGridActivity.this);
+            String gridItemText = (String) ((TextView) v.findViewById(R.id.grid_item_text)).getText();
+            String connID = (String) ((TextView) v.findViewById(R.id.grid_item_id)).getText();
+            if (connID.equals("$NC")) {
                 return true;
             }
+
+            alertDialogBuilder.setTitle(getString(R.string.connection_edit_delete_prompt) + " " + gridItemText + " ?");
+
+            CharSequence[] cs = {getString(R.string.connection_edit), getString(R.string.connection_delete), getString(R.string.connection_favorite)};
+            if (gridItemText.contains("★")) {
+                cs[2] = getString(R.string.connection_cancel_favorite);
+            }
+
+            alertDialogBuilder.setItems(cs, (dialog, item) -> {
+                if (cs[item].toString().equals(getString(R.string.connection_edit))) {
+                    editConnection(v);
+                } else if (cs[item].toString().equals(getString(R.string.connection_delete))) {
+                    deleteConnection(v);
+                } else if (cs[item].toString().equals(getString(R.string.connection_favorite))) {
+                    addFavConnection(v);
+                } else if (cs[item].toString().equals(getString(R.string.connection_cancel_favorite))) {
+                    cancelFavConnection(v);
+                }
+            });
+            AlertDialog alertDialog = alertDialogBuilder.create();
+            alertDialog.show();
+            return true;
         });
 
         search = findViewById(R.id.search);
@@ -211,20 +204,18 @@ public class ConnectionGridActivity extends AppCompatActivity implements GetText
         }
         // else let the system decide
 
-
         editDefaultSettings = findViewById(R.id.actionEditDefaultSettings);
-        editDefaultSettings.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                editDefaultSettings(null);
-            }
-        });
+        editDefaultSettings.setOnClickListener(v -> editDefaultSettings(null));
+    }
+
+    private boolean isNightMode() {
+        return (getResources().getConfiguration().uiMode
+                & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
     }
 
     private ConnectionLoader getConnectionLoader(Context context) {
         boolean connectionsInSharedPrefs = Utils.isOpaque(context);
-        ConnectionLoader connectionLoader = new ConnectionLoader(appContext, this, connectionsInSharedPrefs);
-        return connectionLoader;
+        return new ConnectionLoader(appContext, this, connectionsInSharedPrefs);
     }
 
     private void createAndSetLabeledImageAdapterAndNumberOfColumns() {

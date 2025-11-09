@@ -14,40 +14,39 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal">
 
-<!--        <androidx.appcompat.widget.AppCompatImageButton-->
-<!--            android:id="@+id/addNewConnection"-->
-<!--            android:layout_width="35dp"-->
-<!--            android:layout_height="35dp"-->
-<!--            android:layout_marginTop="40dp"-->
-<!--            android:contentDescription="@string/action_new_connection"-->
-<!--            android:title="@string/action_new_connection"-->
-<!--            app:srcCompat="@drawable/ic_action_new" />-->
+        <!--        <androidx.appcompat.widget.AppCompatImageButton-->
+        <!--            android:id="@+id/addNewConnection"-->
+        <!--            android:layout_width="35dp"-->
+        <!--            android:layout_height="35dp"-->
+        <!--            android:layout_marginTop="40dp"-->
+        <!--            android:contentDescription="@string/action_new_connection"-->
+        <!--            android:title="@string/action_new_connection"-->
+        <!--            app:srcCompat="@drawable/ic_action_new" />-->
 
         <EditText
             android:id="@+id/search"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="32dp"
             android:layout_marginStart="2dp"
             android:layout_marginEnd="2dp"
             android:layout_weight="0.90"
+            android:gravity="center"
             android:hint="@string/search_connections"
             android:paddingBottom="10dp"
-            android:textAlignment="center"
             android:shadowColor="@color/theme"
-            android:gravity="center"
-            android:textAppearance="?android:attr/textAppearanceMedium" />
+            android:textAlignment="center"
+            android:textAppearance="?android:attr/textAppearanceLarge" />
 
         <androidx.appcompat.widget.AppCompatImageButton
             android:id="@+id/actionEditDefaultSettings"
             android:layout_width="25dp"
             android:layout_height="40dp"
+            android:layout_marginStart="5dp"
             android:layout_marginTop="40dp"
             android:layout_marginEnd="10dp"
-            android:layout_marginStart="5dp"
-            app:srcCompat="@drawable/i8_settings"
             android:title="@string/action_edit_default_settings"
-            android:visibility="gone" />
+            android:visibility="gone"
+            app:srcCompat="@drawable/i8_settings" />
     </LinearLayout>
 
     <GridView

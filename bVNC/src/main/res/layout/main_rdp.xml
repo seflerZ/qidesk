@@ -13,8 +13,8 @@
         <TableLayout
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="32dp"
-            android:padding="5dip">
+            android:paddingStart="5dip"
+            android:paddingEnd="5dip">
 
             <TableRow>
                 <EditText

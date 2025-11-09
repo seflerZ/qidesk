@@ -158,7 +158,7 @@ public class aRDP extends MainConfiguration {
                                     if (computerAddress.equals(ipText.getText() + ":" + portText.getText())) {
                                         Button btn = findViewById(R.id.nvstream_pair);
                                         btn.setEnabled(false);
-                                        btn.setBackgroundColor(getColor(R.color.grey_overlay));
+                                        btn.setBackgroundColor(getColor(R.color.black_overlay));
                                         btn.setTextColor(getColor(R.color.theme));
 
                                         if (details.state == ComputerDetails.State.ONLINE) {
@@ -289,7 +289,7 @@ public class aRDP extends MainConfiguration {
                 .collect(Collectors.toMap(aRDP::getGestureEntryName, connection -> connection));
 
         gestureFileArray = new ArrayList<>(nameConMap.keySet());
-        gestureFileArray.add(0, "(NEW FILE)");
+        gestureFileArray.add(0, getString(R.string.gesture_new_config_file));
 
         // 创建适配器
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
@@ -516,12 +516,12 @@ public class aRDP extends MainConfiguration {
      * Enables and disables the EditText boxes for width and height of remote desktop.
      */
     private void setRemoteWidthAndHeight() {
-        if (selected.getRdpResType() != Constants.RDP_GEOM_SELECT_CUSTOM) {
-            rdpWidth.setEnabled(false);
-            rdpHeight.setEnabled(false);
-        } else {
+        if (selected.getRdpResType() == Constants.RDP_GEOM_SELECT_CUSTOM) {
             rdpWidth.setEnabled(true);
             rdpHeight.setEnabled(true);
+        } else {
+            rdpWidth.setEnabled(false);
+            rdpHeight.setEnabled(false);
         }
     }
 

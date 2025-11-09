@@ -27,7 +27,7 @@
             android:id="@+id/search"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="32dp"
+            android:layout_marginTop="38dp"
             android:layout_marginStart="2dp"
             android:layout_marginEnd="2dp"
             android:layout_weight="0.90"
@@ -35,7 +35,7 @@
             android:paddingBottom="10dp"
             android:textAlignment="center"
             android:gravity="center"
-            android:textAppearance="?android:attr/textAppearanceMedium" />
+            android:textAppearance="?android:attr/textAppearanceLarge" />
 
         <androidx.appcompat.widget.AppCompatImageButton
             android:id="@+id/actionEditDefaultSettings"

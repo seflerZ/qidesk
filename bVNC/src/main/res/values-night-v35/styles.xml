@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="QiHua" parent="Theme.AppCompat.DayNight">
+        <item name="colorPrimary">@color/grey_overlay</item>
+        <item name="android:statusBarColor">@color/grey_overlay</item>
+        <item name="colorAccent">@color/theme</item>
+        <item name="actionBarStyle">@style/QiHuaActionBar</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
+    </style>
+</resources>

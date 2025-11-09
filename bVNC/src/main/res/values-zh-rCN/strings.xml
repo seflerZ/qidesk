@@ -93,12 +93,6 @@
     <string name="ssl_strict">要求通用名称与证书相符（建议）。</string>
     <string name="usb">USB（先插上OTG线）</string>
 
-    <string name="ad_donate_text0">Pro版本对应于多重身份验证。为了防止违法使用，也对应于主密码功能。加上为了防盗包含密码与SSH键的所有连接设定都是加密的。这些都在主菜单内进行设定。如果主菜单按钮不见，请按住在菜单上的应用按钮。</string>
-    <string name="ad_donate_text1">如果您购买Pro版本并且同意捐赠我们的话，请点击这里。</string>
-    <string name="ad_donate_text2">使用Pro版本时，可以将这个对话框设定为无效，也可以存取追加功能。</string>
-    <string name="ad_donate_text3">项目的详细请参照以下客户端应用用链接：</string>
-    <string name="ad_donate_text_rdp">Pro版本的aRDP已对应声音重定向！</string>
-    <string name="ad_donate_text_spice">Pro版本的aSPICE已对应USB重定向！只要在连接之前安装OTG电缆就行了。</string>
     <string name="address_caption">VNC服务器</string>
     <string name="address_caption_hint">服务器域名或IP地址</string>
     <string name="address_caption_hint_tunneled">VNC服务器</string>
@@ -487,11 +481,13 @@ bVNC对应的功能如下：
     <string name="rdp_geom_native_landscape">源设备横向</string>
     <string name="rdp_geom_native_portrait">源设备纵向</string>
     <string name="rdp_geom_full_hd">1080p</string>
+    <string name="rdp_geom_2k">1440p</string>
     <string-array name="rdp_geometry">
         <item>@string/rdp_geom_full_hd</item>
         <item>@string/rdp_geom_native_landscape</item>
         <item>@string/rdp_geom_native_portrait</item>
         <item>@string/rdp_geom_custom</item>
+        <item>@string/rdp_geom_2k</item>
     </string-array>
 
     <string name="rdp_zoom_level_none">无缩放</string>
@@ -930,5 +926,6 @@ aSPICE对应的功能如下：
     <string name="connection_paired_offline">已配对（未连接）</string>
     <string name="connection_paired_unknown">已配对（未知状态）</string>
     <string name="gesture_config_file">配置文件：</string>
+    <string name="gesture_new_config_file">（新建配置文件）</string>
 
 </resources>

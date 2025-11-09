@@ -33,14 +33,11 @@
         android:label="@string/ardp_app_name"
         android:theme="@style/QiHua"
         android:hardwareAccelerated="true"
-        android:extractNativeLibs="true"
-        tools:replace="android:label,android:theme">
+        android:extractNativeLibs="true">
         <activity
             android:name="com.undatech.opaque.ConnectionGridActivity"
             android:configChanges="keyboardHidden"
             android:exported="true"
-            android:label="@string/ardp_app_name"
-            android:resizeableActivity="true"
             android:theme="@style/QiHua">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -97,22 +94,22 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
-                <data
-                    android:host="*"
-                    android:pathPattern=".*\\.rdp"
-                    android:scheme="http" />
-                <data
-                    android:host="*"
-                    android:pathPattern="/.*\\.rdp"
-                    android:scheme="file" />
-                <data
-                    android:host="*"
-                    android:pathPattern=".*\\.RDP"
-                    android:scheme="http" />
-                <data
-                    android:host="*"
-                    android:pathPattern="/.*\\.RDP"
-                    android:scheme="file" />
+                <data android:scheme="http"/>
+                <data android:host="*"/>
+                <data android:pathPattern=".*\\.rdp"/>
+
+                <data android:scheme="file"/>
+                <data android:host="*"/>
+                <data android:pathPattern="/.*\\.rdp"/>
+
+                <data android:scheme="http"/>
+                <data android:host="*"/>
+                <data android:pathPattern=".*\\.RDP"/>
+
+                <data android:scheme="file"/>
+                <data android:host="*"/>
+                <data android:pathPattern="/.*\\.RDP"/>
+
                 <data android:mimeType="*/*" />
             </intent-filter>
         </activity>
