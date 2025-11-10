@@ -455,7 +455,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         extraKeysView.setExtraKeysViewClient(new ExtraKeysView.IExtraKeysView() {
             @Override
             public void onExtraKeyButtonClick(View view, ExtraKeyButton buttonInfo, MaterialButton button) {
-                performShortKeys(Arrays.asList(buttonInfo.getKey()));
+                performShortKeys(Collections.singletonList(buttonInfo.getKey()));
             }
 
             @Override
