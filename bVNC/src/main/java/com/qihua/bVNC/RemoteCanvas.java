@@ -649,13 +649,6 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         int remoteWidth = getRemoteWidth(getWidth(), getHeight());
         int remoteHeight = getRemoteHeight(getWidth(), getHeight());
 
-        boolean isOnRemoteNetwork = Utils.isWrongSubnetSiteLocalAddress(computerDetails.localAddress.address);
-        if (!isOnRemoteNetwork) {
-            computerDetails.activeAddress = computerDetails.localAddress;
-        } else {
-            computerDetails.activeAddress = computerDetails.remoteAddress;
-        }
-
         // defined here now, can be configured in later versions
         PreferenceConfiguration prefConfig = new PreferenceConfiguration();
         prefConfig.absoluteMouseMode = true;
@@ -674,7 +667,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         prefConfig.incomingFrameQueueSize = 2;
 
         // reduce bitrate if on cellular connection
-        if (isOnRemoteNetwork) {
+        if (!computerDetails.activeAddress.address.equals(computerDetails.localAddress.address)) {
             prefConfig.bitrate = 5000 * (remoteWidth / 1920);
             prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_BALANCED;
             prefConfig.incomingFrameQueueSize = 5;

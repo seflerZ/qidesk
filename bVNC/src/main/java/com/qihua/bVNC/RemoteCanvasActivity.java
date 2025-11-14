@@ -77,7 +77,6 @@ import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
-import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
@@ -88,8 +87,11 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.button.MaterialButton;
 import com.limelight.binding.input.ControllerHandler;
+import com.limelight.computers.ComputerManagerListener;
 import com.limelight.computers.ComputerManagerService;
 import com.limelight.nvstream.http.ComputerDetails;
+import com.limelight.nvstream.http.NvHTTP;
+import com.limelight.nvstream.http.PairingManager;
 import com.limelight.ui.GameGestures;
 import com.qihua.bVNC.dialogs.EnterTextDialog;
 import com.qihua.bVNC.dialogs.MetaKeyDialog;
@@ -118,9 +120,11 @@ import com.undatech.opaque.util.RemoteToolbar;
 import com.qihua.bVNC.R;
 
 import org.json.JSONException;
+import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.StringReader;
 import java.net.URL;
 import java.net.URLConnection;
 import java.text.MessageFormat;
@@ -166,8 +170,21 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
                     // Now make the binder visible
                     managerBinder = localBinder;
 
-                    // start the connection
-                    canvas.startConnection();
+                    // Start polling
+                    managerBinder.startPolling(details -> {
+                        if (details.pairState == PairingManager.PairState.PAIRED
+                                && details.manualAddress != null) {
+
+                            if (details.state != ComputerDetails.State.ONLINE) {
+                                Utils.showFatalErrorMessage(getContext(),
+                                        getContext().getString(R.string.error_connection_failed));
+                                return;
+                            }
+
+                            // start the connection
+                            canvas.startConnection();
+                        }
+                    });
                 }
             }.start();
         }

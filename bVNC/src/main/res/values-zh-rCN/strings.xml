@@ -920,7 +920,7 @@ aSPICE对应的功能如下：
     <string name="connection_type_nvstream">NVStream(Sunshine)</string>
     <string name="send_pin_to_pair">配对</string>
     <string name="app_to_load">启动应用</string>
-    <string name="cellular_connection_warning">当前使用蜂窝网络，已降低码率。</string>
+    <string name="cellular_connection_warning">非本地网络，已降低码率</string>
 
     <string name="connection_paired_online">已配对（已连接）</string>
     <string name="connection_paired_offline">已配对（未连接）</string>

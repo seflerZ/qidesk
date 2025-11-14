@@ -158,8 +158,6 @@ public class aRDP extends MainConfiguration {
                                     if (computerAddress.equals(ipText.getText() + ":" + portText.getText())) {
                                         Button btn = findViewById(R.id.nvstream_pair);
                                         btn.setEnabled(false);
-                                        btn.setBackgroundColor(getColor(R.color.black_overlay));
-                                        btn.setTextColor(getColor(R.color.theme));
 
                                         if (details.state == ComputerDetails.State.ONLINE) {
                                             btn.setText(getString(R.string.connection_paired_online));
