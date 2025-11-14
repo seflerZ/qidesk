@@ -134,7 +134,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyListener, OnGenericMotionListener, GameGestures {
-
+    private boolean touchpadFeedback = false;
     public static final int[] inputModeIds = {R.id.itemInputTouchpad};
     public static final Map<Integer, String> inputModeMap;
     private final static String TAG = "RemoteCanvasActivity";
@@ -292,15 +292,6 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
                                 | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                                 | View.SYSTEM_UI_FLAG_FULLSCREEN
                                 | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
-
-                boolean isChinese = Utils.isChineseLocal(getApplicationContext());
-                if (isChinese) {
-//                    touchpad.setImageResource(R.drawable.t_tips);
-                } else {
-//                    touchpad.setImageResource(R.drawable.t_tips_en);
-                }
-
-//                touchpad.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
             } catch (Throwable ignored) {
                 // fallback
                 canvasPresentation = null;
@@ -313,6 +304,9 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             canvas = findViewById(R.id.canvas);
             touchpad = canvas;
         }
+
+        touchpadFeedback
+                = Utils.querySharedPreferenceBoolean(canvas.getContext(), Constants.touchpadFeedback);
 
         canvas.setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE
@@ -456,6 +450,10 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             @Override
             public void onExtraKeyButtonClick(View view, ExtraKeyButton buttonInfo, MaterialButton button) {
                 performShortKeys(Collections.singletonList(buttonInfo.getKey()));
+
+                if (touchpadFeedback) {
+                    sendShortVibration();
+                }
             }
 
             @Override
