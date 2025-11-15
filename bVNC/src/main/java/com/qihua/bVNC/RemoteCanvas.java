@@ -652,25 +652,29 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         // defined here now, can be configured in later versions
         PreferenceConfiguration prefConfig = new PreferenceConfiguration();
         prefConfig.absoluteMouseMode = true;
-        prefConfig.enableAudioFx = true;
+        prefConfig.enableAudioFx = false;
         prefConfig.fps = 60;
         prefConfig.enableSops = false;
         prefConfig.bindAllUsb = true;
         prefConfig.audioConfiguration = MoonBridge.AUDIO_CONFIGURATION_STEREO;
         prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_BALANCED;
         prefConfig.multiController = false;
+        prefConfig.disableWarnings = true;
+        prefConfig.enablePip = false;
+        prefConfig.enableLatencyToast = false;
         prefConfig.width = remoteWidth;
         prefConfig.height = remoteHeight;
         prefConfig.enableHdr = false;
-        prefConfig.bitrate = 10000 * (remoteWidth / 1920);
+        prefConfig.bitrate = 15000 * (remoteWidth / 1920);
         prefConfig.disableWarnings = false;
-        prefConfig.incomingFrameQueueSize = 2;
+        prefConfig.incomingFrameQueueSize = 4;
 
         // reduce bitrate if on cellular connection
         if (!computerDetails.activeAddress.address.equals(computerDetails.localAddress.address)) {
             prefConfig.bitrate = 5000 * (remoteWidth / 1920);
-            prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_BALANCED;
-            prefConfig.incomingFrameQueueSize = 5;
+            prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_MIN_LATENCY;
+            prefConfig.incomingFrameQueueSize = 1;
+            prefConfig.fps = 60;
 
             activity.runOnUiThread(() -> Toast.makeText(activity.getApplicationContext()
                     , R.string.cellular_connection_warning, Toast.LENGTH_SHORT).show());

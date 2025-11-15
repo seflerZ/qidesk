@@ -47,6 +47,7 @@ import android.graphics.drawable.Drawable;
 import android.hardware.display.DisplayManager;
 import android.media.AudioManager;
 import android.net.Uri;
+import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -146,6 +147,9 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             R.id.itemOneToOne};
     public static final String GESTURES_DAT_SUFFIX = "_gestures.dat";
 
+    private WifiManager.WifiLock highPerfWifiLock;
+    private WifiManager.WifiLock lowLatencyWifiLock;
+
     static {
         Map<Integer, String> temp = new HashMap<>();
         temp.put(R.id.itemInputTouchpad, InputHandlerTouchpad.ID);
@@ -183,6 +187,8 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 
                             // start the connection
                             canvas.startConnection();
+
+                            managerBinder.stopPolling();
                         }
                     });
                 }
@@ -287,6 +293,24 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             WindowManager.LayoutParams params = getWindow().getAttributes();
             params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
             getWindow().setAttributes(params);
+        }
+
+        // Make sure Wi-Fi is fully powered up
+        WifiManager wifiMgr = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        try {
+            highPerfWifiLock = wifiMgr.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "Moonlight High Perf Lock");
+            highPerfWifiLock.setReferenceCounted(false);
+            highPerfWifiLock.acquire();
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                lowLatencyWifiLock = wifiMgr.createWifiLock(WifiManager.WIFI_MODE_FULL_LOW_LATENCY, "Moonlight Low Latency Lock");
+                lowLatencyWifiLock.setReferenceCounted(false);
+                lowLatencyWifiLock.acquire();
+            }
+        } catch (SecurityException e) {
+            // Some Samsung Galaxy S10+/S10e devices throw a SecurityException from
+            // WifiLock.acquire() even though we have android.permission.WAKE_LOCK in our manifest.
+            e.printStackTrace();
         }
 
         if (displays.length >= 1) {
@@ -1562,6 +1586,13 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 
         if (managerBinder != null) {
             unbindService(serviceConnection);
+        }
+
+        if (lowLatencyWifiLock != null) {
+            lowLatencyWifiLock.release();
+        }
+        if (highPerfWifiLock != null) {
+            highPerfWifiLock.release();
         }
     }
 
