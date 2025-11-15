@@ -313,6 +313,9 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             e.printStackTrace();
         }
 
+        // use sustained performance mode to ensure consistent CPU availability
+        getWindow().setSustainedPerformanceMode(true);
+
         if (displays.length >= 1) {
             setContentView(R.layout.touchpad);
 
