@@ -307,10 +307,9 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
                 lowLatencyWifiLock.setReferenceCounted(false);
                 lowLatencyWifiLock.acquire();
             }
-        } catch (SecurityException e) {
+        } catch (SecurityException ignore) {
             // Some Samsung Galaxy S10+/S10e devices throw a SecurityException from
             // WifiLock.acquire() even though we have android.permission.WAKE_LOCK in our manifest.
-            e.printStackTrace();
         }
 
         // use sustained performance mode to ensure consistent CPU availability
