@@ -602,7 +602,7 @@ build_freerdp() {
         git checkout ${freerdp_ver}
         git reset --hard
         # Patch the config
-        sed -i -e 's/8ffbe944e74043d0d3fb53d4a2a14c94de71f58dbea6a06d0dc92369542958ea/94c8ca364db990047ec4ec3481b04ce0d791e62561ef5601443011bdc00825e3/'\
+        sed -i -e 's/8ffbe944e74043d0d3fb53d4a2a14c94de71f58dbea6a06d0dc92369542958ea/558544ad358283a7ab2930d69a9ceddf913f4a51ee9bf1bfb9e377322af81a69/'\
                -e 's/d7939ce614029cdff0b6c20f0e2e5703158a489a72b2507b8bd51bf8c8fd10ca/cf3098950cb4d853ad95c0841f1f9c6d3dc102dccfcacd521d93925208b76ac8/'\
                -e "s/BUILD_ARCH=.*/BUILD_ARCH=\"${abis}\"/"\
                 ./scripts/android-build.conf
