@@ -928,4 +928,5 @@ aSPICE对应的功能如下：
     <string name="gesture_config_file">配置文件：</string>
     <string name="gesture_new_config_file">（新建配置文件）</string>
 
+    <string name="zoom_level">缩放级别</string>
 </resources>

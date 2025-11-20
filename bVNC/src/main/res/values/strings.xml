@@ -948,4 +948,5 @@ Below that is where you configure your connection.
     <string name="connection_paired_unknown">Paired (Unknown)</string>
     <string name="gesture_config_file">Config File:</string>
     <string name="gesture_new_config_file">(NEW FILE)</string>
+    <string name="zoom_level">Zoom Level</string>
 </resources>

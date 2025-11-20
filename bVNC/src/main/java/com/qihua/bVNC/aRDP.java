@@ -77,6 +77,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -241,9 +242,9 @@ public class aRDP extends MainConfiguration {
 
         spinnerNvApp = (Spinner) findViewById(R.id.spinnerNvApp);
         adapterNvAppNames = new ThemedArrayAdapter<>(getApplicationContext(),
-                android.R.layout.simple_spinner_item,
+                R.layout.large_text_spinner_list,
                 new ArrayList<>());
-        adapterNvAppNames.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        adapterNvAppNames.setDropDownViewResource(R.layout.large_text_spinner_list_dropdown);
         spinnerNvApp.setAdapter(adapterNvAppNames);
         spinnerNvApp.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
@@ -315,6 +316,17 @@ public class aRDP extends MainConfiguration {
             }
         });
 
+        List<String> rdpGeometryArray
+                = Arrays.asList(getResources().getStringArray(R.array.rdp_geometry));
+        // 创建适配器
+        ArrayAdapter<String> geoAdapter = new ArrayAdapter<>(
+                this, // 当前上下文
+                R.layout.gesture_connection_item, // 列表项布局
+                R.id.connectionName, // 列表项中的 TextView ID（如果使用默认布局）
+                rdpGeometryArray // 数据
+        );
+        spinnerRdpGeometry.setAdapter(geoAdapter);
+
         spinnerRdpGeometry.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> arg0, View view, int itemIndex, long id) {
@@ -326,6 +338,17 @@ public class aRDP extends MainConfiguration {
             public void onNothingSelected(AdapterView<?> arg0) {
             }
         });
+
+        List<String> rdpZoomLevelArray
+                = Arrays.asList(getResources().getStringArray(R.array.rdp_zoom_level));
+        // 创建适配器
+        ArrayAdapter<String> zoomAdapter = new ArrayAdapter<>(
+                this, // 当前上下文
+                R.layout.gesture_connection_item, // 列表项布局
+                R.id.connectionName, // 列表项中的 TextView ID（如果使用默认布局）
+                rdpZoomLevelArray // 数据
+        );
+        spinnerRdpZoomLevel.setAdapter(zoomAdapter);
 
         spinnerRdpZoomLevel.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
@@ -358,6 +381,16 @@ public class aRDP extends MainConfiguration {
             public void onNothingSelected(AdapterView<?> arg0) {
             }
         });
+
+        List<String> connTypes = Arrays.asList(getResources().getStringArray(R.array.rdp_connection_type));
+        ArrayAdapter<String> connAdapter = new ThemedArrayAdapter<>(
+                getApplicationContext(), // 当前上下文
+                R.layout.large_text_spinner_list,
+                connTypes // 数据
+        );
+        connAdapter.setDropDownViewResource(R.layout.large_text_spinner_list_dropdown);
+
+        spinnerConnectionType.setAdapter(connAdapter);
 
         spinnerConnectionType.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
@@ -987,13 +1020,14 @@ public class aRDP extends MainConfiguration {
 
     }
 
-    // 在aRDP.java或其他合适的地方添加这个内部类
     private static class ThemedArrayAdapter<T> extends ArrayAdapter<T> {
-        private Context context;
 
-        public ThemedArrayAdapter(Context context, int resource, List<T> objects) {
-            super(context, resource, objects);
-            this.context = context;
+        public ThemedArrayAdapter(Context context, int layout, List<T> objects) {
+            super(context, layout, objects);
+        }
+
+        public ThemedArrayAdapter(Context context, int layout, int textview, List<T> objects) {
+            super(context, layout, textview, objects);
         }
 
         @Override

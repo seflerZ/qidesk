@@ -33,27 +33,17 @@
 
                 <TextView
                     android:id="@+id/connectionTypeLabel"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="0.2"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="0.5"
                     android:text="@string/connection_type_caption"
                     android:textAppearance="?android:attr/textAppearanceLarge" />
 
                 <Spinner
                     android:id="@+id/spinnerConnectionType"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="0.8"
-                    android:entries="@array/rdp_connection_type"
-                    android:textAppearance="?android:attr/textAppearanceLarge" />
-
-<!--                <Spinner-->
-<!--                    android:id="@+id/connectionType"-->
-<!--                    android:layout_width="wrap_content"-->
-<!--                    android:layout_height="wrap_content"-->
-<!--                    android:layout_weight="0.4"-->
-<!--                    android:entries="@array/rdp_geometry"-->
-<!--                    android:textAppearance="?android:attr/textAppearanceMedium" />-->
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="0.5" />
             </TableRow>
 
             <TableRow>
@@ -310,20 +300,20 @@
             </TableRow>
             <TableRow>
                 <TextView
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="0.2"
+                    android:layout_weight="0.5"
                     android:id="@+id/spinnerNvAppText"
                     android:text="@string/app_to_load"
                     android:textAppearance="?android:attr/textAppearanceLarge" />
                 <Spinner
                     android:id="@+id/spinnerNvApp"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:dropDownWidth="match_parent"
                     android:entries="@array/rdp_connection_type"
                     android:textAppearance="?android:attr/textAppearanceLarge"
-                    android:layout_weight="0.8" />
+                    android:layout_weight="0.5" />
             </TableRow>
         </TableLayout>
 
@@ -393,31 +383,34 @@
 
                 <Spinner
                     android:id="@+id/spinnerRdpGeometry"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="0.4"
-                    android:entries="@array/rdp_geometry"
-                    android:textAppearance="?android:attr/textAppearanceMedium" />
+                    />
 
                 <EditText
                     android:id="@+id/rdpWidth"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="0.3"
                     android:singleLine="true"
+                    android:gravity="center"
                     android:textAppearance="?android:attr/textAppearanceMedium" />
 
                 <TextView
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:text="x"
+                    android:gravity="center"
+                    android:layout_weight="0.03"
                     android:textAppearance="?android:attr/textAppearanceMedium" />
 
                 <EditText
                     android:id="@+id/rdpHeight"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="0.3"
+                    android:gravity="center"
                     android:singleLine="true"
                     android:textAppearance="?android:attr/textAppearanceMedium" />
             </LinearLayout>
@@ -429,11 +422,19 @@
                 android:orientation="horizontal"
                 android:layout_marginBottom="5dp" >
 
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="50dp"
+                    android:layout_weight="0.3"
+                    android:gravity="center"
+                    android:text="@string/zoom_level"
+                    android:textAppearance="?android:attr/textAppearanceMedium" />
+
                 <Spinner
                     android:id="@+id/spinnerRdpZoomLevel"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
+                    android:layout_weight="0.7"
                     android:entries="@array/rdp_zoom_level"
                     android:textAppearance="?android:attr/textAppearanceMedium" />
 
