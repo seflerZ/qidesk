@@ -40,7 +40,7 @@
                     android:textAppearance="?android:attr/textAppearanceLarge" />
 
                 <Spinner
-                    android:id="@+id/connectionType"
+                    android:id="@+id/spinnerConnectionType"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_weight="0.8"

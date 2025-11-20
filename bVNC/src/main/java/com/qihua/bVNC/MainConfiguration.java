@@ -41,7 +41,7 @@ public abstract class MainConfiguration extends AppCompatActivity {
     protected Database database;
     protected EditText nickText;
     protected int layoutID;
-    protected Spinner connectionType;
+    protected Spinner spinnerConnectionType;
     protected int selectedConnType;
     protected EditText ipText;
     protected boolean isNewConnection;
@@ -65,7 +65,7 @@ public abstract class MainConfiguration extends AppCompatActivity {
         Log.d(TAG, "commonUpdateViewFromSelected called");
         selected.loadFromSharedPreferences(this);
         selectedConnType = selected.getConnectionType();
-        connectionType.setSelection(selectedConnType);
+        spinnerConnectionType.setSelection(selectedConnType);
         checkboxKeepSshPass.setChecked(selected.getKeepSshPassword());
 
         if (selected.getKeepSshPassword() || selected.getSshPassword().length() > 0) {
@@ -168,7 +168,7 @@ public abstract class MainConfiguration extends AppCompatActivity {
         sshPassphrase = (EditText) findViewById(R.id.sshPassphrase);
 
         // Define what happens when somebody selects different connection types.
-        connectionType = (Spinner) findViewById(R.id.connectionType);
+        spinnerConnectionType = (Spinner) findViewById(R.id.spinnerConnectionType);
 
         nickText = (EditText) findViewById(R.id.textNickname);
         ipText = (EditText) findViewById(R.id.textIP);
@@ -181,7 +181,7 @@ public abstract class MainConfiguration extends AppCompatActivity {
         ArrayAdapter adapter = ArrayAdapter.createFromResource(this,
                 arrayId, R.layout.connection_list_entry);
         adapter.setDropDownViewResource(R.layout.connection_list_entry);
-        connectionType.setAdapter(adapter);
+        spinnerConnectionType.setAdapter(adapter);
     }
 
     /**

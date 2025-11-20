@@ -359,7 +359,7 @@ public class aRDP extends MainConfiguration {
             }
         });
 
-        connectionType.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+        spinnerConnectionType.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> ad, View view, int itemIndex, long id) {
                 selectedConnType = itemIndex;

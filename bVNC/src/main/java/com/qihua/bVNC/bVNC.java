@@ -42,7 +42,6 @@ import android.widget.ToggleButton;
 
 import com.qihua.bVNC.dialogs.AutoXCustomizeDialog;
 import com.qihua.bVNC.dialogs.RepeaterDialog;
-import com.qihua.bVNC.R;
 
 /**
  * bVNC is the Activity for setting up VNC connections.
@@ -119,8 +118,8 @@ public class bVNC extends MainConfiguration {
         });
 
         // Define what happens when somebody selects different VNC connection types.
-        connectionType = (Spinner) findViewById(R.id.connectionType);
-        connectionType.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+        spinnerConnectionType = (Spinner) findViewById(R.id.spinnerConnectionType);
+        spinnerConnectionType.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> ad, View view, int itemIndex, long id) {
                 android.util.Log.d(TAG, "connectionType onItemSelected called");
