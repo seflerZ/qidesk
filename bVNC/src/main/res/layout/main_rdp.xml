@@ -205,9 +205,9 @@
 
                     <EditText
                         android:id="@+id/textIP"
-                        android:layout_width="fill_parent"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
+                        android:layout_weight="0.8"
                         android:hint="@string/rdp_address_caption_hint"
                         android:inputType="textNoSuggestions|textVisiblePassword"
                         android:nextFocusDown="@+id/textPORT"
@@ -216,9 +216,9 @@
 
                     <EditText
                         android:id="@+id/textPORT"
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_weight="0"
+                        android:layout_weight="0.2"
                         android:hint="@string/port_hint"
                         android:inputType="textNoSuggestions|textVisiblePassword"
                         android:singleLine="true"
@@ -262,9 +262,9 @@
 
                     <EditText
                         android:id="@+id/textPASSWORD"
-                        android:layout_width="fill_parent"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
+                        android:layout_weight="0.8"
                         android:hint="@string/rdp_password_hint"
                         android:inputType="textNoSuggestions|textPassword"
                         android:singleLine="true"
@@ -272,9 +272,9 @@
 
                     <CheckBox
                         android:id="@+id/checkboxKeepPassword"
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_weight="0"
+                        android:layout_weight="0.2"
                         android:singleLine="true"
                         android:text="@string/keep_password_button"
                         android:textAppearance="?android:attr/textAppearanceMedium" />
