@@ -19,20 +19,14 @@ android {
 
     namespace "com.qihua.rmt"
 
-    packagingOptions {
-        jniLibs {
-            useLegacyPackaging true
-        }
-    }
-
     buildTypes {
         debug {
             debuggable true
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         release {
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.txt'
             signingConfig signingConfigs.debug
         }
     }
