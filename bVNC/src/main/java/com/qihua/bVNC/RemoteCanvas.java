@@ -2004,7 +2004,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
      * Invalidates (to redraw) the location of the remote pointer.
      */
     public void invalidateMousePosition() {
-        if (bitmapData != null) {
+        // NVStream is not using local cursor at present
+        if (bitmapData != null && !isNvStream) {
             // add little offset for the cursor image
             bitmapData.moveCursorRect(pointer.getX() - pointer.getHotspotX(), pointer.getY() - pointer.getHotspotY());
             RectF r = bitmapData.getCursorRect();
