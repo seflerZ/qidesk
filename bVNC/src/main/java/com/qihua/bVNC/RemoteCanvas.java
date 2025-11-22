@@ -654,7 +654,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         prefConfig.absoluteMouseMode = true;
         prefConfig.enableAudioFx = false;
         prefConfig.fps = 60;
-        prefConfig.enableSops = false;
+        prefConfig.enableSops = true;
         prefConfig.bindAllUsb = true;
         prefConfig.audioConfiguration = MoonBridge.AUDIO_CONFIGURATION_STEREO;
         prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_BALANCED;
@@ -667,7 +667,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         prefConfig.enableHdr = false;
         prefConfig.bitrate = 15000 * (remoteWidth / 1920);
         prefConfig.disableWarnings = false;
-        prefConfig.incomingFrameQueueSize = 4;
+        prefConfig.incomingFrameQueueSize = 3;
 //        prefConfig.videoFormat = PreferenceConfiguration.FormatOption.FORCE_H264;
 
         // reduce bitrate if on cellular connection
