@@ -498,7 +498,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
         isVnc = conn.getConnectionType() == Constants.CONN_TYPE_VNC;
         isRdp = conn.getConnectionType() == Constants.CONN_TYPE_RDP;
-        isNvStream  = conn.getConnectionType() == Constants.CONN_TYPE_NVSTREAM;
+        isNvStream = conn.getConnectionType() == Constants.CONN_TYPE_NVSTREAM;
         isSpice = false;
 
         try {
@@ -1937,7 +1937,9 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         public boolean isShowFps() {
             return fpsCounter != null;
         }
-    };
+    }
+
+    ;
 
     long lastDraw;
 
@@ -1966,7 +1968,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
      * Causes a redraw of the myDrawable to happen at the indicated coordinates.
      */
     public void reDraw(float x, float y, float w, float h) {
-        reDraw((int)x, (int)y, (int)w, (int)h);
+        reDraw((int) x, (int) y, (int) w, (int) h);
     }
 
     /**
@@ -2006,7 +2008,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             // add little offset for the cursor image
             bitmapData.moveCursorRect(pointer.getX() - pointer.getHotspotX(), pointer.getY() - pointer.getHotspotY());
             RectF r = bitmapData.getCursorRect();
-            reDraw(r.left , r.top , r.width(), r.height());
+            reDraw(r.left, r.top, r.width(), r.height());
         }
     }
 
@@ -2160,11 +2162,11 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     }
 
     public int getCenteredXOffset() {
-        return (int)(rfbconn.framebufferWidth() * getMinimumScale() - getWidth()) / 2;
+        return (int) (rfbconn.framebufferWidth() * getMinimumScale() - getWidth()) / 2;
     }
 
     public int getCenteredYOffset() {
-        return (int)(rfbconn.framebufferHeight() * getMinimumScale() - getHeight()) / 2;
+        return (int) (rfbconn.framebufferHeight() * getMinimumScale() - getHeight()) / 2;
     }
 
     public float getMinimumScale() {
@@ -2380,7 +2382,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                     float x = (canvas.getWidth() - textWidth) / 2f;
 
                     canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
-                    canvas.drawText(text,  x, canvas.getHeight() / 2, paint);
+                    canvas.drawText(text, x, canvas.getHeight() / 2, paint);
                 }
             }
         } finally {

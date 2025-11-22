@@ -164,35 +164,37 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             final ComputerManagerService.ComputerManagerBinder localBinder =
                     ((ComputerManagerService.ComputerManagerBinder)binder);
 
+            // Only for NVStream connections
+            if (!canvas.isNvStream) {
+                return;
+            }
+
             // Wait in a separate thread to avoid stalling the UI
-            new Thread() {
-                @Override
-                public void run() {
-                    // Wait for the binder to be ready
-                    localBinder.waitForReady();
+            new Thread(() -> {
+                // Wait for the binder to be ready
+                localBinder.waitForReady();
 
-                    // Now make the binder visible
-                    managerBinder = localBinder;
+                // Now make the binder visible
+                managerBinder = localBinder;
 
-                    // Start polling
-                    managerBinder.startPolling(details -> {
-                        if (details.pairState == PairingManager.PairState.PAIRED
-                                && details.manualAddress != null) {
+                // Start polling
+                managerBinder.startPolling(details -> {
+                    if (details.pairState == PairingManager.PairState.PAIRED
+                            && details.manualAddress.address.equals(connection.getAddress())) {
 
-                            if (details.state != ComputerDetails.State.ONLINE) {
-                                Utils.showFatalErrorMessage(getContext(),
-                                        getContext().getString(R.string.error_connection_failed));
-                                return;
-                            }
-
-                            // start the connection
-                            canvas.startConnection();
-
-                            managerBinder.stopPolling();
+                        if (details.state != ComputerDetails.State.ONLINE) {
+                            Utils.showFatalErrorMessage(getContext(),
+                                    getContext().getString(R.string.error_connection_failed));
+                            return;
                         }
-                    });
-                }
-            }.start();
+
+                        // start the connection
+                        canvas.startConnection();
+
+                        managerBinder.stopPolling();
+                    }
+                });
+            }).start();
         }
 
         public void onServiceDisconnected(ComponentName className) {
@@ -636,6 +638,13 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 
         touchpad.setInputHandler(getInputHandlerById(R.id.itemInputTouchpad));
         touchpad.showProgessDialog();
+
+        // NVStream connect on service bind event, not here
+        if (!canvas.isNvStream) {
+            handler.post(() -> {
+                canvas.startConnection();
+            });
+        }
     }
 
     private void handleSerializedConnection(Intent i) {
