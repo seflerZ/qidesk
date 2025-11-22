@@ -31,7 +31,11 @@ android {
         multiDexEnabled true
     }
 
-    namespace 'com.undatech.remoteClientLib'
+    externalNativeBuild {
+        ndkBuild {
+            path 'jni/Android.mk'
+        }
+    }
 
     useLibrary 'org.apache.http.legacy'
 
@@ -44,7 +48,6 @@ android {
 
     sourceSets.main {
         java.srcDirs += 'src/main/java'
-        jniLibs.srcDirs += 'src/main/jni'
     }
 
     packagingOptions {
