@@ -145,7 +145,7 @@ public class LabeledImageApapter extends BaseAdapter {
                 imageView.setImageBitmap(gridImage);
                 imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
             } else {
-                if (c.getId().equals("NC")) {
+                if (c.getId().equals("$NC")) {
                     imageView.setImageResource(R.drawable.ic_add_connection_48);
                     imageView.setScaleType(ImageView.ScaleType.CENTER);
                 } else {
