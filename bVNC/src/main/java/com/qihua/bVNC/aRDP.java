@@ -110,7 +110,7 @@ public class aRDP extends MainConfiguration {
     private CheckBox checkboxEnableRecording;
     private CheckBox checkboxEnableGesture;
     private CheckBox checkboxConsoleMode;
-//    private CheckBox checkboxRedirectSdCard;
+    //    private CheckBox checkboxRedirectSdCard;
     private CheckBox checkboxRemoteFx;
     private CheckBox checkboxDesktopBackground;
     private CheckBox checkboxFontSmoothing;
@@ -132,82 +132,100 @@ public class aRDP extends MainConfiguration {
     private ComputerManagerService.ComputerManagerBinder managerBinder;
     private ComputerManagerService.ApplistPoller poller;
     private ArrayList<String> gestureFileArray;
-    private final ServiceConnection serviceConnection = new ServiceConnection() {
-        public void onServiceConnected(ComponentName className, final IBinder binder) {
-            final ComputerManagerService.ComputerManagerBinder localBinder =
-                    ((ComputerManagerService.ComputerManagerBinder)binder);
+    private ServiceConnection serviceConnection;
+    private ConnectionLoader connectionLoader;
 
-            // Wait in a separate thread to avoid stalling the UI
-            new Thread(() -> {
-                // Wait for the binder to be ready
-                localBinder.waitForReady();
+    public void startServiceConnection() {
+        if (serviceConnection != null) {
+            return;
+        }
 
-                // Now make the binder visible
-                managerBinder = localBinder;
+        serviceConnection = new ServiceConnection() {
+            public void onServiceConnected(ComponentName className, final IBinder binder) {
+                final ComputerManagerService.ComputerManagerBinder localBinder =
+                        ((ComputerManagerService.ComputerManagerBinder) binder);
 
-                // Start polling
-                managerBinder.startPolling(new ComputerManagerListener() {
-                    @Override
-                    public void notifyComputerUpdated(final ComputerDetails details) {
-                        if (details.pairState == PairingManager.PairState.PAIRED
-                                && details.manualAddress != null) {
-                            aRDP.this.runOnUiThread(() -> {
-                                String computerAddress = details.manualAddress.toString();
+                // Wait in a separate thread to avoid stalling the UI
+                new Thread(() -> {
+                    // Wait for the binder to be ready
+                    localBinder.waitForReady();
 
-                                if (computerAddress.equals(ipText.getText() + ":" + portText.getText())) {
-                                    Button btn = findViewById(R.id.nvstream_pair);
-                                    btn.setEnabled(false);
+                    // Now make the binder visible
+                    managerBinder = localBinder;
 
-                                    if (details.state == ComputerDetails.State.ONLINE) {
-                                        btn.setText(getString(R.string.connection_paired_online));
-                                    } else if (details.state == ComputerDetails.State.OFFLINE) {
-                                        btn.setText(getString(R.string.connection_paired_offline));
-                                    } else {
-                                        btn.setText(getString(R.string.connection_paired_unknown));
-                                    }
+                    // Start polling
+                    managerBinder.startPolling(new ComputerManagerListener() {
+                        @Override
+                        public void notifyComputerUpdated(final ComputerDetails details) {
+                            if (details.pairState == PairingManager.PairState.NOT_PAIRED
+                                    && ipText.getText().length() <= 0) {
 
-                                    nickText.setText(details.name);
-                                    sshServer.setText(details.uuid);
+                                ipText.setText(details.localAddress.address);
+                                portText.setText("" + details.localAddress.port);
+                                nickText.setText(details.name);
 
-                                    // Since the computer is online, start polling the apps
-                                    if (poller == null) {
-                                        poller = managerBinder.createAppListPoller(details);
-                                        poller.start();
-                                    }
+                                return;
+                            }
 
-                                    if (details.rawAppList != null) {
-                                        try {
-                                            updateUiWithAppList(NvHTTP.getAppListByReader(new StringReader(details.rawAppList)));
-                                        } catch (XmlPullParserException | IOException e) {
-                                            e.printStackTrace();
+                            if (details.pairState == PairingManager.PairState.PAIRED
+                                    && details.manualAddress != null) {
+                                aRDP.this.runOnUiThread(() -> {
+                                    String computerAddress = details.manualAddress.toString();
+
+                                    if (computerAddress.equals(ipText.getText() + ":" + portText.getText())) {
+                                        Button btn = findViewById(R.id.nvstream_pair);
+                                        btn.setEnabled(false);
+
+                                        if (details.state == ComputerDetails.State.ONLINE) {
+                                            btn.setText(getString(R.string.connection_paired_online));
+                                        } else if (details.state == ComputerDetails.State.OFFLINE) {
+                                            btn.setText(getString(R.string.connection_paired_offline));
+                                        } else {
+                                            btn.setText(getString(R.string.connection_paired_unknown));
+                                        }
+
+                                        nickText.setText(details.name);
+                                        sshServer.setText(details.uuid);
+
+                                        // Since the computer is online, start polling the apps
+                                        if (poller == null) {
+                                            poller = managerBinder.createAppListPoller(details);
+                                            poller.start();
+                                        }
+
+                                        if (details.rawAppList != null) {
+                                            try {
+                                                updateUiWithAppList(NvHTTP.getAppListByReader(
+                                                        new StringReader(details.rawAppList)));
+                                            } catch (XmlPullParserException | IOException ignore) {
+                                            }
                                         }
                                     }
-                                }
-                            });
+                                });
+                            }
                         }
-                    }
-                });
+                    });
 
-                // Force a keypair to be generated early to avoid discovery delays
-                new AndroidCryptoProvider(aRDP.this).getClientCertificate();
-            }).start();
-        }
+                    // Force a keypair to be generated early to avoid discovery delays
+                    new AndroidCryptoProvider(aRDP.this).getClientCertificate();
+                }).start();
+            }
 
-        public void onServiceDisconnected(ComponentName className) {
-            managerBinder = null;
-        }
-    };
-    private ConnectionLoader connectionLoader;
+            public void onServiceDisconnected(ComponentName className) {
+                managerBinder = null;
+            }
+        };
+
+        // Bind to the ComputerManager service
+        bindService(new Intent(aRDP.this,
+                ComputerManagerService.class), serviceConnection, Service.BIND_AUTO_CREATE);
+    }
 
     @Override
     public void onCreate(Bundle icicle) {
         layoutID = R.layout.main_rdp;
 
         super.onCreate(icicle);
-
-        // Bind to the ComputerManager service
-        bindService(new Intent(aRDP.this,
-                ComputerManagerService.class), serviceConnection, Service.BIND_AUTO_CREATE);
 
         sshServer = (EditText) findViewById(R.id.sshServer);
         sshPort = (EditText) findViewById(R.id.sshPort);
@@ -437,6 +455,8 @@ public class aRDP extends MainConfiguration {
                 } else if (selectedConnType == Constants.CONN_TYPE_NVSTREAM) {
                     rdpDomain.setVisibility(View.GONE);
 
+                    startServiceConnection();
+
                     findViewById(R.id.nvstream_pair).setVisibility(View.VISIBLE);
                     findViewById(R.id.spinnerNvApp).setVisibility(View.VISIBLE);
                     findViewById(R.id.spinnerNvAppText).setVisibility(View.VISIBLE);
@@ -641,7 +661,8 @@ public class aRDP extends MainConfiguration {
             if (uri.getHost() != null && !uri.getHost().isEmpty()) {
                 return uri;
             }
-        } catch (URISyntaxException ignored) {}
+        } catch (URISyntaxException ignored) {
+        }
 
         try {
             // Attempt to escape the input as an IPv6 literal.
@@ -650,7 +671,8 @@ public class aRDP extends MainConfiguration {
             if (uri.getHost() != null && !uri.getHost().isEmpty()) {
                 return uri;
             }
-        } catch (URISyntaxException ignored) {}
+        } catch (URISyntaxException ignored) {
+        }
 
         return null;
     }
@@ -680,7 +702,7 @@ public class aRDP extends MainConfiguration {
 
                 computerDetails.manualAddress = new ComputerDetails.AddressTuple(host, port);
                 success = managerBinder.addComputerBlocking(computerDetails);
-                if (!success){
+                if (!success) {
                     wrongSiteLocal = Utils.isWrongSubnetSiteLocalAddress(host);
                 }
             } else {
@@ -707,21 +729,17 @@ public class aRDP extends MainConfiguration {
 
         if (invalidInput) {
             Dialog.displayDialog(this, getResources().getString(R.string.conn_error_title), getResources().getString(R.string.addpc_unknown_host), false);
-        }
-        else if (wrongSiteLocal) {
+        } else if (wrongSiteLocal) {
             Dialog.displayDialog(this, getResources().getString(R.string.conn_error_title), getResources().getString(R.string.addpc_wrong_sitelocal), false);
-        }
-        else if (!success) {
+        } else if (!success) {
             String dialogText;
-            if (portTestResult != MoonBridge.ML_TEST_RESULT_INCONCLUSIVE && portTestResult != 0)  {
+            if (portTestResult != MoonBridge.ML_TEST_RESULT_INCONCLUSIVE && portTestResult != 0) {
                 dialogText = getResources().getString(R.string.nettest_text_blocked);
-            }
-            else {
+            } else {
                 dialogText = getResources().getString(R.string.addpc_fail);
             }
             Dialog.displayDialog(this, getResources().getString(R.string.conn_error_title), dialogText, false);
-        }
-        else {
+        } else {
             aRDP.this.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -738,7 +756,7 @@ public class aRDP extends MainConfiguration {
     }
 
     public void nvStreamPair(View view) {
-        String address = ipText.getText() +  ":" + portText.getText();
+        String address = ipText.getText() + ":" + portText.getText();
 
         ComputerDetails computerDetails = managerBinder.getComputerByManualAddress(address);
         if (computerDetails == null) {
@@ -874,7 +892,8 @@ public class aRDP extends MainConfiguration {
         try {
             selected.setRdpWidth(Integer.parseInt(rdpWidth.getText().toString()));
             selected.setRdpHeight(Integer.parseInt(rdpHeight.getText().toString()));
-        } catch (NumberFormatException ignored) {}
+        } catch (NumberFormatException ignored) {
+        }
 
         setRemoteSoundTypeFromView(groupRemoteSoundType);
         selected.setEnableRecording(checkboxEnableRecording.isChecked());
@@ -905,6 +924,7 @@ public class aRDP extends MainConfiguration {
 
     /**
      * Automatically linked with android:onClick in the layout.
+     *
      * @param view
      */
     public void toggleEnableRecording(View view) {
@@ -955,6 +975,7 @@ public class aRDP extends MainConfiguration {
 
     /**
      * Automatically linked with android:onClick in the layout.
+     *
      * @param view
      */
     public void remoteSoundTypeToggled(View view) {
@@ -965,6 +986,7 @@ public class aRDP extends MainConfiguration {
 
     /**
      * Sets the remote sound type in the settings from the specified parameter.
+     *
      * @param view
      */
     public void setRemoteSoundTypeFromView(View view) {
