@@ -140,21 +140,8 @@ public abstract class RemotePointer {
             SystemClock.sleep(100);
             releaseButton(getX(), getY(), combinedMetastate);
             used = true;
-        } else if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
-            if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
-                scroller.direction = 0;
-            } else {
-                scroller.direction = 1;
-            }
-
-            if (e.getAction() == KeyEvent.ACTION_DOWN) {
-                handler.post(scroller);
-            } else {
-                handler.removeCallbacks(scroller);
-            }
-            releaseButton(pointerX, pointerY, 0);
-            used = true;
         }
+
         return used;
     }
 

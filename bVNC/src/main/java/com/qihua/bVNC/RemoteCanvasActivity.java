@@ -622,8 +622,8 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         if (Utils.querySharedPreferenceBoolean(this, Constants.keepScreenOnTag))
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-        if (Utils.querySharedPreferenceBoolean(this, Constants.forceLandscapeTag))
-            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+//        if (Utils.querySharedPreferenceBoolean(this, Constants.forceLandscapeTag))
+//            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
 
         Intent i = getIntent();
         Uri data = i.getData();

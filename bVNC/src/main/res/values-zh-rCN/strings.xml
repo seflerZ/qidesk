@@ -929,4 +929,5 @@ aSPICE对应的功能如下：
     <string name="gesture_new_config_file">（新建配置文件）</string>
 
     <string name="zoom_level">缩放级别</string>
+    <string name="use_small_icon">在列表使用小图标</string>
 </resources>

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 <!--    <SwitchPreferenceCompat-->
 <!--        android:defaultValue="false"-->
 <!--        android:key="disableImmersive"-->
@@ -9,10 +10,17 @@
         android:key="keepScreenOn"
         android:title="@string/keep_screen_awake_enable" />
 
+<!--    <SwitchPreferenceCompat-->
+<!--        app:isPreferenceVisible="false"-->
+<!--        android:defaultValue="false"-->
+<!--        android:key="forceLandscape"-->
+<!--        android:title="@string/landscape_force" />-->
+
     <SwitchPreferenceCompat
         android:defaultValue="false"
-        android:key="forceLandscape"
-        android:title="@string/landscape_force" />
+        android:summary="@string/theme_mode_restart"
+        android:key="useSmallThumbnails"
+        android:title="@string/use_small_icon" />
 
     <SwitchPreferenceCompat
         android:defaultValue="false"

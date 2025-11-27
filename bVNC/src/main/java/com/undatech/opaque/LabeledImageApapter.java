@@ -22,6 +22,7 @@ package com.undatech.opaque;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.util.Log;
@@ -94,6 +95,17 @@ public class LabeledImageApapter extends BaseAdapter {
 //        } else {
             numCols = gView.getNumColumns();
 //        }
+
+        if (Utils.querySharedPreferenceBoolean(context, Constants.useSmallThumbnails, true)) {
+            Configuration config = context.getResources().getConfiguration();
+            if (config.screenWidthDp < 600) {
+                numCols = 3;
+                gView.setNumColumns(numCols);
+            } else {
+                numCols = 4;
+                gView.setNumColumns(numCols);
+            }
+        }
 
         int width = gView.getWidth() / numCols;
         int height = width;

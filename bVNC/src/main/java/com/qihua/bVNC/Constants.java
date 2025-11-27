@@ -190,6 +190,7 @@ public class Constants {
     public static final String positionToolbarLastUsed = "positionToolbarLastUsed";
     public static final String preferSendingUnicode = "preferSendingUnicode";
     public static final String doNotShowDesktopThumbnails = "doNotShowDesktopThumbnails";
+    public static final String useSmallThumbnails = "useSmallThumbnails";
     public static final String showOnlyConnectionNicknames = "showOnlyConnectionNicknames";
     public static final String touchpadLongPressAction = "touchpadLongPressAction";
     public static final String touchpadCursorSpeed = "touchpadCursorSpeed";
