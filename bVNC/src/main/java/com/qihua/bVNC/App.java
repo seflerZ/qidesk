@@ -34,9 +34,6 @@ public class App extends MultiDexApplication {
         database = new Database(this);
         context = new WeakReference<Context>(this);
         debugLog = Utils.querySharedPreferenceBoolean(getApplicationContext(), "moreDebugLoggingTag");
-
-        //
-//        UMConfigure.preInit(this,"68086a69bc47b67d83466552","DEFAULT");
     }
 
     public Database getDatabase() {

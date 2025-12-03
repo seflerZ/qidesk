@@ -129,7 +129,6 @@ public abstract class MainConfiguration extends AppCompatActivity {
         super.onCreate(icicle);
         Utils.showMenu(this);
         setContentView(layoutID);
-//        System.gc();
 
         setTitle(R.string.configure_connection);
 
@@ -199,14 +198,12 @@ public abstract class MainConfiguration extends AppCompatActivity {
     protected void onStart() {
         Log.d(TAG, "onStart called");
         super.onStart();
-//        System.gc();
     }
 
     @Override
     protected void onResume() {
         Log.d(TAG, "onResume called");
         super.onResume();
-//        System.gc();
     }
 
     @Override
@@ -317,11 +314,9 @@ public abstract class MainConfiguration extends AppCompatActivity {
         d.getSize(outSize);
         int height = outSize.y;
         int value = height;
-        if (android.os.Build.VERSION.SDK_INT >= 14) {
-            android.view.ViewConfiguration vc = ViewConfiguration.get(this);
-            if (vc.hasPermanentMenuKey())
-                value = bottom;
-        }
+        ViewConfiguration vc = ViewConfiguration.get(this);
+        if (vc.hasPermanentMenuKey())
+            value = bottom;
         if (Utils.isBlackBerry()) {
             value = bottom;
         }
@@ -343,11 +338,9 @@ public abstract class MainConfiguration extends AppCompatActivity {
         Point outSize = new Point();
         d.getSize(outSize);
         int width = outSize.x;
-        if (android.os.Build.VERSION.SDK_INT >= 14) {
-            android.view.ViewConfiguration vc = ViewConfiguration.get(this);
-            if (vc.hasPermanentMenuKey())
-                return right;
-        }
+        ViewConfiguration vc = ViewConfiguration.get(this);
+        if (vc.hasPermanentMenuKey())
+            return right;
         return width;
     }
 
@@ -370,7 +363,7 @@ public abstract class MainConfiguration extends AppCompatActivity {
         Log.d(TAG, "onMenuOpened called");
         try {
             menu.findItem(R.id.itemSaveAsCopy).setEnabled(selected != null && !selected.isNew());
-        } catch (NullPointerException e) {
+        } catch (NullPointerException ignored) {
         }
         return true;
     }
@@ -383,19 +376,17 @@ public abstract class MainConfiguration extends AppCompatActivity {
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         Log.d(TAG, "onActivityResult called");
         super.onActivityResult(requestCode, resultCode, data);
-        switch (requestCode) {
-            case (Constants.ACTIVITY_GEN_KEY):
-                if (resultCode == Activity.RESULT_OK && data != null && data.getExtras() != null) {
-                    Bundle b = data.getExtras();
-                    String privateKey = (String) b.get("PrivateKey");
-                    if (!privateKey.equals(selected.getSshPrivKey()) && privateKey.length() != 0)
-                        Toast.makeText(getBaseContext(), getString(R.string.ssh_key_generated), Toast.LENGTH_LONG).show();
-                    selected.setSshPrivKey(privateKey);
-                    selected.setSshPubKey((String) b.get("PublicKey"));
-                    selected.saveAndWriteRecent(true, this);
-                } else
-                    Log.i(TAG, "The user cancelled SSH key generation.");
-                break;
+        if (requestCode == Constants.ACTIVITY_GEN_KEY) {
+            if (resultCode == Activity.RESULT_OK && data != null && data.getExtras() != null) {
+                Bundle b = data.getExtras();
+                String privateKey = (String) b.get("PrivateKey");
+                if (!privateKey.equals(selected.getSshPrivKey()) && !privateKey.isEmpty())
+                    Toast.makeText(getBaseContext(), getString(R.string.ssh_key_generated), Toast.LENGTH_LONG).show();
+                selected.setSshPrivKey(privateKey);
+                selected.setSshPubKey((String) b.get("PublicKey"));
+                selected.saveAndWriteRecent(true, this);
+            } else
+                Log.i(TAG, "The user cancelled SSH key generation.");
         }
     }
 
@@ -410,7 +401,7 @@ public abstract class MainConfiguration extends AppCompatActivity {
     public void saveAsCopy(MenuItem item) {
         Log.d(TAG, "saveAsCopy called");
         if (selected.getNickname().equals(nickText.getText().toString()))
-            nickText.setText(new String(getString(R.string.copy_of) + " " + selected.getNickname()));
+            nickText.setText(getString(R.string.copy_of) + " " + selected.getNickname());
         selected.setScreenshotFilename(Utils.newScreenshotFileName());
         updateSelectedFromView();
         selected.set_Id(0);
