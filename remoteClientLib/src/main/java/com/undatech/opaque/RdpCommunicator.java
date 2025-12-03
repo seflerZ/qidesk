@@ -140,15 +140,10 @@ public class RdpCommunicator extends RfbConnectable implements RdpKeyboardMapper
     @Override
     public void writePointerEvent(int x, int y, int metaState, int pointerMask, boolean rel) {
         this.metaState = metaState;
-//        if ((pointerMask & RemotePointer.POINTER_DOWN_MASK) != 0) {
-//            sendModifierKeys(true);
-//        }
 
-        LibFreeRDP.sendCursorEvent(session.getInstance(), x, y, pointerMask);
-//
-//        if ((pointerMask & RemotePointer.POINTER_DOWN_MASK) == 0) {
-//            sendModifierKeys(false);
-//        }
+        try {
+            LibFreeRDP.sendCursorEvent(session.getInstance(), x, y, pointerMask);
+        } catch (Exception ignore) {}
     }
 
     @Override
@@ -222,10 +217,6 @@ public class RdpCommunicator extends RfbConnectable implements RdpKeyboardMapper
         if (down) {
             sendModifierKeys(true);
         }
-//        try {
-//            Thread.sleep(5);
-//        } catch (InterruptedException e) {
-//        }
 
         GeneralUtils.debugLog(this.debugLogging, TAG, "processVirtualKey: " +
                 "Sending VK key: " + virtualKeyCode + ". Is it down: " + down);
@@ -245,10 +236,7 @@ public class RdpCommunicator extends RfbConnectable implements RdpKeyboardMapper
         if (down && !suppressMetaState) {
             sendModifierKeys(true);
         }
-//        try {
-//            Thread.sleep(5);
-//        } catch (InterruptedException e) {
-//        }
+
         GeneralUtils.debugLog(this.debugLogging, TAG, "processUnicodeKey: " +
                 "Sending unicode key: " + unicodeKey + ", down: " + down + ", metaState: " + metaState);
         LibFreeRDP.sendUnicodeKeyEvent(session.getInstance(), unicodeKey, down);
@@ -297,7 +285,7 @@ public class RdpCommunicator extends RfbConnectable implements RdpKeyboardMapper
         bookmark.<ManualBookmark>get().setPort(rdpPort);
 
         BookmarkBase.DebugSettings debugSettings = bookmark.getDebugSettings();
-        debugSettings.setDebugLevel("WARN");
+        debugSettings.setDebugLevel("ERROR");
         //debugSettings.setAsyncUpdate(false);
         //debugSettings.setAsyncInput(false);
         //debugSettings.setAsyncChannel(false);
