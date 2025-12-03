@@ -361,11 +361,7 @@ public class Utils {
         if (isOpaque(context)) {
             return ConnectionSetupActivity.class;
         } else if (isVnc(context)) {
-            if (custom) {
-                return CustomVnc.class;
-            } else {
-                return bVNC.class;
-            }
+            return aRDP.class;
         } else if (isRdp(context)) {
             return aRDP.class;
         } else if (isSpice(context)) {

@@ -729,7 +729,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             } else {
                 Log.i(TAG, "Insufficent information to connect, showing connection dialog.");
                 // launch appropriate activity
-                Class cls = bVNC.class;
+                Class cls = aRDP.class;
                 if (Utils.isRdp(this)) {
                     cls = aRDP.class;
                 } else if (Utils.isSpice(this)) {
