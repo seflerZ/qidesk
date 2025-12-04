@@ -268,7 +268,8 @@ public class ConnectionGridActivity extends AppCompatActivity implements GetText
         String id = (String) ((TextView) v.findViewById(R.id.grid_item_id)).getText();
         ConnectionLoader connectionLoader = getConnectionLoader(this);
         Connection conn = connectionLoader.getConnectionById(id);
-        Intent intent = new Intent(ConnectionGridActivity.this, Utils.getConnectionSetupClass(this));
+        String connTypeStr = Utils.getConnectionTypeString(conn.getConnectionType());
+        Intent intent = new Intent(ConnectionGridActivity.this, Utils.getConnectionSetupClass(connTypeStr));
         if (Utils.isOpaque(this)) {
             ConnectionSettings cs = (ConnectionSettings) connectionLoader.getConnections().get(id);
             intent.putExtra("com.undatech.opaque.connectionToEdit", cs.getFilename());
@@ -393,7 +394,7 @@ public class ConnectionGridActivity extends AppCompatActivity implements GetText
      */
     public void addNewConnection() {
         Intent intent = new Intent(ConnectionGridActivity.this,
-                Utils.getConnectionSetupClass(this));
+                Utils.getConnectionSetupClass("rdp"));
         intent.putExtra("isNewConnection", true);
         startActivity(intent);
     }

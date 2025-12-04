@@ -325,6 +325,19 @@ public class Utils {
         return Utils.pName(context) + ".CONNECTION";
     }
 
+    public static String getConnectionTypeString(int type) {
+        switch (type) {
+            case 0:
+                return "rdp";
+            case 1:
+                return "vnc";
+            case 2:
+                return "nvstream";
+            default:
+                return "unsupported";
+        }
+    }
+
     public static boolean isCustom(Context context) {
         String packageName = Utils.pName(context);
         for (String s : standardPackageNames) {
@@ -355,19 +368,16 @@ public class Utils {
         return packageName.toLowerCase().contains("opaque");
     }
 
-    public static Class getConnectionSetupClass(Context context) {
-        String packageName = Utils.pName(context);
-        boolean custom = isCustom(context);
-        if (isOpaque(context)) {
-            return ConnectionSetupActivity.class;
-        } else if (isVnc(context)) {
-            return aRDP.class;
-        } else if (isRdp(context)) {
-            return aRDP.class;
-        } else if (isSpice(context)) {
-            return aSPICE.class;
-        } else {
-            throw new IllegalArgumentException("Could not find appropriate connection setup activity class for package " + packageName);
+    public static Class getConnectionSetupClass(String type) {
+        switch (type) {
+            case "vnc":
+                return aRDP.class;
+            case "rdp":
+                return aRDP.class;
+            case "nvstream":
+                return aRDP.class;
+            default:
+                throw new UnsupportedOperationException("Unsupported connection type: " + type);
         }
     }
 
