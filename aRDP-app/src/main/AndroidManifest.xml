@@ -56,7 +56,7 @@
             android:windowSoftInputMode="stateHidden|adjustResize" />
 
         <activity
-            android:name="com.qihua.bVNC.aRDP"
+            android:name="com.qihua.bVNC.ConfigRDP"
             android:configChanges="orientation|keyboardHidden"
             android:resizeableActivity="true"
             android:theme="@style/QiHua"

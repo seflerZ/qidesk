@@ -86,7 +86,7 @@ import java.util.stream.Collectors;
 /**
  * aRDP is the Activity for setting up RDP connections.
  */
-public class aRDP extends MainConfiguration {
+public class ConfigRDP extends MainConfiguration {
     private final static String TAG = "aRDP";
     private LinearLayout layoutAdvancedSettings;
     private EditText sshServer;
@@ -169,7 +169,7 @@ public class aRDP extends MainConfiguration {
 
                             if (details.pairState == PairingManager.PairState.PAIRED
                                     && details.manualAddress != null) {
-                                aRDP.this.runOnUiThread(() -> {
+                                ConfigRDP.this.runOnUiThread(() -> {
                                     String computerAddress = details.manualAddress.toString();
 
                                     if (computerAddress.equals(ipText.getText() + ":" + portText.getText())) {
@@ -207,7 +207,7 @@ public class aRDP extends MainConfiguration {
                     });
 
                     // Force a keypair to be generated early to avoid discovery delays
-                    new AndroidCryptoProvider(aRDP.this).getClientCertificate();
+                    new AndroidCryptoProvider(ConfigRDP.this).getClientCertificate();
                 }).start();
             }
 
@@ -217,7 +217,7 @@ public class aRDP extends MainConfiguration {
         };
 
         // Bind to the ComputerManager service
-        bindService(new Intent(aRDP.this,
+        bindService(new Intent(ConfigRDP.this,
                 ComputerManagerService.class), serviceConnection, Service.BIND_AUTO_CREATE);
     }
 
@@ -300,7 +300,7 @@ public class aRDP extends MainConfiguration {
 
         Map<String, Connection> connMap = connectionLoader.loadConnectionsById();
         Map<String, Connection> nameConMap = connMap.values().stream()
-                .collect(Collectors.toMap(aRDP::getGestureEntryName, connection -> connection));
+                .collect(Collectors.toMap(ConfigRDP::getGestureEntryName, connection -> connection));
 
         gestureFileArray = new ArrayList<>(nameConMap.keySet());
         gestureFileArray.add(0, getString(R.string.gesture_new_config_file));
@@ -746,10 +746,10 @@ public class aRDP extends MainConfiguration {
             }
             Dialog.displayDialog(this, getResources().getString(R.string.conn_error_title), dialogText, false);
         } else {
-            aRDP.this.runOnUiThread(new Runnable() {
+            ConfigRDP.this.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    Toast.makeText(aRDP.this, getResources().getString(R.string.addpc_success), Toast.LENGTH_LONG).show();
+                    Toast.makeText(ConfigRDP.this, getResources().getString(R.string.addpc_success), Toast.LENGTH_LONG).show();
                 }
             });
         }
@@ -783,15 +783,15 @@ public class aRDP extends MainConfiguration {
 
     private void doPair(final ComputerDetails computer) {
         if (computer.state == ComputerDetails.State.OFFLINE || computer.activeAddress == null) {
-            Toast.makeText(aRDP.this, getResources().getString(com.limelight.R.string.pair_pc_offline), Toast.LENGTH_SHORT).show();
+            Toast.makeText(ConfigRDP.this, getResources().getString(com.limelight.R.string.pair_pc_offline), Toast.LENGTH_SHORT).show();
             return;
         }
         if (managerBinder == null) {
-            Toast.makeText(aRDP.this, getResources().getString(com.limelight.R.string.error_manager_not_running), Toast.LENGTH_LONG).show();
+            Toast.makeText(ConfigRDP.this, getResources().getString(com.limelight.R.string.error_manager_not_running), Toast.LENGTH_LONG).show();
             return;
         }
 
-        Toast.makeText(aRDP.this, getResources().getString(com.limelight.R.string.pairing), Toast.LENGTH_SHORT).show();
+        Toast.makeText(ConfigRDP.this, getResources().getString(com.limelight.R.string.pairing), Toast.LENGTH_SHORT).show();
 
         new Thread(new Runnable() {
             @Override
@@ -802,7 +802,7 @@ public class aRDP extends MainConfiguration {
                 try {
                     httpConn = new NvHTTP(ServerHelper.getCurrentAddressFromComputer(computer),
                             computer.httpsPort, managerBinder.getUniqueId(), computer.serverCert,
-                            PlatformBinding.getCryptoProvider(aRDP.this));
+                            PlatformBinding.getCryptoProvider(ConfigRDP.this));
                     if (httpConn.getPairState() == PairingManager.PairState.PAIRED) {
                         message = getResources().getString(com.limelight.R.string.pair_succeed);
                         success = true;
@@ -810,7 +810,7 @@ public class aRDP extends MainConfiguration {
                         final String pinStr = PairingManager.generatePinString();
 
                         // Spin the dialog off in a thread because it blocks
-                        Dialog.displayDialog(aRDP.this, getResources().getString(com.limelight.R.string.pair_pairing_title),
+                        Dialog.displayDialog(ConfigRDP.this, getResources().getString(com.limelight.R.string.pair_pairing_title),
                                 getResources().getString(com.limelight.R.string.pair_pairing_msg) + " " + pinStr + "\n\n" +
                                         getResources().getString(com.limelight.R.string.pair_pairing_help), false);
 
@@ -858,7 +858,7 @@ public class aRDP extends MainConfiguration {
 
                 runOnUiThread(() -> {
                     if (toastMessage != null) {
-                        Toast.makeText(aRDP.this, toastMessage, Toast.LENGTH_LONG).show();
+                        Toast.makeText(ConfigRDP.this, toastMessage, Toast.LENGTH_LONG).show();
                     }
 
 //                        if (toastSuccess) {

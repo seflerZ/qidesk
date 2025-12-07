@@ -49,7 +49,6 @@ import android.text.ClipboardManager;
 import android.text.Html;
 import android.util.Log;
 import android.view.View;
-import android.view.ViewConfiguration;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
@@ -59,7 +58,6 @@ import androidx.core.content.ContextCompat;
 
 import com.antlersoft.android.contentxml.SqliteElement;
 import com.antlersoft.android.contentxml.SqliteElement.ReplaceStrategy;
-import com.undatech.opaque.ConnectionSetupActivity;
 
 import net.sqlcipher.database.SQLiteDatabase;
 
@@ -75,7 +73,6 @@ import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.StringWriter;
 import java.io.Writer;
-import java.lang.reflect.Field;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
@@ -371,11 +368,11 @@ public class Utils {
     public static Class getConnectionSetupClass(String type) {
         switch (type) {
             case "vnc":
-                return aRDP.class;
+                return ConfigVNC.class;
             case "rdp":
-                return aRDP.class;
+                return ConfigRDP.class;
             case "nvstream":
-                return aRDP.class;
+                return ConfigNVStream.class;
             default:
                 throw new UnsupportedOperationException("Unsupported connection type: " + type);
         }

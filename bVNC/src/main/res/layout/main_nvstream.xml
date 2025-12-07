@@ -36,15 +36,15 @@
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="0.5"
-                    android:text="@string/connection_type_caption"
                     android:visibility="gone"
+                    android:text="@string/connection_type_caption"
                     android:textAppearance="?android:attr/textAppearanceLarge" />
 
                 <Spinner
                     android:id="@+id/spinnerConnectionType"
                     android:layout_width="0dp"
-                    android:layout_height="match_parent"
                     android:visibility="gone"
+                    android:layout_height="match_parent"
                     android:layout_weight="0.5" />
             </TableRow>
 

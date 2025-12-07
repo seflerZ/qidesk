@@ -35,7 +35,6 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
-import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.database.Cursor;
 import android.gesture.GestureLibraries;
@@ -88,10 +87,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.button.MaterialButton;
 import com.limelight.binding.input.ControllerHandler;
-import com.limelight.computers.ComputerManagerListener;
 import com.limelight.computers.ComputerManagerService;
 import com.limelight.nvstream.http.ComputerDetails;
-import com.limelight.nvstream.http.NvHTTP;
 import com.limelight.nvstream.http.PairingManager;
 import com.limelight.ui.GameGestures;
 import com.qihua.bVNC.dialogs.EnterTextDialog;
@@ -118,19 +115,15 @@ import com.undatech.opaque.RemoteClientLibConstants;
 import com.undatech.opaque.util.FileUtils;
 import com.undatech.opaque.util.OnTouchViewMover;
 import com.undatech.opaque.util.RemoteToolbar;
-import com.qihua.bVNC.R;
 
 import org.json.JSONException;
-import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.StringReader;
 import java.net.URL;
 import java.net.URLConnection;
 import java.text.MessageFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -729,9 +722,9 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             } else {
                 Log.i(TAG, "Insufficent information to connect, showing connection dialog.");
                 // launch appropriate activity
-                Class cls = aRDP.class;
+                Class cls = ConfigRDP.class;
                 if (Utils.isRdp(this)) {
-                    cls = aRDP.class;
+                    cls = ConfigRDP.class;
                 } else if (Utils.isSpice(this)) {
                     cls = aSPICE.class;
                 }
