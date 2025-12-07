@@ -31,11 +31,7 @@ android {
         multiDexEnabled true
     }
 
-    externalNativeBuild {
-        ndkBuild {
-            path 'jni/Android.mk'
-        }
-    }
+    namespace 'com.undatech.remoteClientLib'
 
     useLibrary 'org.apache.http.legacy'
 
