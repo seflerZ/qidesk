@@ -433,7 +433,9 @@ public class aRDP extends MainConfiguration {
                     findViewById(R.id.checkboxEnableRecording).setVisibility(View.VISIBLE);
                     findViewById(R.id.textDescriptGeom).setVisibility(View.VISIBLE);
 
-                    portText.setText("3389");
+                    if (ipText.getText().length() <= 0) {
+                        portText.setText("3389");
+                    }
                 } else if (selectedConnType == Constants.CONN_TYPE_VNC) {
                     rdpDomain.setVisibility(View.GONE);
 
@@ -451,7 +453,9 @@ public class aRDP extends MainConfiguration {
                     findViewById(R.id.checkboxEnableRecording).setVisibility(View.GONE);
                     findViewById(R.id.textDescriptGeom).setVisibility(View.GONE);
 
-                    portText.setText("5900");
+                    if (ipText.getText().length() <= 0) {
+                        portText.setText("5900");
+                    }
                 } else if (selectedConnType == Constants.CONN_TYPE_NVSTREAM) {
                     rdpDomain.setVisibility(View.GONE);
 
@@ -476,7 +480,9 @@ public class aRDP extends MainConfiguration {
                     findViewById(R.id.checkboxEnableRecording).setVisibility(View.GONE);
                     findViewById(R.id.geometryGroupZoom).setVisibility(View.GONE);
 
-                    portText.setText("47989");
+                    if (ipText.getText().length() <= 0) {
+                        portText.setText("47989");
+                    }
                 }
             }
 
