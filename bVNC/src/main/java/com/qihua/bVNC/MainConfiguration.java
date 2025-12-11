@@ -65,7 +65,6 @@ public abstract class MainConfiguration extends AppCompatActivity {
         Log.d(TAG, "commonUpdateViewFromSelected called");
         selected.loadFromSharedPreferences(this);
         selectedConnType = selected.getConnectionType();
-        spinnerConnectionType.setSelection(selectedConnType);
         checkboxKeepSshPass.setChecked(selected.getKeepSshPassword());
 
         if (selected.getKeepSshPassword() || selected.getSshPassword().length() > 0) {

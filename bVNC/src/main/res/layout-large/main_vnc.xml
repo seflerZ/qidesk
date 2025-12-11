@@ -29,24 +29,6 @@
             </TableRow>
 
             <TableRow>
-                <TextView
-                    android:id="@+id/connectionTypeLabel"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:text="@string/connection_type_caption"
-                    android:layout_weight="0.5"
-                    android:visibility="gone"
-                    android:textAppearance="?android:attr/textAppearanceLarge" />
-
-                <Spinner
-                    android:id="@+id/spinnerConnectionType"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:visibility="gone"
-                    android:layout_weight="0.5" />
-            </TableRow>
-
-            <TableRow>
 
                 <TextView
                     android:id="@+id/sshCaption"

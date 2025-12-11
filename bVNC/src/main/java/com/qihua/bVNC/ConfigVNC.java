@@ -188,7 +188,6 @@ public class ConfigVNC extends MainConfiguration {
         checkboxEnableGfx = (CheckBox) findViewById(R.id.checkboxEnableGfx);
         checkboxEnableGfxH264 = (CheckBox) findViewById(R.id.checkboxEnableGfxH264);
         checkboxPreferSendingUnicode = (CheckBox) findViewById(R.id.checkboxPreferSendingUnicode);
-//        setConnectionTypeSpinnerAdapter(R.array.rdp_connection_type);
 
         findViewById(R.id.nvstream_pair).setVisibility(View.GONE);
         findViewById(R.id.spinnerNvApp).setVisibility(View.GONE);

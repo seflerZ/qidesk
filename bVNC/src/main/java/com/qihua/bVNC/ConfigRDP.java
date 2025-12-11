@@ -88,16 +88,12 @@ import java.util.stream.Collectors;
  */
 public class ConfigRDP extends MainConfiguration {
     private final static String TAG = "aRDP";
-    private LinearLayout layoutAdvancedSettings;
     private EditText sshServer;
     private EditText sshPort;
     private EditText sshUser;
     private EditText portText;
     private EditText textPassword;
-    private ToggleButton toggleAdvancedSettings;
-    //private Spinner colorSpinner;
     private Spinner spinnerRdpGeometry;
-    private String lastRawApplist;
     private Spinner spinnerRdpZoomLevel;
     private Spinner spinnerGestureConfig;
     private EditText textUsername;
@@ -125,101 +121,9 @@ public class ConfigRDP extends MainConfiguration {
     private CheckBox checkboxEnableGfxH264;
     private CheckBox checkboxPreferSendingUnicode;
     private Spinner spinnerRdpColor;
-    private Spinner spinnerNvApp;
-    private List<NvApp> lastNvApps;
-    private ArrayAdapter<String> adapterNvAppNames;
     private List<String> rdpColorArray;
-    private ComputerManagerService.ComputerManagerBinder managerBinder;
-    private ComputerManagerService.ApplistPoller poller;
     private ArrayList<String> gestureFileArray;
-    private ServiceConnection serviceConnection;
     private ConnectionLoader connectionLoader;
-
-    public void startServiceConnection() {
-        if (serviceConnection != null) {
-            return;
-        }
-
-        serviceConnection = new ServiceConnection() {
-            public void onServiceConnected(ComponentName className, final IBinder binder) {
-                final ComputerManagerService.ComputerManagerBinder localBinder =
-                        ((ComputerManagerService.ComputerManagerBinder) binder);
-
-                // Wait in a separate thread to avoid stalling the UI
-                new Thread(() -> {
-                    // Wait for the binder to be ready
-                    localBinder.waitForReady();
-
-                    // Now make the binder visible
-                    managerBinder = localBinder;
-
-                    // Start polling
-                    managerBinder.startPolling(new ComputerManagerListener() {
-                        @Override
-                        public void notifyComputerUpdated(final ComputerDetails details) {
-                            if (details.pairState == PairingManager.PairState.NOT_PAIRED
-                                    && ipText.getText().length() <= 0) {
-
-                                ipText.setText(details.localAddress.address);
-                                portText.setText("" + details.localAddress.port);
-                                nickText.setText(details.name);
-
-                                return;
-                            }
-
-                            if (details.pairState == PairingManager.PairState.PAIRED
-                                    && details.manualAddress != null) {
-                                ConfigRDP.this.runOnUiThread(() -> {
-                                    String computerAddress = details.manualAddress.toString();
-
-                                    if (computerAddress.equals(ipText.getText() + ":" + portText.getText())) {
-                                        Button btn = findViewById(R.id.nvstream_pair);
-                                        btn.setEnabled(false);
-
-                                        if (details.state == ComputerDetails.State.ONLINE) {
-                                            btn.setText(getString(R.string.connection_paired_online));
-                                        } else if (details.state == ComputerDetails.State.OFFLINE) {
-                                            btn.setText(getString(R.string.connection_paired_offline));
-                                        } else {
-                                            btn.setText(getString(R.string.connection_paired_unknown));
-                                        }
-
-                                        nickText.setText(details.name);
-                                        sshServer.setText(details.uuid);
-
-                                        // Since the computer is online, start polling the apps
-                                        if (poller == null) {
-                                            poller = managerBinder.createAppListPoller(details);
-                                            poller.start();
-                                        }
-
-                                        if (details.rawAppList != null) {
-                                            try {
-                                                updateUiWithAppList(NvHTTP.getAppListByReader(
-                                                        new StringReader(details.rawAppList)));
-                                            } catch (XmlPullParserException | IOException ignore) {
-                                            }
-                                        }
-                                    }
-                                });
-                            }
-                        }
-                    });
-
-                    // Force a keypair to be generated early to avoid discovery delays
-                    new AndroidCryptoProvider(ConfigRDP.this).getClientCertificate();
-                }).start();
-            }
-
-            public void onServiceDisconnected(ComponentName className) {
-                managerBinder = null;
-            }
-        };
-
-        // Bind to the ComputerManager service
-        bindService(new Intent(ConfigRDP.this,
-                ComputerManagerService.class), serviceConnection, Service.BIND_AUTO_CREATE);
-    }
 
     @Override
     public void onCreate(Bundle icicle) {
@@ -242,38 +146,6 @@ public class ConfigRDP extends MainConfiguration {
         checkboxUseDpadAsArrows = (CheckBox) findViewById(R.id.checkboxUseDpadAsArrows);
         checkboxRotateDpad = (CheckBox) findViewById(R.id.checkboxRotateDpad);
         checkboxUseLastPositionToolbar = (CheckBox) findViewById(R.id.checkboxUseLastPositionToolbar);
-        // The advanced settings button.
-        toggleAdvancedSettings = (ToggleButton) findViewById(R.id.toggleAdvancedSettings);
-        layoutAdvancedSettings = (LinearLayout) findViewById(R.id.layoutAdvancedSettings);
-        toggleAdvancedSettings.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton arg0, boolean checked) {
-                if (checked)
-                    layoutAdvancedSettings.setVisibility(View.VISIBLE);
-                else
-                    layoutAdvancedSettings.setVisibility(View.GONE);
-            }
-        });
-
-        spinnerNvApp = (Spinner) findViewById(R.id.spinnerNvApp);
-        adapterNvAppNames = new ThemedArrayAdapter<>(getApplicationContext(),
-                R.layout.large_text_spinner_list,
-                new ArrayList<>());
-        adapterNvAppNames.setDropDownViewResource(R.layout.large_text_spinner_list_dropdown);
-        spinnerNvApp.setAdapter(adapterNvAppNames);
-        spinnerNvApp.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                NvApp nvApp = lastNvApps.get(position);
-                textUsername.setText(nvApp.getAppName());
-                textPassword.setText(String.valueOf(nvApp.getAppId()));
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
-        });
 
         rdpColorArray = Utilities.Companion.toList(getResources().getStringArray(R.array.rdp_colors));
         spinnerRdpColor = (Spinner) findViewById(R.id.spinnerRdpColor);
@@ -405,96 +277,9 @@ public class ConfigRDP extends MainConfiguration {
         );
         connAdapter.setDropDownViewResource(R.layout.large_text_spinner_list_dropdown);
 
-        spinnerConnectionType.setAdapter(connAdapter);
-
-        spinnerConnectionType.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> ad, View view, int itemIndex, long id) {
-                selectedConnType = itemIndex;
-                selected.setConnectionType(selectedConnType);
-//                selected.save(MainConfiguration.this);
-//                updateViewFromSelected();
-
-                if (selectedConnType == Constants.CONN_TYPE_RDP) {
-                    setVisibilityOfSshWidgets(View.GONE);
-                    rdpDomain.setVisibility(View.VISIBLE);
-
-                    findViewById(R.id.nvstream_pair).setVisibility(View.GONE);
-                    findViewById(R.id.spinnerNvApp).setVisibility(View.GONE);
-                    findViewById(R.id.spinnerNvAppText).setVisibility(View.GONE);
-
-                    findViewById(R.id.textPASSWORD).setVisibility(View.VISIBLE);
-                    findViewById(R.id.checkboxKeepPassword).setVisibility(View.VISIBLE);
-                    findViewById(R.id.textUsername).setVisibility(View.VISIBLE);
-                    nickText.setEnabled(true);
-                    nickText.setHint(getString(R.string.nickname_caption_hint));
-
-                    findViewById(R.id.geometryGroup).setVisibility(View.VISIBLE);
-                    findViewById(R.id.checkboxEnableRecording).setVisibility(View.VISIBLE);
-                    findViewById(R.id.textDescriptGeom).setVisibility(View.VISIBLE);
-
-                    if (ipText.getText().length() <= 0) {
-                        portText.setText("3389");
-                    }
-                } else if (selectedConnType == Constants.CONN_TYPE_VNC) {
-                    rdpDomain.setVisibility(View.GONE);
-
-                    findViewById(R.id.nvstream_pair).setVisibility(View.GONE);
-                    findViewById(R.id.spinnerNvApp).setVisibility(View.GONE);
-                    findViewById(R.id.spinnerNvAppText).setVisibility(View.GONE);
-
-                    findViewById(R.id.textPASSWORD).setVisibility(View.VISIBLE);
-                    findViewById(R.id.checkboxKeepPassword).setVisibility(View.VISIBLE);
-                    findViewById(R.id.textUsername).setVisibility(View.VISIBLE);
-                    nickText.setEnabled(true);
-                    nickText.setHint(getString(R.string.nickname_caption_hint));
-
-                    findViewById(R.id.geometryGroup).setVisibility(View.GONE);
-                    findViewById(R.id.checkboxEnableRecording).setVisibility(View.GONE);
-                    findViewById(R.id.textDescriptGeom).setVisibility(View.GONE);
-
-                    if (ipText.getText().length() <= 0) {
-                        portText.setText("5900");
-                    }
-                } else if (selectedConnType == Constants.CONN_TYPE_NVSTREAM) {
-                    rdpDomain.setVisibility(View.GONE);
-
-                    startServiceConnection();
-
-                    findViewById(R.id.nvstream_pair).setVisibility(View.VISIBLE);
-                    findViewById(R.id.spinnerNvApp).setVisibility(View.VISIBLE);
-                    findViewById(R.id.spinnerNvAppText).setVisibility(View.VISIBLE);
-
-                    findViewById(R.id.geometryGroup).setVisibility(View.GONE);
-                    findViewById(R.id.checkboxEnableRecording).setVisibility(View.GONE);
-                    findViewById(R.id.textDescriptGeom).setVisibility(View.GONE);
-                    findViewById(R.id.textNickname).setEnabled(false);
-                    nickText.setEnabled(false);
-                    nickText.setHint(getString(R.string.nickname_caption_hint_auto));
-
-                    findViewById(R.id.textPASSWORD).setVisibility(View.GONE);
-                    findViewById(R.id.checkboxKeepPassword).setVisibility(View.GONE);
-                    findViewById(R.id.textUsername).setVisibility(View.GONE);
-
-                    findViewById(R.id.geometryGroup).setVisibility(View.VISIBLE);
-                    findViewById(R.id.checkboxEnableRecording).setVisibility(View.GONE);
-                    findViewById(R.id.geometryGroupZoom).setVisibility(View.GONE);
-
-                    if (ipText.getText().length() <= 0) {
-                        portText.setText("47989");
-                    }
-                }
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> ad) {
-            }
-        });
-
         groupRemoteSoundType = (RadioGroup) findViewById(R.id.groupRemoteSoundType);
         checkboxEnableRecording = (CheckBox) findViewById(R.id.checkboxEnableRecording);
         checkboxConsoleMode = (CheckBox) findViewById(R.id.checkboxConsoleMode);
-//        checkboxRedirectSdCard = (CheckBox) findViewById(R.id.checkboxRedirectSdCard);
         checkboxEnableGesture = (CheckBox) findViewById(R.id.checkboxEnableGesture);
         checkboxRemoteFx = (CheckBox) findViewById(R.id.checkboxRemoteFx);
         checkboxDesktopBackground = (CheckBox) findViewById(R.id.checkboxDesktopBackground);
@@ -506,7 +291,23 @@ public class ConfigRDP extends MainConfiguration {
         checkboxEnableGfx = (CheckBox) findViewById(R.id.checkboxEnableGfx);
         checkboxEnableGfxH264 = (CheckBox) findViewById(R.id.checkboxEnableGfxH264);
         checkboxPreferSendingUnicode = (CheckBox) findViewById(R.id.checkboxPreferSendingUnicode);
-//        setConnectionTypeSpinnerAdapter(R.array.rdp_connection_type);
+
+        setVisibilityOfSshWidgets(View.GONE);
+        rdpDomain.setVisibility(View.VISIBLE);
+
+        findViewById(R.id.textPASSWORD).setVisibility(View.VISIBLE);
+        findViewById(R.id.checkboxKeepPassword).setVisibility(View.VISIBLE);
+        findViewById(R.id.textUsername).setVisibility(View.VISIBLE);
+        nickText.setEnabled(true);
+        nickText.setHint(getString(R.string.nickname_caption_hint));
+
+        findViewById(R.id.geometryGroup).setVisibility(View.VISIBLE);
+        findViewById(R.id.checkboxEnableRecording).setVisibility(View.VISIBLE);
+        findViewById(R.id.textDescriptGeom).setVisibility(View.VISIBLE);
+
+        if (ipText.getText().length() <= 0) {
+            portText.setText("3389");
+        }
     }
 
     @NonNull
@@ -522,42 +323,6 @@ public class ConfigRDP extends MainConfiguration {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-
-        if (managerBinder != null) {
-            unbindService(serviceConnection);
-        }
-
-        if (poller != null) {
-            poller.stop();
-        }
-    }
-
-    private void updateUiWithAppList(final List<NvApp> appList) {
-        lastNvApps = appList;
-        if (appList == null || appList.isEmpty()) {
-            return;
-        }
-
-        // set the spinner to last selected
-        if (selected.getPassword() != null && !selected.getPassword().isEmpty()) {
-            for (int i = 0; i < lastNvApps.size(); i++) {
-                NvApp nvApp = lastNvApps.get(i);
-                int curAppId = Integer.parseInt(selected.getPassword());
-                if (nvApp.getAppId() != curAppId) {
-                    continue;
-                }
-
-                spinnerNvApp.setSelection(i);
-            }
-        }
-
-        List<String> appNames = appList.stream().map(NvApp::getAppName).collect(Collectors.toList());
-
-        adapterNvAppNames.clear();
-        adapterNvAppNames.addAll(appNames);
-
-        // show the spinner
-        spinnerNvApp.setVisibility(View.VISIBLE);
     }
 
     /**
@@ -608,7 +373,6 @@ public class ConfigRDP extends MainConfiguration {
         checkboxEnableRecording.setChecked(selected.getEnableRecording());
         checkboxEnableGesture.setChecked(selected.getEnableGesture());
         checkboxConsoleMode.setChecked(selected.getConsoleMode());
-//        checkboxRedirectSdCard.setChecked(selected.getRedirectSdCard());
         checkboxRemoteFx.setChecked(selected.getRemoteFx());
         checkboxDesktopBackground.setChecked(selected.getDesktopBackground());
         checkboxFontSmoothing.setChecked(selected.getFontSmoothing());
@@ -659,221 +423,6 @@ public class ConfigRDP extends MainConfiguration {
         return 0;
     }
 
-    private URI parseRawUserInputToUri(String rawUserInput) {
-        try {
-            // Try adding a scheme and parsing the remaining input.
-            // This handles input like 127.0.0.1:47989, [::1], [::1]:47989, and 127.0.0.1.
-            URI uri = new URI("moonlight://" + rawUserInput);
-            if (uri.getHost() != null && !uri.getHost().isEmpty()) {
-                return uri;
-            }
-        } catch (URISyntaxException ignored) {
-        }
-
-        try {
-            // Attempt to escape the input as an IPv6 literal.
-            // This handles input like ::1.
-            URI uri = new URI("moonlight://[" + rawUserInput + "]");
-            if (uri.getHost() != null && !uri.getHost().isEmpty()) {
-                return uri;
-            }
-        } catch (URISyntaxException ignored) {
-        }
-
-        return null;
-    }
-
-    private ComputerDetails doAddPc(String rawUserInput) {
-        boolean wrongSiteLocal = false;
-        boolean invalidInput = false;
-        boolean success;
-        int portTestResult;
-
-        SpinnerDialog dialog = SpinnerDialog.displayDialog(this, getResources().getString(R.string.title_add_pc),
-                getResources().getString(R.string.msg_add_pc), false);
-
-        ComputerDetails computerDetails = new ComputerDetails();
-
-        try {
-            // Check if we parsed a host address successfully
-            URI uri = parseRawUserInputToUri(rawUserInput);
-            if (uri != null && uri.getHost() != null && !uri.getHost().isEmpty()) {
-                String host = uri.getHost();
-                int port = uri.getPort();
-
-                // If a port was not specified, use the default
-                if (port == -1) {
-                    port = NvHTTP.DEFAULT_HTTP_PORT;
-                }
-
-                computerDetails.manualAddress = new ComputerDetails.AddressTuple(host, port);
-                success = managerBinder.addComputerBlocking(computerDetails);
-                if (!success) {
-                    wrongSiteLocal = Utils.isWrongSubnetSiteLocalAddress(host);
-                }
-            } else {
-                // Invalid user input
-                success = false;
-                invalidInput = true;
-            }
-        } catch (Exception e) {
-            success = false;
-            invalidInput = true;
-        }
-
-        // Keep the SpinnerDialog open while testing connectivity
-        if (!success && !wrongSiteLocal && !invalidInput) {
-            // Run the test before dismissing the spinner because it can take a few seconds.
-            portTestResult = MoonBridge.testClientConnectivity(ServerHelper.CONNECTION_TEST_SERVER, 443,
-                    MoonBridge.ML_PORT_FLAG_TCP_47984 | MoonBridge.ML_PORT_FLAG_TCP_47989);
-        } else {
-            // Don't bother with the test if we succeeded or the IP address was bogus
-            portTestResult = MoonBridge.ML_TEST_RESULT_INCONCLUSIVE;
-        }
-
-        dialog.dismiss();
-
-        if (invalidInput) {
-            Dialog.displayDialog(this, getResources().getString(R.string.conn_error_title), getResources().getString(R.string.addpc_unknown_host), false);
-        } else if (wrongSiteLocal) {
-            Dialog.displayDialog(this, getResources().getString(R.string.conn_error_title), getResources().getString(R.string.addpc_wrong_sitelocal), false);
-        } else if (!success) {
-            String dialogText;
-            if (portTestResult != MoonBridge.ML_TEST_RESULT_INCONCLUSIVE && portTestResult != 0) {
-                dialogText = getResources().getString(R.string.nettest_text_blocked);
-            } else {
-                dialogText = getResources().getString(R.string.addpc_fail);
-            }
-            Dialog.displayDialog(this, getResources().getString(R.string.conn_error_title), dialogText, false);
-        } else {
-            ConfigRDP.this.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    Toast.makeText(ConfigRDP.this, getResources().getString(R.string.addpc_success), Toast.LENGTH_LONG).show();
-                }
-            });
-        }
-
-        if (!success) {
-            return null;
-        }
-
-        return computerDetails;
-    }
-
-    public void nvStreamPair(View view) {
-        String address = ipText.getText() + ":" + portText.getText();
-
-        ComputerDetails computerDetails = managerBinder.getComputerByManualAddress(address);
-        if (computerDetails == null) {
-            computerDetails = doAddPc(address);
-        }
-
-        if (computerDetails == null) {
-            // error handling
-            return;
-        }
-
-        // Fill in the NickName of this device
-        nickText.setText(computerDetails.name);
-        textUsername.setText(computerDetails.uuid);
-
-        doPair(computerDetails);
-    }
-
-    private void doPair(final ComputerDetails computer) {
-        if (computer.state == ComputerDetails.State.OFFLINE || computer.activeAddress == null) {
-            Toast.makeText(ConfigRDP.this, getResources().getString(com.limelight.R.string.pair_pc_offline), Toast.LENGTH_SHORT).show();
-            return;
-        }
-        if (managerBinder == null) {
-            Toast.makeText(ConfigRDP.this, getResources().getString(com.limelight.R.string.error_manager_not_running), Toast.LENGTH_LONG).show();
-            return;
-        }
-
-        Toast.makeText(ConfigRDP.this, getResources().getString(com.limelight.R.string.pairing), Toast.LENGTH_SHORT).show();
-
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                NvHTTP httpConn;
-                String message;
-                boolean success = false;
-                try {
-                    httpConn = new NvHTTP(ServerHelper.getCurrentAddressFromComputer(computer),
-                            computer.httpsPort, managerBinder.getUniqueId(), computer.serverCert,
-                            PlatformBinding.getCryptoProvider(ConfigRDP.this));
-                    if (httpConn.getPairState() == PairingManager.PairState.PAIRED) {
-                        message = getResources().getString(com.limelight.R.string.pair_succeed);
-                        success = true;
-                    } else {
-                        final String pinStr = PairingManager.generatePinString();
-
-                        // Spin the dialog off in a thread because it blocks
-                        Dialog.displayDialog(ConfigRDP.this, getResources().getString(com.limelight.R.string.pair_pairing_title),
-                                getResources().getString(com.limelight.R.string.pair_pairing_msg) + " " + pinStr + "\n\n" +
-                                        getResources().getString(com.limelight.R.string.pair_pairing_help), false);
-
-                        PairingManager pm = httpConn.getPairingManager();
-
-                        PairingManager.PairState pairState = pm.pair(httpConn.getServerInfo(true), pinStr);
-                        if (pairState == PairingManager.PairState.PIN_WRONG) {
-                            message = getResources().getString(com.limelight.R.string.pair_incorrect_pin);
-                        } else if (pairState == PairingManager.PairState.FAILED) {
-                            if (computer.runningGameId != 0) {
-                                message = getResources().getString(com.limelight.R.string.pair_pc_ingame);
-                            } else {
-                                message = getResources().getString(com.limelight.R.string.pair_fail);
-                            }
-                        } else if (pairState == PairingManager.PairState.ALREADY_IN_PROGRESS) {
-                            message = getResources().getString(com.limelight.R.string.pair_already_in_progress);
-                        } else if (pairState == PairingManager.PairState.PAIRED) {
-                            // Just navigate to the app view without displaying a toast
-                            message = getResources().getString(com.limelight.R.string.pair_succeed);
-                            success = true;
-
-                            // Pin this certificate for later HTTPS use
-                            managerBinder.getComputer(computer.uuid).serverCert = pm.getPairedCert();
-
-                            // Invalidate reachability information after pairing to force
-                            // a refresh before reading pair state again
-                            managerBinder.invalidateStateForComputer(computer.uuid);
-                        } else {
-                            // Should be no other values
-                            message = null;
-                        }
-                    }
-                } catch (UnknownHostException e) {
-                    message = getResources().getString(com.limelight.R.string.error_unknown_host);
-                } catch (FileNotFoundException e) {
-                    message = getResources().getString(com.limelight.R.string.error_404);
-                } catch (XmlPullParserException | IOException e) {
-                    message = e.getMessage();
-                }
-
-                Dialog.closeDialogs();
-
-                final String toastMessage = message;
-                final boolean toastSuccess = success;
-
-                runOnUiThread(() -> {
-                    if (toastMessage != null) {
-                        Toast.makeText(ConfigRDP.this, toastMessage, Toast.LENGTH_LONG).show();
-                    }
-
-//                        if (toastSuccess) {
-//                            // Open the app list after a successful pairing attempt
-//                            doAppList(computer, true, false);
-//                        }
-//                        else {
-//                            // Start polling again if we're still in the foreground
-//                            startComputerUpdates();
-//                        }
-                });
-            }
-        }).start();
-    }
-
     protected void updateSelectedFromView() {
         commonUpdateSelectedFromView();
 
@@ -883,7 +432,7 @@ public class ConfigRDP extends MainConfiguration {
         try {
             selected.setPort(Integer.parseInt(portText.getText().toString()));
             selected.setSshPort(Integer.parseInt(sshPort.getText().toString()));
-        } catch (NumberFormatException nfe) {
+        } catch (NumberFormatException ignored) {
         }
 
         selected.setNickname(nickText.getText().toString());
@@ -905,7 +454,6 @@ public class ConfigRDP extends MainConfiguration {
         selected.setEnableRecording(checkboxEnableRecording.isChecked());
         selected.setEnableGesture(checkboxEnableGesture.isChecked());
         selected.setConsoleMode(checkboxConsoleMode.isChecked());
-//        selected.setRedirectSdCard(checkboxRedirectSdCard.isChecked());
         selected.setRemoteFx(checkboxRemoteFx.isChecked());
         selected.setDesktopBackground(checkboxDesktopBackground.isChecked());
         selected.setFontSmoothing(checkboxFontSmoothing.isChecked());
@@ -972,22 +520,12 @@ public class ConfigRDP extends MainConfiguration {
         startActivity(intent);
     }
 
-    public void toggleEnableStorageRedirect(View view) {
-        CheckBox b = (CheckBox) view;
-        PermissionsManager.requestPermissions(this, PermissionGroups.EXTERNAL_STORAGE_MANAGEMENT, true);
-
-        selected.setRedirectSdCard(b.isChecked());
-    }
-
     /**
      * Automatically linked with android:onClick in the layout.
      *
      * @param view
      */
     public void remoteSoundTypeToggled(View view) {
-//        if (Utils.isFree(this)) {
-//            IntroTextDialog.showIntroTextIfNecessary(this, database, true);
-//        }
     }
 
     /**
@@ -997,10 +535,6 @@ public class ConfigRDP extends MainConfiguration {
      */
     public void setRemoteSoundTypeFromView(View view) {
         RadioGroup g = (RadioGroup) view;
-//        if (Utils.isFree(this)) {
-//            IntroTextDialog.showIntroTextIfNecessary(this, database, true);
-//            g.check(R.id.radioRemoteSoundDisabled);
-//        }
 
         int id = g.getCheckedRadioButtonId();
         int soundType = Constants.REMOTE_SOUND_DISABLED;
@@ -1043,10 +577,6 @@ public class ConfigRDP extends MainConfiguration {
 
         public ThemedArrayAdapter(Context context, int layout, List<T> objects) {
             super(context, layout, objects);
-        }
-
-        public ThemedArrayAdapter(Context context, int layout, int textview, List<T> objects) {
-            super(context, layout, textview, objects);
         }
 
         @Override
