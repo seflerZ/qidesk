@@ -62,6 +62,18 @@
             android:theme="@style/QiHua"
             android:windowSoftInputMode="stateHidden|adjustResize" />
         <activity
+            android:name="com.qihua.bVNC.ConfigVNC"
+            android:configChanges="orientation|keyboardHidden"
+            android:resizeableActivity="true"
+            android:theme="@style/QiHua"
+            android:windowSoftInputMode="stateHidden|adjustResize" />
+        <activity
+            android:name="com.qihua.bVNC.ConfigNVStream"
+            android:configChanges="orientation|keyboardHidden"
+            android:resizeableActivity="true"
+            android:theme="@style/QiHua"
+            android:windowSoftInputMode="stateHidden|adjustResize" />
+        <activity
             android:name="com.qihua.bVNC.RemoteCanvasActivity"
             android:configChanges="colorMode|density|fontScale|fontWeightAdjustment|keyboard|keyboardHidden|layoutDirection|locale|mcc|mnc|navigation|orientation|screenLayout|screenSize|smallestScreenSize|touchscreen|uiMode"
             android:exported="true"

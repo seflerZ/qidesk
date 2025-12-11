@@ -41,21 +41,27 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.AdapterView.OnItemLongClickListener;
+import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.GridView;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.AppCompatImageButton;
@@ -83,6 +89,8 @@ import com.qihua.bVNC.R;
 import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 public class ConnectionGridActivity extends AppCompatActivity implements GetTextFragment.OnFragmentDismissedListener {
@@ -245,7 +253,7 @@ public class ConnectionGridActivity extends AppCompatActivity implements GetText
 
         // Treat connection with id "$NC" as add new connection button
         if (id.equals("$NC")) {
-            addNewConnection();
+            displayConnectionTypes();
             return;
         }
 
@@ -389,28 +397,92 @@ public class ConnectionGridActivity extends AppCompatActivity implements GetText
         createAndSetLabeledImageAdapterAndNumberOfColumns();
     }
 
+    private static class ConnectionType {
+        final int iconRes;
+        final String title;
+        final String description;
+        final String type;
+
+        ConnectionType(int iconRes, String title, String description, String type) {
+            this.iconRes = iconRes;
+            this.title = title;
+            this.description = description;
+            this.type = type;
+        }
+    }
+
+    private void displayConnectionTypes() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(R.string.select_connection_type);
+
+        List<ConnectionType> connectionTypes = new ArrayList<>();
+        connectionTypes.add(new ConnectionType(R.drawable.vnc_connection, "VNC", getString(R.string.description_vnc), "vnc"));
+        connectionTypes.add(new ConnectionType(R.drawable.rdp_connection_2, "RDP", getString(R.string.description_rdp), "rdp"));
+        connectionTypes.add(new ConnectionType(R.drawable.nvstream_connection, "NVStream", getString(R.string.description_nvstream), "nvstream"));
+        connectionTypes.add(new ConnectionType(R.drawable.ssh_connection, "SSH", getString(R.string.description_ssh), "ssh"));
+
+        ArrayAdapter<ConnectionType> adapter = new ArrayAdapter<ConnectionType>(this, R.layout.connection_type_list_item, connectionTypes) {
+            @NonNull
+            @Override
+            public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+                if (convertView == null) {
+                    convertView = LayoutInflater.from(getContext()).inflate(R.layout.connection_type_list_item, parent, false);
+                }
+
+                ConnectionType currentType = getItem(position);
+
+                ImageView icon = convertView.findViewById(R.id.connection_type_icon);
+                TextView title = convertView.findViewById(R.id.connection_type_title);
+                TextView description = convertView.findViewById(R.id.connection_type_description);
+
+                if (currentType != null) {
+                    icon.setImageResource(currentType.iconRes);
+                    title.setText(currentType.title);
+                    description.setText(currentType.description);
+                }
+
+                return convertView;
+            }
+        };
+
+        builder.setAdapter(adapter, (dialog, which) -> {
+            addNewConnection(connectionTypes.get(which).type);
+        });
+
+        builder.create().show();
+    }
+
     /**
      * Starts a new connection.
      */
-    public void addNewConnection() {
+    public void addNewConnection(String type) {
+        if (type.equals("ssh")) {
+            return;
+        }
+
         Intent intent = new Intent(ConnectionGridActivity.this,
-                Utils.getConnectionSetupClass("rdp"));
+                Utils.getConnectionSetupClass(type));
         intent.putExtra("isNewConnection", true);
         startActivity(intent);
     }
+
+    public void addNewConnection() {
+        addNewConnection("rdp");
+    }
+
 
     /**
      * Linked with android:onClick to the add new connection action bar item.
      */
     public void addNewConnection(MenuItem menuItem) {
-        addNewConnection();
+        displayConnectionTypes();
     }
 
     /**
      * Linked with android:onClick to the add new connection item in the activity.
      */
     public void addNewConnection(View view) {
-        addNewConnection();
+        displayConnectionTypes();
     }
 
     /**

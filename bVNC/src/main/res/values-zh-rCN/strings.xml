@@ -930,4 +930,9 @@ aSPICE对应的功能如下：
 
     <string name="zoom_level">缩放级别</string>
     <string name="use_small_icon">在列表使用小图标</string>
+    <string name="select_connection_type">创建哪种类的远程桌面连接?</string>
+    <string name="description_vnc">Linux 桌面上广泛使用远程桌面连接。</string>
+    <string name="description_rdp">原生适用于 Windows，少数 Linux 也支持。</string>
+    <string name="description_nvstream">Nvidia 串流， 非常适合玩游戏。</string>
+    <string name="description_ssh">[即将推出] 纯文本 SSH 终端，适合远程服务器管理。</string>
 </resources>
