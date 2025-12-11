@@ -29,24 +29,6 @@
             </TableRow>
 
             <TableRow>
-                <TextView
-                    android:id="@+id/connectionTypeLabel"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:text="@string/connection_type_caption"
-                    android:visibility="gone"
-                    android:layout_weight="0.5"
-                    android:textAppearance="?android:attr/textAppearanceLarge" />
-
-                <Spinner
-                    android:id="@+id/spinnerConnectionType"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:visibility="gone"
-                    android:layout_weight="0.5" />
-            </TableRow>
-
-            <TableRow>
 
                 <TextView
                     android:id="@+id/sshCaption"
@@ -234,19 +216,6 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:hint="@string/rdp_username_hint"
-                    android:inputType="textNoSuggestions|textVisiblePassword"
-                    android:singleLine="true"
-                    android:textAppearance="?android:attr/textAppearanceLarge" />
-            </TableRow>
-
-            <TableRow>
-
-                <EditText
-                    android:id="@+id/rdpDomain"
-                    android:layout_width="fill_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:hint="@string/rdp_domain_hint"
                     android:inputType="textNoSuggestions|textVisiblePassword"
                     android:singleLine="true"
                     android:textAppearance="?android:attr/textAppearanceLarge" />

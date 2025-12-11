@@ -94,14 +94,9 @@ public class ConfigNVStream extends MainConfiguration {
     private EditText sshUser;
     private EditText portText;
     private EditText textPassword;
-    private ToggleButton toggleAdvancedSettings;
-    //private Spinner colorSpinner;
-    private Spinner spinnerRdpGeometry;
     private String lastRawApplist;
-    private Spinner spinnerRdpZoomLevel;
     private Spinner spinnerGestureConfig;
     private EditText textUsername;
-    private EditText rdpDomain;
     private EditText rdpWidth;
     private EditText rdpHeight;
     private CheckBox checkboxKeepPassword;
@@ -109,21 +104,8 @@ public class ConfigNVStream extends MainConfiguration {
     private RadioGroup groupRemoteSoundType;
     private CheckBox checkboxEnableRecording;
     private CheckBox checkboxEnableGesture;
-    private CheckBox checkboxConsoleMode;
-    //    private CheckBox checkboxRedirectSdCard;
-    private CheckBox checkboxRemoteFx;
-    private CheckBox checkboxDesktopBackground;
-    private CheckBox checkboxFontSmoothing;
-    private CheckBox checkboxDesktopComposition;
-    private CheckBox checkboxWindowContents;
-    private CheckBox checkboxMenuAnimation;
-    private CheckBox checkboxVisualStyles;
     private CheckBox checkboxRotateDpad;
     private CheckBox checkboxUseLastPositionToolbar;
-    private CheckBox checkboxUseSshPubkey;
-    private CheckBox checkboxEnableGfx;
-    private CheckBox checkboxEnableGfxH264;
-    private CheckBox checkboxPreferSendingUnicode;
     private Spinner spinnerRdpColor;
     private Spinner spinnerNvApp;
     private List<NvApp> lastNvApps;
@@ -228,32 +210,15 @@ public class ConfigNVStream extends MainConfiguration {
         super.onCreate(icicle);
 
         sshServer = (EditText) findViewById(R.id.sshServer);
-        sshPort = (EditText) findViewById(R.id.sshPort);
-        sshUser = (EditText) findViewById(R.id.sshUser);
+
         portText = (EditText) findViewById(R.id.textPORT);
         textPassword = (EditText) findViewById(R.id.textPASSWORD);
         textUsername = (EditText) findViewById(R.id.textUsername);
-        rdpDomain = (EditText) findViewById(R.id.rdpDomain);
-
-        // Here we say what happens when the Pubkey Checkbox is checked/unchecked.
-        checkboxUseSshPubkey = (CheckBox) findViewById(R.id.checkboxUseSshPubkey);
 
         checkboxKeepPassword = (CheckBox) findViewById(R.id.checkboxKeepPassword);
         checkboxUseDpadAsArrows = (CheckBox) findViewById(R.id.checkboxUseDpadAsArrows);
         checkboxRotateDpad = (CheckBox) findViewById(R.id.checkboxRotateDpad);
         checkboxUseLastPositionToolbar = (CheckBox) findViewById(R.id.checkboxUseLastPositionToolbar);
-        // The advanced settings button.
-        toggleAdvancedSettings = (ToggleButton) findViewById(R.id.toggleAdvancedSettings);
-        layoutAdvancedSettings = (LinearLayout) findViewById(R.id.layoutAdvancedSettings);
-        toggleAdvancedSettings.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton arg0, boolean checked) {
-                if (checked)
-                    layoutAdvancedSettings.setVisibility(View.VISIBLE);
-                else
-                    layoutAdvancedSettings.setVisibility(View.GONE);
-            }
-        });
 
         spinnerNvApp = (Spinner) findViewById(R.id.spinnerNvApp);
         adapterNvAppNames = new ThemedArrayAdapter<>(getApplicationContext(),
@@ -289,8 +254,6 @@ public class ConfigNVStream extends MainConfiguration {
         });
 
         // The geometry type and dimensions boxes.
-        spinnerRdpGeometry = (Spinner) findViewById(R.id.spinnerRdpGeometry);
-        spinnerRdpZoomLevel = (Spinner) findViewById(R.id.spinnerRdpZoomLevel);
         spinnerGestureConfig = (Spinner) findViewById(R.id.spinnerGestureConfig);
         rdpWidth = (EditText) findViewById(R.id.rdpWidth);
         rdpHeight = (EditText) findViewById(R.id.rdpHeight);
@@ -340,19 +303,6 @@ public class ConfigNVStream extends MainConfiguration {
                 R.id.connectionName, // 列表项中的 TextView ID（如果使用默认布局）
                 rdpGeometryArray // 数据
         );
-        spinnerRdpGeometry.setAdapter(geoAdapter);
-
-        spinnerRdpGeometry.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> arg0, View view, int itemIndex, long id) {
-                selected.setRdpResType(itemIndex);
-                setRemoteWidthAndHeight();
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> arg0) {
-            }
-        });
 
         List<String> rdpZoomLevelArray
                 = Arrays.asList(getResources().getStringArray(R.array.rdp_zoom_level));
@@ -363,39 +313,6 @@ public class ConfigNVStream extends MainConfiguration {
                 R.id.connectionName, // 列表项中的 TextView ID（如果使用默认布局）
                 rdpZoomLevelArray // 数据
         );
-        spinnerRdpZoomLevel.setAdapter(zoomAdapter);
-
-        spinnerRdpZoomLevel.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> arg0, View view, int itemIndex, long id) {
-                int level;
-                switch (itemIndex) {
-                    case 0:
-                        level = 100;
-                        break;
-                    case 1:
-                        level = 125;
-                        break;
-                    case 2:
-                        level = 140;
-                        break;
-                    case 3:
-                        level = 160;
-                        break;
-                    case 4:
-                        level = 200;
-                        break;
-                    default:
-                        level = 100;
-                }
-
-                selected.setZoomLevel(level);
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> arg0) {
-            }
-        });
 
         List<String> connTypes = Arrays.asList(getResources().getStringArray(R.array.rdp_connection_type));
         ArrayAdapter<String> connAdapter = new ThemedArrayAdapter<>(
@@ -405,108 +322,35 @@ public class ConfigNVStream extends MainConfiguration {
         );
         connAdapter.setDropDownViewResource(R.layout.large_text_spinner_list_dropdown);
 
-        spinnerConnectionType.setAdapter(connAdapter);
-
-        spinnerConnectionType.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> ad, View view, int itemIndex, long id) {
-                selectedConnType = itemIndex;
-                selected.setConnectionType(selectedConnType);
-//                selected.save(MainConfiguration.this);
-//                updateViewFromSelected();
-
-                if (selectedConnType == Constants.CONN_TYPE_RDP) {
-                    setVisibilityOfSshWidgets(View.GONE);
-                    rdpDomain.setVisibility(View.VISIBLE);
-
-                    findViewById(R.id.nvstream_pair).setVisibility(View.GONE);
-                    findViewById(R.id.spinnerNvApp).setVisibility(View.GONE);
-                    findViewById(R.id.spinnerNvAppText).setVisibility(View.GONE);
-
-                    findViewById(R.id.textPASSWORD).setVisibility(View.VISIBLE);
-                    findViewById(R.id.checkboxKeepPassword).setVisibility(View.VISIBLE);
-                    findViewById(R.id.textUsername).setVisibility(View.VISIBLE);
-                    nickText.setEnabled(true);
-                    nickText.setHint(getString(R.string.nickname_caption_hint));
-
-                    findViewById(R.id.geometryGroup).setVisibility(View.VISIBLE);
-                    findViewById(R.id.checkboxEnableRecording).setVisibility(View.VISIBLE);
-                    findViewById(R.id.textDescriptGeom).setVisibility(View.VISIBLE);
-
-                    if (ipText.getText().length() <= 0) {
-                        portText.setText("3389");
-                    }
-                } else if (selectedConnType == Constants.CONN_TYPE_VNC) {
-                    rdpDomain.setVisibility(View.GONE);
-
-                    findViewById(R.id.nvstream_pair).setVisibility(View.GONE);
-                    findViewById(R.id.spinnerNvApp).setVisibility(View.GONE);
-                    findViewById(R.id.spinnerNvAppText).setVisibility(View.GONE);
-
-                    findViewById(R.id.textPASSWORD).setVisibility(View.VISIBLE);
-                    findViewById(R.id.checkboxKeepPassword).setVisibility(View.VISIBLE);
-                    findViewById(R.id.textUsername).setVisibility(View.VISIBLE);
-                    nickText.setEnabled(true);
-                    nickText.setHint(getString(R.string.nickname_caption_hint));
-
-                    findViewById(R.id.geometryGroup).setVisibility(View.GONE);
-                    findViewById(R.id.checkboxEnableRecording).setVisibility(View.GONE);
-                    findViewById(R.id.textDescriptGeom).setVisibility(View.GONE);
-
-                    if (ipText.getText().length() <= 0) {
-                        portText.setText("5900");
-                    }
-                } else if (selectedConnType == Constants.CONN_TYPE_NVSTREAM) {
-                    rdpDomain.setVisibility(View.GONE);
-
-                    startServiceConnection();
-
-                    findViewById(R.id.nvstream_pair).setVisibility(View.VISIBLE);
-                    findViewById(R.id.spinnerNvApp).setVisibility(View.VISIBLE);
-                    findViewById(R.id.spinnerNvAppText).setVisibility(View.VISIBLE);
-
-                    findViewById(R.id.geometryGroup).setVisibility(View.GONE);
-                    findViewById(R.id.checkboxEnableRecording).setVisibility(View.GONE);
-                    findViewById(R.id.textDescriptGeom).setVisibility(View.GONE);
-                    findViewById(R.id.textNickname).setEnabled(false);
-                    nickText.setEnabled(false);
-                    nickText.setHint(getString(R.string.nickname_caption_hint_auto));
-
-                    findViewById(R.id.textPASSWORD).setVisibility(View.GONE);
-                    findViewById(R.id.checkboxKeepPassword).setVisibility(View.GONE);
-                    findViewById(R.id.textUsername).setVisibility(View.GONE);
-
-                    findViewById(R.id.geometryGroup).setVisibility(View.VISIBLE);
-                    findViewById(R.id.checkboxEnableRecording).setVisibility(View.GONE);
-                    findViewById(R.id.geometryGroupZoom).setVisibility(View.GONE);
-
-                    if (ipText.getText().length() <= 0) {
-                        portText.setText("47989");
-                    }
-                }
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> ad) {
-            }
-        });
-
         groupRemoteSoundType = (RadioGroup) findViewById(R.id.groupRemoteSoundType);
         checkboxEnableRecording = (CheckBox) findViewById(R.id.checkboxEnableRecording);
-        checkboxConsoleMode = (CheckBox) findViewById(R.id.checkboxConsoleMode);
-//        checkboxRedirectSdCard = (CheckBox) findViewById(R.id.checkboxRedirectSdCard);
+
         checkboxEnableGesture = (CheckBox) findViewById(R.id.checkboxEnableGesture);
-        checkboxRemoteFx = (CheckBox) findViewById(R.id.checkboxRemoteFx);
-        checkboxDesktopBackground = (CheckBox) findViewById(R.id.checkboxDesktopBackground);
-        checkboxFontSmoothing = (CheckBox) findViewById(R.id.checkboxFontSmoothing);
-        checkboxDesktopComposition = (CheckBox) findViewById(R.id.checkboxDesktopComposition);
-        checkboxWindowContents = (CheckBox) findViewById(R.id.checkboxWindowContents);
-        checkboxMenuAnimation = (CheckBox) findViewById(R.id.checkboxMenuAnimation);
-        checkboxVisualStyles = (CheckBox) findViewById(R.id.checkboxVisualStyles);
-        checkboxEnableGfx = (CheckBox) findViewById(R.id.checkboxEnableGfx);
-        checkboxEnableGfxH264 = (CheckBox) findViewById(R.id.checkboxEnableGfxH264);
-        checkboxPreferSendingUnicode = (CheckBox) findViewById(R.id.checkboxPreferSendingUnicode);
-//        setConnectionTypeSpinnerAdapter(R.array.rdp_connection_type);
+
+        startServiceConnection();
+
+        findViewById(R.id.nvstream_pair).setVisibility(View.VISIBLE);
+        findViewById(R.id.spinnerNvApp).setVisibility(View.VISIBLE);
+        findViewById(R.id.spinnerNvAppText).setVisibility(View.VISIBLE);
+
+        findViewById(R.id.geometryGroup).setVisibility(View.GONE);
+        findViewById(R.id.checkboxEnableRecording).setVisibility(View.GONE);
+        findViewById(R.id.textDescriptGeom).setVisibility(View.GONE);
+        findViewById(R.id.textNickname).setEnabled(false);
+        nickText.setEnabled(false);
+        nickText.setHint(getString(R.string.nickname_caption_hint_auto));
+
+        findViewById(R.id.textPASSWORD).setVisibility(View.GONE);
+        findViewById(R.id.checkboxKeepPassword).setVisibility(View.GONE);
+        findViewById(R.id.textUsername).setVisibility(View.GONE);
+
+        findViewById(R.id.geometryGroup).setVisibility(View.VISIBLE);
+        findViewById(R.id.checkboxEnableRecording).setVisibility(View.GONE);
+        findViewById(R.id.geometryGroupZoom).setVisibility(View.GONE);
+
+        if (ipText.getText().length() <= 0) {
+            portText.setText("47989");
+        }
     }
 
     @NonNull
@@ -579,10 +423,6 @@ public class ConfigNVStream extends MainConfiguration {
         super.commonUpdateViewFromSelected();
 
         sshServer.setText(selected.getSshServer());
-        sshPort.setText(Integer.toString(selected.getSshPort()));
-        sshUser.setText(selected.getSshUser());
-
-        checkboxUseSshPubkey.setChecked(selected.getUseSshPubKey());
 
         portText.setText(Integer.toString(selected.getPort()));
 
@@ -596,10 +436,9 @@ public class ConfigNVStream extends MainConfiguration {
         checkboxUseLastPositionToolbar.setChecked((!isNewConnection) ? selected.getUseLastPositionToolbar() : this.useLastPositionToolbarDefault());
         nickText.setText(selected.getNickname());
         textUsername.setText(selected.getUserName());
-        rdpDomain.setText(selected.getRdpDomain());
+
         spinnerRdpColor.setSelection(rdpColorArray.indexOf(String.valueOf(selected.getRdpColor())));
-        spinnerRdpGeometry.setSelection(selected.getRdpResType());
-        spinnerRdpZoomLevel.setSelection(convert2ZoomIndex(selected.getZoomLevel()));
+
         spinnerGestureConfig.setSelection(convert2GestureIndex(selected));
         rdpWidth.setText(String.format(Locale.CHINA, "%d", selected.getRdpWidth()));
         rdpHeight.setText(String.format(Locale.CHINA, "%d", selected.getRdpHeight()));
@@ -607,18 +446,6 @@ public class ConfigNVStream extends MainConfiguration {
         setRemoteSoundTypeFromSettings(selected.getRemoteSoundType());
         checkboxEnableRecording.setChecked(selected.getEnableRecording());
         checkboxEnableGesture.setChecked(selected.getEnableGesture());
-        checkboxConsoleMode.setChecked(selected.getConsoleMode());
-//        checkboxRedirectSdCard.setChecked(selected.getRedirectSdCard());
-        checkboxRemoteFx.setChecked(selected.getRemoteFx());
-        checkboxDesktopBackground.setChecked(selected.getDesktopBackground());
-        checkboxFontSmoothing.setChecked(selected.getFontSmoothing());
-        checkboxDesktopComposition.setChecked(selected.getDesktopComposition());
-        checkboxWindowContents.setChecked(selected.getWindowContents());
-        checkboxMenuAnimation.setChecked(selected.getMenuAnimation());
-        checkboxVisualStyles.setChecked(selected.getVisualStyles());
-        checkboxEnableGfx.setChecked(selected.getEnableGfx());
-        checkboxEnableGfxH264.setChecked(selected.getEnableGfxH264());
-        checkboxPreferSendingUnicode.setChecked(selected.getPreferSendingUnicode());
     }
 
     private int convert2GestureIndex(ConnectionBean selected) {
@@ -890,11 +717,6 @@ public class ConfigNVStream extends MainConfiguration {
         selected.setSshServer(sshServer.getText().toString());
         selected.setSshUser(sshUser.getText().toString());
 
-        // If we are using an SSH key, then the ssh password box is used
-        // for the key pass-phrase instead.
-        selected.setUseSshPubKey(checkboxUseSshPubkey.isChecked());
-        selected.setRdpDomain(rdpDomain.getText().toString());
-        selected.setRdpResType(spinnerRdpGeometry.getSelectedItemPosition());
         try {
             selected.setRdpWidth(Integer.parseInt(rdpWidth.getText().toString()));
             selected.setRdpHeight(Integer.parseInt(rdpHeight.getText().toString()));
@@ -904,17 +726,6 @@ public class ConfigNVStream extends MainConfiguration {
         setRemoteSoundTypeFromView(groupRemoteSoundType);
         selected.setEnableRecording(checkboxEnableRecording.isChecked());
         selected.setEnableGesture(checkboxEnableGesture.isChecked());
-        selected.setConsoleMode(checkboxConsoleMode.isChecked());
-//        selected.setRedirectSdCard(checkboxRedirectSdCard.isChecked());
-        selected.setRemoteFx(checkboxRemoteFx.isChecked());
-        selected.setDesktopBackground(checkboxDesktopBackground.isChecked());
-        selected.setFontSmoothing(checkboxFontSmoothing.isChecked());
-        selected.setDesktopComposition(checkboxDesktopComposition.isChecked());
-        selected.setWindowContents(checkboxWindowContents.isChecked());
-        selected.setMenuAnimation(checkboxMenuAnimation.isChecked());
-        selected.setVisualStyles(checkboxVisualStyles.isChecked());
-        selected.setEnableGfx(checkboxEnableGfx.isChecked());
-        selected.setEnableGfxH264(checkboxEnableGfxH264.isChecked());
 
         selected.setUserName(textUsername.getText().toString());
         selected.setPassword(textPassword.getText().toString());
@@ -923,9 +734,6 @@ public class ConfigNVStream extends MainConfiguration {
         selected.setUseDpadAsArrows(checkboxUseDpadAsArrows.isChecked());
         selected.setRotateDpad(checkboxRotateDpad.isChecked());
         selected.setUseLastPositionToolbar(checkboxUseLastPositionToolbar.isChecked());
-        selected.setPreferSendingUnicode(checkboxPreferSendingUnicode.isChecked());
-        // TODO: Reinstate Color model spinner but for RDP settings.
-        //selected.setColorModel(((COLORMODEL)colorSpinner.getSelectedItem()).nameString());
     }
 
     /**
