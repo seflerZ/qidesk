@@ -98,10 +98,8 @@ public class ConfigNVStream extends MainConfiguration {
     private EditText rdpWidth;
     private EditText rdpHeight;
     private CheckBox checkboxKeepPassword;
-    private CheckBox checkboxUseDpadAsArrows;
     private RadioGroup groupRemoteSoundType;
     private CheckBox checkboxEnableGesture;
-    private CheckBox checkboxRotateDpad;
     private CheckBox checkboxUseLastPositionToolbar;
     private Spinner spinnerRdpGeometry;
     private Spinner spinnerRdpColor;
@@ -215,8 +213,6 @@ public class ConfigNVStream extends MainConfiguration {
 
         spinnerRdpGeometry = (Spinner) findViewById(R.id.spinnerRdpGeometry);
         checkboxKeepPassword = (CheckBox) findViewById(R.id.checkboxKeepPassword);
-        checkboxUseDpadAsArrows = (CheckBox) findViewById(R.id.checkboxUseDpadAsArrows);
-        checkboxRotateDpad = (CheckBox) findViewById(R.id.checkboxRotateDpad);
         checkboxUseLastPositionToolbar = (CheckBox) findViewById(R.id.checkboxUseLastPositionToolbar);
 
         spinnerNvApp = (Spinner) findViewById(R.id.spinnerNvApp);
@@ -417,8 +413,6 @@ public class ConfigNVStream extends MainConfiguration {
         }
 
         checkboxKeepPassword.setChecked(selected.getKeepPassword());
-        checkboxUseDpadAsArrows.setChecked(selected.getUseDpadAsArrows());
-        checkboxRotateDpad.setChecked(selected.getRotateDpad());
         checkboxUseLastPositionToolbar.setChecked((!isNewConnection) ? selected.getUseLastPositionToolbar() : this.useLastPositionToolbarDefault());
         nickText.setText(selected.getNickname());
         textUsername.setText(selected.getUserName());
@@ -719,8 +713,6 @@ public class ConfigNVStream extends MainConfiguration {
         selected.setPassword(textPassword.getText().toString());
 
         selected.setKeepPassword(checkboxKeepPassword.isChecked());
-        selected.setUseDpadAsArrows(checkboxUseDpadAsArrows.isChecked());
-        selected.setRotateDpad(checkboxRotateDpad.isChecked());
         selected.setUseLastPositionToolbar(checkboxUseLastPositionToolbar.isChecked());
     }
 
