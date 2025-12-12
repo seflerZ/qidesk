@@ -90,8 +90,6 @@ public class ConfigNVStream extends MainConfiguration {
     private final static String TAG = "aRDP";
     private LinearLayout layoutAdvancedSettings;
     private EditText sshServer;
-    private EditText sshPort;
-    private EditText sshUser;
     private EditText portText;
     private EditText textPassword;
     private String lastRawApplist;
@@ -102,10 +100,10 @@ public class ConfigNVStream extends MainConfiguration {
     private CheckBox checkboxKeepPassword;
     private CheckBox checkboxUseDpadAsArrows;
     private RadioGroup groupRemoteSoundType;
-    private CheckBox checkboxEnableRecording;
     private CheckBox checkboxEnableGesture;
     private CheckBox checkboxRotateDpad;
     private CheckBox checkboxUseLastPositionToolbar;
+    private Spinner spinnerRdpGeometry;
     private Spinner spinnerRdpColor;
     private Spinner spinnerNvApp;
     private List<NvApp> lastNvApps;
@@ -215,6 +213,7 @@ public class ConfigNVStream extends MainConfiguration {
         textPassword = (EditText) findViewById(R.id.textPASSWORD);
         textUsername = (EditText) findViewById(R.id.textUsername);
 
+        spinnerRdpGeometry = (Spinner) findViewById(R.id.spinnerRdpGeometry);
         checkboxKeepPassword = (CheckBox) findViewById(R.id.checkboxKeepPassword);
         checkboxUseDpadAsArrows = (CheckBox) findViewById(R.id.checkboxUseDpadAsArrows);
         checkboxRotateDpad = (CheckBox) findViewById(R.id.checkboxRotateDpad);
@@ -276,6 +275,29 @@ public class ConfigNVStream extends MainConfiguration {
                 gestureFileArray // 数据
         );
 
+        List<String> rdpGeometryArray
+                = Arrays.asList(getResources().getStringArray(R.array.rdp_geometry));
+        // 创建适配器
+        ArrayAdapter<String> geoAdapter = new ArrayAdapter<>(
+                this, // 当前上下文
+                R.layout.gesture_connection_item, // 列表项布局
+                R.id.connectionName, // 列表项中的 TextView ID（如果使用默认布局）
+                rdpGeometryArray // 数据
+        );
+        spinnerRdpGeometry.setAdapter(geoAdapter);
+
+        spinnerRdpGeometry.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> arg0, View view, int itemIndex, long id) {
+                selected.setRdpResType(itemIndex);
+                setRemoteWidthAndHeight();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> arg0) {
+            }
+        });
+
         spinnerGestureConfig.setAdapter(adapter);
         spinnerGestureConfig.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
@@ -294,36 +316,7 @@ public class ConfigNVStream extends MainConfiguration {
             }
         });
 
-        List<String> rdpGeometryArray
-                = Arrays.asList(getResources().getStringArray(R.array.rdp_geometry));
-        // 创建适配器
-        ArrayAdapter<String> geoAdapter = new ArrayAdapter<>(
-                this, // 当前上下文
-                R.layout.gesture_connection_item, // 列表项布局
-                R.id.connectionName, // 列表项中的 TextView ID（如果使用默认布局）
-                rdpGeometryArray // 数据
-        );
-
-        List<String> rdpZoomLevelArray
-                = Arrays.asList(getResources().getStringArray(R.array.rdp_zoom_level));
-        // 创建适配器
-        ArrayAdapter<String> zoomAdapter = new ArrayAdapter<>(
-                this, // 当前上下文
-                R.layout.gesture_connection_item, // 列表项布局
-                R.id.connectionName, // 列表项中的 TextView ID（如果使用默认布局）
-                rdpZoomLevelArray // 数据
-        );
-
-        List<String> connTypes = Arrays.asList(getResources().getStringArray(R.array.rdp_connection_type));
-        ArrayAdapter<String> connAdapter = new ThemedArrayAdapter<>(
-                getApplicationContext(), // 当前上下文
-                R.layout.large_text_spinner_list,
-                connTypes // 数据
-        );
-        connAdapter.setDropDownViewResource(R.layout.large_text_spinner_list_dropdown);
-
         groupRemoteSoundType = (RadioGroup) findViewById(R.id.groupRemoteSoundType);
-        checkboxEnableRecording = (CheckBox) findViewById(R.id.checkboxEnableRecording);
 
         checkboxEnableGesture = (CheckBox) findViewById(R.id.checkboxEnableGesture);
 
@@ -333,9 +326,6 @@ public class ConfigNVStream extends MainConfiguration {
         findViewById(R.id.spinnerNvApp).setVisibility(View.VISIBLE);
         findViewById(R.id.spinnerNvAppText).setVisibility(View.VISIBLE);
 
-        findViewById(R.id.geometryGroup).setVisibility(View.GONE);
-        findViewById(R.id.checkboxEnableRecording).setVisibility(View.GONE);
-        findViewById(R.id.textDescriptGeom).setVisibility(View.GONE);
         findViewById(R.id.textNickname).setEnabled(false);
         nickText.setEnabled(false);
         nickText.setHint(getString(R.string.nickname_caption_hint_auto));
@@ -343,10 +333,6 @@ public class ConfigNVStream extends MainConfiguration {
         findViewById(R.id.textPASSWORD).setVisibility(View.GONE);
         findViewById(R.id.checkboxKeepPassword).setVisibility(View.GONE);
         findViewById(R.id.textUsername).setVisibility(View.GONE);
-
-        findViewById(R.id.geometryGroup).setVisibility(View.VISIBLE);
-        findViewById(R.id.checkboxEnableRecording).setVisibility(View.GONE);
-        findViewById(R.id.geometryGroupZoom).setVisibility(View.GONE);
 
         if (ipText.getText().length() <= 0) {
             portText.setText("47989");
@@ -436,6 +422,12 @@ public class ConfigNVStream extends MainConfiguration {
         checkboxUseLastPositionToolbar.setChecked((!isNewConnection) ? selected.getUseLastPositionToolbar() : this.useLastPositionToolbarDefault());
         nickText.setText(selected.getNickname());
         textUsername.setText(selected.getUserName());
+        selected.setRdpResType(spinnerRdpGeometry.getSelectedItemPosition());
+        try {
+            selected.setRdpWidth(Integer.parseInt(rdpWidth.getText().toString()));
+            selected.setRdpHeight(Integer.parseInt(rdpHeight.getText().toString()));
+        } catch (NumberFormatException ignored) {
+        }
 
         spinnerRdpColor.setSelection(rdpColorArray.indexOf(String.valueOf(selected.getRdpColor())));
 
@@ -444,7 +436,6 @@ public class ConfigNVStream extends MainConfiguration {
         rdpHeight.setText(String.format(Locale.CHINA, "%d", selected.getRdpHeight()));
         setRemoteWidthAndHeight();
         setRemoteSoundTypeFromSettings(selected.getRemoteSoundType());
-        checkboxEnableRecording.setChecked(selected.getEnableRecording());
         checkboxEnableGesture.setChecked(selected.getEnableGesture());
     }
 
@@ -709,13 +700,11 @@ public class ConfigNVStream extends MainConfiguration {
         }
         try {
             selected.setPort(Integer.parseInt(portText.getText().toString()));
-            selected.setSshPort(Integer.parseInt(sshPort.getText().toString()));
-        } catch (NumberFormatException nfe) {
+        } catch (NumberFormatException ignored) {
         }
 
         selected.setNickname(nickText.getText().toString());
         selected.setSshServer(sshServer.getText().toString());
-        selected.setSshUser(sshUser.getText().toString());
 
         try {
             selected.setRdpWidth(Integer.parseInt(rdpWidth.getText().toString()));
@@ -724,7 +713,6 @@ public class ConfigNVStream extends MainConfiguration {
         }
 
         setRemoteSoundTypeFromView(groupRemoteSoundType);
-        selected.setEnableRecording(checkboxEnableRecording.isChecked());
         selected.setEnableGesture(checkboxEnableGesture.isChecked());
 
         selected.setUserName(textUsername.getText().toString());
