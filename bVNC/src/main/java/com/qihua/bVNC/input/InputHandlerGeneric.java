@@ -744,12 +744,14 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             return true;
         }
 
-        if (e.getDeviceId() > 10) {
-            if (e.getButtonState() == MotionEvent.BUTTON_PRIMARY) {
-                touchpad.post(()-> touchpad.startPointerCapture());
-            }
+        InputDevice device = e.getDevice();
+        if (device == null) return false;
 
-            return true;
+        if ((device.getSources() & InputDevice.SOURCE_MOUSE) == InputDevice.SOURCE_MOUSE) {
+            if ((e.getButtonState() & MotionEvent.BUTTON_PRIMARY) != 0) {
+                touchpad.post(() -> touchpad.startPointerCapture());
+                return true; // 消费事件，不传递给其他组件
+            }
         }
 
         GeneralUtils.debugLog(debugLogging, TAG, "onTouchEvent: pointerID: " + pointerID);

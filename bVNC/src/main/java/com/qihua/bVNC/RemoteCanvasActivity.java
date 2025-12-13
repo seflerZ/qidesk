@@ -783,14 +783,14 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
                 FrameLayout.LayoutParams.WRAP_CONTENT);
 
         if (Utils.querySharedPreferenceBoolean(this, Constants.leftHandedModeTag)) {
-            params.gravity = Gravity.TOP | Gravity.LEFT;
+            params.gravity = Gravity.TOP | Gravity.START;
         } else {
-            params.gravity = Gravity.TOP | Gravity.RIGHT;
+            params.gravity = Gravity.TOP | Gravity.END;
         }
 
         panner = new Panner(this, canvas.handler);
 
-        toolbar = (RemoteToolbar) findViewById(R.id.toolbar);
+        toolbar = findViewById(R.id.toolbar);
         toolbar.setTitle("");
         toolbar.getBackground().setAlpha(66);
         toolbar.setLayoutParams(params);
@@ -818,17 +818,6 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         // ever have r.top equal to zero. so a special case for them.
         Rect re = new Rect();
         getWindow().getDecorView().getWindowVisibleDisplayFrame(re);
-//        if (r.top == 0 || re.top > 0) {
-//            if (canvas.myDrawable != null) {
-//                android.util.Log.d(TAG, "onGlobalLayout: Setting VisibleDesktopHeight to: " + (r.bottom - re.top));
-//                canvas.setVisibleDesktopHeight(r.bottom - re.top);
-//                canvas.relativePan(0, 0);
-//            } else {
-//                android.util.Log.d(TAG, "onGlobalLayout: canvas.myDrawable is null");
-//            }
-//        } else {
-//            android.util.Log.d(TAG, "onGlobalLayout: Found r.top to be non-zero");
-//        }
 
         // Enable/show the toolbar if the keyboard is gone, and disable/hide otherwise.
         // We detect the keyboard if more than 19% of the screen is covered.
@@ -1020,11 +1009,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             return;
         }
         Drawable replacer;
-        if (connection.getExtraKeysToggleType() == Constants.EXTRA_KEYS_OFF) {
-            m.setVisible(false);
-        } else {
-            m.setVisible(true);
-        }
+        m.setVisible(connection.getExtraKeysToggleType() != Constants.EXTRA_KEYS_OFF);
         if (layoutKeys.getVisibility() == View.GONE)
             replacer = getResources().getDrawable(R.drawable.showkeys);
         else
@@ -1140,9 +1125,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         }
         canvas.setOnKeyListener(this);
         canvas.setFocusableInTouchMode(true);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            canvas.setFocusedByDefault(true);
-        }
+        canvas.setFocusedByDefault(true);
         canvas.requestFocus();
         canvas.setDrawingCacheEnabled(false);
 
@@ -1556,30 +1539,6 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         return false;
     }
 
-    private void sendSpecialKeyAgain() {
-        if (lastSentKey == null
-                || lastSentKey.get_Id() != connection.getLastMetaKeyId()) {
-            ArrayList<MetaKeyBean> keys = new ArrayList<MetaKeyBean>();
-            Database database = new Database(this);
-            Cursor c = database.getReadableDatabase().rawQuery(
-                    MessageFormat.format("SELECT * FROM {0} WHERE {1} = {2}",
-                            MetaKeyBean.GEN_TABLE_NAME,
-                            MetaKeyBean.GEN_FIELD__ID, connection
-                                    .getLastMetaKeyId()),
-                    MetaKeyDialog.EMPTY_ARGS);
-            MetaKeyBean.Gen_populateFromCursor(c, keys, MetaKeyBean.NEW);
-            c.close();
-            database.close();
-            if (keys.size() > 0) {
-                lastSentKey = keys.get(0);
-            } else {
-                lastSentKey = null;
-            }
-        }
-        if (lastSentKey != null)
-            canvas.getKeyboard().sendMetaKey(lastSentKey);
-    }
-
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -1631,7 +1590,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
                 consumed = inputHandler.onKeyUp(keyCode, evt);
             }
             resetOnScreenKeys(keyCode);
-        } catch (NullPointerException e) {
+        } catch (NullPointerException ignored) {
         }
 
         return consumed;
@@ -1646,7 +1605,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
                     t.show();
                     try {
                         Thread.sleep(2000);
-                    } catch (InterruptedException e) {
+                    } catch (InterruptedException ignored) {
                     }
                     t.show();
                 }
@@ -1671,8 +1630,9 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             if (connection.getUseDpadAsArrows())
                 return false;
             return inputHandler.onTouchEvent(event);
-        } catch (NullPointerException e) {
+        } catch (NullPointerException ignored) {
         }
+
         return super.onTrackballEvent(event);
     }
 
@@ -1681,65 +1641,21 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     public boolean onTouchEvent(MotionEvent event) {
         try {
             return inputHandler.onTouchEvent(event);
-        } catch (NullPointerException e) {
+        } catch (NullPointerException ignored) {
         }
+
         return super.onTouchEvent(event);
     }
 
     // Send e.g. mouse events like hover and scroll to be handled.
     @Override
     public boolean onGenericMotionEvent(MotionEvent event) {
-        // Ignore TOOL_TYPE_FINGER events that come from the touchscreen with HOVER type action
-        // which cause pointer jumping trouble in simulated touchpad for some devices.
-        boolean toolTypeFinger = false;
-        if (Constants.SDK_INT >= android.os.Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-            toolTypeFinger = event.getToolType(0) == MotionEvent.TOOL_TYPE_FINGER;
+        try {
+            return inputHandler.onTouchEvent(event);
+        } catch (NullPointerException ignored) {
         }
-        int a = event.getAction();
-        if (!((a == MotionEvent.ACTION_HOVER_ENTER ||
-                a == MotionEvent.ACTION_HOVER_EXIT ||
-                a == MotionEvent.ACTION_HOVER_MOVE) &&
-                event.getSource() == InputDevice.SOURCE_TOUCHSCREEN &&
-                toolTypeFinger
-        )) {
-            try {
-                return inputHandler.onTouchEvent(event);
-            } catch (NullPointerException e) {
-            }
-        }
+
         return super.onGenericMotionEvent(event);
-    }
-
-    private void selectColorModel() {
-
-        String[] choices = new String[COLORMODEL.values().length];
-        int currentSelection = -1;
-        for (int i = 0; i < choices.length; i++) {
-            COLORMODEL cm = COLORMODEL.values()[i];
-            choices[i] = cm.toString();
-            if (canvas.isColorModel(cm))
-                currentSelection = i;
-        }
-
-        final Dialog dialog = new Dialog(this);
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        ListView list = new ListView(this);
-        list.setAdapter(new ArrayAdapter<String>(this,
-                android.R.layout.simple_list_item_checked, choices));
-        list.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
-        list.setItemChecked(currentSelection, true);
-        list.setOnItemClickListener(new OnItemClickListener() {
-            public void onItemClick(AdapterView<?> arg0, View arg1, int arg2, long arg3) {
-                dialog.dismiss();
-                COLORMODEL cm = COLORMODEL.values()[arg2];
-                canvas.setColorModel(cm);
-                connection.setColorModel(cm.nameString());
-                connection.save(RemoteCanvasActivity.this);
-                Toast.makeText(RemoteCanvasActivity.this, getString(R.string.info_update_color_model_to) + cm.toString(), Toast.LENGTH_SHORT).show();
-            }
-        });
-        dialog.setContentView(list);
-        dialog.show();
     }
 
     public void showToolbar() {
@@ -1755,17 +1671,6 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             gestureOverlayView.setVisibility(View.VISIBLE);
         }
     }
-
-//    @Override
-//    public void onTextSelected(String selectedString) {
-//        android.util.Log.i(TAG, "onTextSelected called with selectedString: " + selectedString);
-////        canvas.pd.show();
-//        connection.setVmname(canvas.vmNameToId.get(selectedString));
-//        connection.save(this);
-//        synchronized (canvas.spicecomm) {
-//            canvas.spicecomm.notify();
-//        }
-//    }
 
     public void toggleKeyboard(MenuItem menuItem) {
         handler.post(() -> {
