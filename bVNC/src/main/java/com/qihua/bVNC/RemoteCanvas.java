@@ -289,6 +289,11 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             fpsCounter = new FpsCounter();
         }
 
+        // 👇 关键：让 MIUI 知道这个 View 是“有意图”接收触摸的
+        setClickable(true);           // 必须
+        setFocusable(true);           // 推荐
+        setFocusableInTouchMode(true); // 推荐（尤其在嵌套场景）
+
         clipboard = (ClipboardManager) getContext().getSystemService(Context.CLIPBOARD_SERVICE);
 
         Display display;

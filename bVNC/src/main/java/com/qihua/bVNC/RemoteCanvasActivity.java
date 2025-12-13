@@ -1636,15 +1636,23 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         return super.onTrackballEvent(event);
     }
 
-    // Send touch events or mouse events like button clicks to be handled.
     @Override
-    public boolean onTouchEvent(MotionEvent event) {
+    public boolean dispatchTouchEvent(MotionEvent event) {
         try {
-            return inputHandler.onTouchEvent(event);
-        } catch (NullPointerException ignored) {
+            if (toolbar.isShown()) {
+                toolbar.dispatchTouchEvent(event);
+            } else {
+                if (inputHandler.onTouchEvent(event)) {
+                    return true;
+                }
+            }
+        } catch (Exception ignore) {
+
         }
 
-        return super.onTouchEvent(event);
+        // If the input handler didn't consume the event, let the default
+        // implementation handle it.
+        return super.dispatchTouchEvent(event);
     }
 
     // Send e.g. mouse events like hover and scroll to be handled.
@@ -1652,7 +1660,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     public boolean onGenericMotionEvent(MotionEvent event) {
         try {
             return inputHandler.onTouchEvent(event);
-        } catch (NullPointerException ignored) {
+        } catch (Exception ignored) {
         }
 
         return super.onGenericMotionEvent(event);
