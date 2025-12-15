@@ -195,7 +195,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         }
     };
 
-    final long hideToolbarDelay = 1000;
+    final long hideToolbarDelay = 2000;
     InputHandler inputHandler;
     Panner panner;
     Handler handler;
@@ -204,7 +204,6 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     boolean keySuperToggled;
     boolean keyAltToggled;
     boolean keyShiftToggled;
-    boolean hardKeyboardExtended;
     boolean extraKeysHidden = true;
     volatile boolean softKeyboardUp;
     RemoteToolbar toolbar;
@@ -1636,15 +1635,31 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         return super.onTrackballEvent(event);
     }
 
+    private final Rect extraKeysRect = new Rect();
+    private boolean nonTouchDown = false;
+
     @Override
     public boolean dispatchTouchEvent(MotionEvent event) {
         try {
-            if (toolbar.isShown()) {
-                toolbar.dispatchTouchEvent(event);
-            } else {
+            int x = (int) event.getX();
+            int y = (int) event.getY();
+
+            extraKeysView.getGlobalVisibleRect(extraKeysRect);
+
+            if (extraKeysRect.contains(x, y)
+                    && event.getAction() == MotionEvent.ACTION_DOWN) {
+                nonTouchDown = true;
+            }
+
+            // 判断触摸点是否落在 ExtraKeyboardView 的可见区域内
+            if (!toolbar.isShown() && !nonTouchDown) {
                 if (inputHandler.onTouchEvent(event)) {
                     return true;
                 }
+            }
+
+            if (event.getAction() == MotionEvent.ACTION_UP) {
+                nonTouchDown = false;
             }
         } catch (Exception ignore) {
 
@@ -1730,15 +1745,6 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         });
     }
 
-//    public void sendCopy(MenuItem menuItem) {
-//        canvas.getKeyboard().sendUnicode('c', KeyEvent.META_CTRL_LEFT_ON);
-//    }
-//
-//    public void sendPaste(MenuItem menuItem) {
-//        canvas.getKeyboard().sendUnicode('v', KeyEvent.META_CTRL_LEFT_ON);
-//    }
-
-
     public void showKeyboard() {
         android.util.Log.i(TAG, "Showing keyboard and hiding action bar");
 
@@ -1769,11 +1775,6 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         }
     }
 
-
-    public void stopPanner() {
-        panner.stop();
-    }
-
     public Connection getConnection() {
         return connection;
     }
@@ -1794,26 +1795,8 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         return managerBinder.getUniqueId();
     }
 
-    // Returns whether we are using D-pad/Trackball to send arrow key events.
-    public boolean getUseDpadAsArrows() {
-        return connection.getUseDpadAsArrows();
-    }
-
-    // Returns whether the D-pad should be rotated to accommodate BT keyboards paired with phones.
-    public boolean getRotateDpad() {
-        return connection.getRotateDpad();
-    }
-
     public RemoteCanvas getCanvas() {
         return canvas;
-    }
-
-    public Panner getPanner() {
-        return panner;
-    }
-
-    public void setPanner(Panner panner) {
-        this.panner = panner;
     }
 
     @Override
