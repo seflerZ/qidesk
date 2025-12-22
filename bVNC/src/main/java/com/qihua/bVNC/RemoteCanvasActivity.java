@@ -216,7 +216,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     private CanvasPresentation canvasPresentation;
     private MenuItem[] inputModeMenuItems;
     private MenuItem[] scalingModeMenuItems;
-    private InputHandler inputModeHandlers[];
+    private InputHandler[] inputModeHandlers;
     private Connection connection;
     private GestureLibrary gestureLibrary;
     private GestureActionLibrary gestureActionLibrary;

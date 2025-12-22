@@ -138,6 +138,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
     public AbstractScaling scaler;
 
+    private boolean canHideCursor = true;
+
     // Variable indicating that we are currently scrolling in simulated touchpad mode.
     public boolean cursorBeingMoved = false;
 
@@ -353,6 +355,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             requestPointerCapture();
         }
 
+        hideCursor();
         requestFocus();
     }
 
@@ -1869,6 +1872,14 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         this.activity = activity;
     }
 
+    public void showCursor() {
+        canHideCursor = false;
+    }
+
+    public void hideCursor() {
+        canHideCursor = true;
+    }
+
     private class DrawWorker implements Runnable {
         private long lastDraw;
         private Thread thread;
@@ -2229,7 +2240,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
     @Override
     public PointerIcon onResolvePointerIcon(MotionEvent event, int pointerIndex) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && !outDisplay) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && !outDisplay && canHideCursor) {
             return PointerIcon.getSystemIcon(getContext(), PointerIcon.TYPE_NULL);
         }
 

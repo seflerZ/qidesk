@@ -320,6 +320,16 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             return true;
         }
 
+        if (pointer.pointerY >= canvas.getImageHeight() - 1
+                && action == MotionEvent.ACTION_DOWN
+                && canvas.isOutDisplay()) {
+            pointer.pointerY = pointer.pointerY - 20;
+            touchpad.releasePointerCapture();
+            touchpad.showCursor();
+
+            return true;
+        }
+
         cumulatedX = 0;
         cumulatedY = 0;
 
