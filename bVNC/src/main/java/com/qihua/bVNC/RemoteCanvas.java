@@ -665,7 +665,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         prefConfig.enableSops = true;
         prefConfig.bindAllUsb = true;
         prefConfig.audioConfiguration = MoonBridge.AUDIO_CONFIGURATION_STEREO;
-        prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_BALANCED;
+        prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_MIN_LATENCY;
         prefConfig.multiController = false;
         prefConfig.disableWarnings = true;
         prefConfig.enablePip = false;
@@ -673,16 +673,16 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         prefConfig.width = remoteWidth;
         prefConfig.height = remoteHeight;
         prefConfig.enableHdr = false;
-        prefConfig.bitrate = 15000 * (remoteWidth / 1920);
+        prefConfig.bitrate = 10000 * (remoteWidth / 1920);
         prefConfig.disableWarnings = false;
-        prefConfig.incomingFrameQueueSize = 3;
+        prefConfig.incomingFrameQueueSize = 1;
 //        prefConfig.videoFormat = PreferenceConfiguration.FormatOption.FORCE_H264;
 
         // reduce bitrate if on cellular connection
         if (!computerDetails.activeAddress.address.equals(computerDetails.localAddress.address)) {
             prefConfig.bitrate = 5000 * (remoteWidth / 1920);
-            prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_MIN_LATENCY;
-            prefConfig.incomingFrameQueueSize = 1;
+            prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_BALANCED;
+            prefConfig.incomingFrameQueueSize = 3;
             prefConfig.fps = 60;
 
             activity.runOnUiThread(() -> Toast.makeText(activity.getApplicationContext()
