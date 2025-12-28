@@ -550,8 +550,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             gestureOverlay.setVisibility(View.VISIBLE);
 
             // 获取当前触摸坐标（需转换为手势层坐标系）
-            float x = e.getRawX() - gestureOverlay.getLeft();
-            float y = e.getRawY() - gestureOverlay.getTop();
+            float x = (e.getX(0) + e.getX(1) + e.getX(2)) / 3;
+            float y = (e.getY(0) + e.getY(1) + e.getY(2)) / 3;
 
             // 生成并分发模拟事件
             MotionEvent downEvent = MotionEvent.obtain(
@@ -891,8 +891,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                             gestureOverlay.setVisibility(View.VISIBLE);
 
                             // 获取当前触摸坐标（需转换为手势层坐标系）
-                            float x = e.getRawX() - gestureOverlay.getLeft();
-                            float y = e.getRawY() - gestureOverlay.getTop();
+                            float x = (e.getX(0) + e.getX(1) + e.getX(2)) / 3;
+                            float y = (e.getY(0) + e.getY(1) + e.getY(2)) / 3;
 
                             // 生成并分发模拟事件
                             MotionEvent downEvent = MotionEvent.obtain(
