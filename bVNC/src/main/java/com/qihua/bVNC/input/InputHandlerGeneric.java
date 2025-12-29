@@ -476,18 +476,17 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             return true;
         }
 
+        int metaState = e.getMetaState() | canvas.getKeyboard().getMetaState();
+        pointer.leftButtonDown(getX(e), getY(e), metaState);
+
         if (touchpadFeedback) {
             activity.sendShortVibration();
         }
 
-        int metaState = e.getMetaState() | canvas.getKeyboard().getMetaState();
-        pointer.leftButtonDown(getX(e), getY(e), metaState);
-
         SystemClock.sleep(100);
         pointer.releaseButton(getX(e), getY(e), 0);
-//        canvas.movePanToMakePointerVisible();
 
-        activity.resetOnScreenKeys(0);
+//        activity.resetOnScreenKeys(0);
 
         return true;
     }
