@@ -879,7 +879,7 @@ aSPICE对应的功能如下：
     <string name="pref_longpress_type_right">鼠标右键</string>
     <string name="pref_longpress_type_gesture">激活手势（代替返回键激活)</string>
 
-    <string name="touchpad_longpress_action">触摸板长按效果</string>
+    <string name="touchpad_longpress_action">单指长按效果</string>
     <string name="touchpad_control_pref">触摸板个性化设置</string>
     <string name="touchpad_edge_wheel">将屏幕边缘当作鼠标滚轮使用</string>
     <string name="touchpad_touch_feedback">启用点击反馈</string>
@@ -916,6 +916,10 @@ aSPICE对应的功能如下：
     <string name="gesture_key_required">请输入手势触发的键值</string>
 
     <string name="gesture_copied">手势已复制</string>
+
+    <string name="three_pointers_touch_action">三指轻触效果</string>
+    <string name="three_pointers_touch_action_keyboard">唤出软键盘</string>
+    <string name="three_pointers_touch_action_middle">鼠标中键</string>
 
     <string name="connection_type_nvstream">NVStream(Sunshine)</string>
     <string name="send_pin_to_pair">配对</string>

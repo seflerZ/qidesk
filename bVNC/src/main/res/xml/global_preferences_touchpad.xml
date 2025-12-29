@@ -19,6 +19,12 @@
             android:entryValues="@array/pref_touchpad_long_press_values"
             android:key="touchpadLongPressAction"
             android:title="@string/touchpad_longpress_action" />
+        <ListPreference
+            android:defaultValue="@string/pref_three_pointer_type_keyboard"
+            android:entries="@array/pref_three_pointer_touch"
+            android:entryValues="@array/pref_touchpad_long_press_values"
+            android:key="threePointerTouchAction"
+            android:title="@string/three_pointers_touch_action" />
         <SwitchPreferenceCompat
             android:defaultValue="true"
             android:key="touchpadEdgeWheel"

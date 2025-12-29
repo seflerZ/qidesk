@@ -193,6 +193,7 @@ public class Constants {
     public static final String useSmallThumbnails = "useSmallThumbnails";
     public static final String showOnlyConnectionNicknames = "showOnlyConnectionNicknames";
     public static final String touchpadLongPressAction = "touchpadLongPressAction";
+    public static final String threePointerTouchAction = "threePointerTouchAction";
     public static final String touchpadCursorSpeed = "touchpadCursorSpeed";
     public static final String enableDebugInfo = "enableDebugInfo";
     public static final String themeModeType = "themeModeType";

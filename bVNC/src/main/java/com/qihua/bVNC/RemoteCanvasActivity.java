@@ -173,6 +173,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
                 // Start polling
                 managerBinder.startPolling(details -> {
                     if (details.pairState == PairingManager.PairState.PAIRED
+                            && details.manualAddress != null
                             && details.manualAddress.address.equals(connection.getAddress())) {
 
                         if (details.state != ComputerDetails.State.ONLINE) {

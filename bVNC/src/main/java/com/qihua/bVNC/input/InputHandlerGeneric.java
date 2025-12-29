@@ -549,9 +549,13 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             GestureOverlayView gestureOverlay = activity.findViewById(R.id.gestureOverlay);
             gestureOverlay.setVisibility(View.VISIBLE);
 
-            // 获取当前触摸坐标（需转换为手势层坐标系）
-            float x = (e.getX(0) + e.getX(1) + e.getX(2)) / 3;
-            float y = (e.getY(0) + e.getY(1) + e.getY(2)) / 3;
+            float x = e.getX();
+            float y = e.getY();
+            if (e.getPointerCount() == 3) {
+                // 获取当前触摸坐标（需转换为手势层坐标系）
+                x = (e.getX(0) + e.getX(1) + e.getX(2)) / 3;
+                y = (e.getY(0) + e.getY(1) + e.getY(2)) / 3;
+            }
 
             // 生成并分发模拟事件
             MotionEvent downEvent = MotionEvent.obtain(
@@ -891,8 +895,14 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                             gestureOverlay.setVisibility(View.VISIBLE);
 
                             // 获取当前触摸坐标（需转换为手势层坐标系）
-                            float x = (e.getX(0) + e.getX(1) + e.getX(2)) / 3;
-                            float y = (e.getY(0) + e.getY(1) + e.getY(2)) / 3;
+                            float x = e.getX();
+                            float y = e.getY();
+                            if (e.getPointerCount() == 3) {
+                                // 获取当前触摸坐标（需转换为手势层坐标系）
+                                x = (e.getX(0) + e.getX(1) + e.getX(2)) / 3;
+                                y = (e.getY(0) + e.getY(1) + e.getY(2)) / 3;
+                            }
+
 
                             // 生成并分发模拟事件
                             MotionEvent downEvent = MotionEvent.obtain(
@@ -951,7 +961,16 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                     case MotionEvent.ACTION_POINTER_UP:
                     case MotionEvent.ACTION_UP:
                         if (!inScaling && thirdPointerWasDown && !thirdPointerGesture) {
-                            activity.toggleKeyboard(null);
+                            String threePointerAction = Utils.querySharedPreferenceString(activity,
+                                    Constants.threePointerTouchAction, "keyboard");
+
+                            if ("keyboard".equals(threePointerAction)) {
+                                activity.toggleKeyboard(null);
+                            } else {
+                                pointer.middleButtonDown(getX(e), getY(e), meta);
+                                SystemClock.sleep(100);
+                                pointer.releaseButton(getX(e), getY(e), meta);
+                            }
 
                             thirdPointerWasDown = false;
                         }
