@@ -320,7 +320,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             return true;
         }
 
-        if (pointer.pointerY >= canvas.getImageHeight() - 1
+        if (pointer.pointerY >= canvas.getImageHeight()
                 && action == MotionEvent.ACTION_DOWN
                 && canvas.isOutDisplay()) {
             pointer.pointerY = pointer.pointerY - 20;
