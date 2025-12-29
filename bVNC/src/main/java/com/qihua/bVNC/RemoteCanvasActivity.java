@@ -36,7 +36,6 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
-import android.database.Cursor;
 import android.gesture.GestureLibraries;
 import android.gesture.GestureLibrary;
 import android.gesture.GestureOverlayView;
@@ -66,15 +65,12 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.View.OnGenericMotionListener;
 import android.view.View.OnKeyListener;
 import android.view.View.OnTouchListener;
-import android.view.View.OnGenericMotionListener;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
-import android.widget.AdapterView;
-import android.widget.AdapterView.OnItemClickListener;
-import android.widget.ArrayAdapter;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ListView;
@@ -102,7 +98,6 @@ import com.qihua.bVNC.gesture.GestureActionLibrary;
 import com.qihua.bVNC.input.InputHandler;
 import com.qihua.bVNC.input.InputHandlerTouchpad;
 import com.qihua.bVNC.input.KeyBoardListenerHelper;
-import com.qihua.bVNC.input.MetaKeyBean;
 import com.qihua.bVNC.input.Panner;
 import com.qihua.bVNC.input.RemoteCanvasHandler;
 import com.qihua.bVNC.input.RemoteKeyboard;
@@ -122,7 +117,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLConnection;
-import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -223,7 +217,6 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     private GestureActionLibrary gestureActionLibrary;
     private float lastPanDist = 0f;
     private ExtraKeysView extraKeysView;
-    private MetaKeyBean lastSentKey;
 
     /**
      * Enables sticky immersive mode if supported.
@@ -925,30 +918,27 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
                 FileUtils.deleteFile(tempVvFile);
 
                 // Spin up a thread to grab the file over the network.
-                Thread t = new Thread() {
-                    @Override
-                    public void run() {
-                        try {
-                            // Download the file and write it out.
-                            URL url = new URL(data.toString());
-                            File file = new File(tempVvFile);
+                Thread t = new Thread(() -> {
+                    try {
+                        // Download the file and write it out.
+                        URL url = new URL(data.toString());
+                        File file = new File(tempVvFile);
 
-                            URLConnection ucon = url.openConnection();
-                            FileUtils.outputToFile(ucon.getInputStream(), new File(tempVvFile));
+                        URLConnection ucon = url.openConnection();
+                        FileUtils.outputToFile(ucon.getInputStream(), new File(tempVvFile));
 
-                            synchronized (RemoteCanvasActivity.this) {
-                                RemoteCanvasActivity.this.notify();
-                            }
-                        } catch (IOException e) {
-                            int what = RemoteClientLibConstants.VV_OVER_HTTP_FAILURE;
-                            if (dataString.startsWith("https")) {
-                                what = RemoteClientLibConstants.VV_OVER_HTTPS_FAILURE;
-                            }
-                            // Quit with an error we could not download the .vv file.
-                            handler.sendEmptyMessage(what);
+                        synchronized (RemoteCanvasActivity.this) {
+                            RemoteCanvasActivity.this.notify();
                         }
+                    } catch (IOException e) {
+                        int what = RemoteClientLibConstants.VV_OVER_HTTP_FAILURE;
+                        if (dataString.startsWith("https")) {
+                            what = RemoteClientLibConstants.VV_OVER_HTTPS_FAILURE;
+                        }
+                        // Quit with an error we could not download the .vv file.
+                        handler.sendEmptyMessage(what);
                     }
-                };
+                });
                 t.start();
 
                 synchronized (this) {
@@ -1427,16 +1417,6 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             }
         }
         return null;
-    }
-
-    void clearInputHandlers() {
-        if (inputModeHandlers == null)
-            return;
-
-        for (int i = 0; i < inputModeIds.length; ++i) {
-            inputModeHandlers[i] = null;
-        }
-        inputModeHandlers = null;
     }
 
     InputHandler getInputHandlerByName(String name) {

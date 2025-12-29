@@ -54,7 +54,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         return ID;
     }
 
-    private long lastScrollTimeMs = 0;
+    private long lastScrollTimeMs = System.currentTimeMillis();
 
     /*
      * (non-Javadoc)
@@ -68,33 +68,49 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             return true;
         }
 
-        final int meta = e2.getMetaState();
-
-        // TODO: This is a workaround for Android 4.2
-        boolean twoFingers = false;
-        if (e1 != null)
-            twoFingers = (e1.getPointerCount() == 2);
-
-        twoFingers = twoFingers || (e2.getPointerCount() == 2);
-
         cumulatedX += distanceX;
         cumulatedY += distanceY;
 
-        if (Math.abs(cumulatedX) > baseSwipeDist || Math.abs(cumulatedY) > baseSwipeDist) {
-            canSwipeToMove = true;
-        }
-
-        if (!canSwipeToMove) {
+        if (System.currentTimeMillis() - lastScrollTimeMs < 13) {
             return true;
         }
 
-        if (lastScrollTimeMs - System.currentTimeMillis() > 200) {
+        //        if (Math.abs(cumulatedX) < baseSwipeDist && Math.abs(cumulatedY) < baseSwipeDist) {
+//            return true;
+//        }
+
+        final int meta = e2.getMetaState();
+        boolean twoFingers = (e1.getPointerCount() == 2);
+        twoFingers = twoFingers || (e2.getPointerCount() == 2);
+
+        if (!twoFingers && !immersiveSwipeX && !immersiveSwipeY) {
+//            if (distanceX > 0 && distanceX < 1) {
+//                distanceX = (float) Math.floor(distanceX);
+//            } else if (distanceX > -1 && distanceX < 0) {
+//                distanceX = (float) Math.ceil(distanceX);
+//            }
+//
+//            if (distanceY > 0 && distanceY < 1) {
+//                distanceY = (float) Math.ceil(distanceY);
+//            } else if (distanceY > -1 && distanceY < 0) {
+//                distanceY = (float) Math.floor(distanceY);
+//            }
+
+            // Compute the absolute new mouse position.
+            int newX = Math.round(pointer.getX() + -cumulatedX);
+            int newY = Math.round(pointer.getY() + -cumulatedY);
+
+            pointer.moveMouse(newX, newY, meta);
+
+            canvas.movePanToMakePointerVisible();
+
             cumulatedX = 0;
             cumulatedY = 0;
-            canSwipeToMove = false;
-        }
 
-        lastScrollTimeMs = System.currentTimeMillis();
+            lastScrollTimeMs = System.currentTimeMillis();
+
+            return true;
+        }
 
         if (inScaling) {
             return true;
@@ -115,8 +131,13 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
 
         // Make distanceX/Y display density independent.
         float sensitivity = pointer.getSensitivity();
-        distanceX = sensitivity * (distanceX / displayDensity) * canvas.getZoomLevelFactor();
-        distanceY = sensitivity * (distanceY / displayDensity) * canvas.getZoomLevelFactor();
+        distanceX = sensitivity * (cumulatedX / displayDensity) * canvas.getZoomLevelFactor();
+        distanceY = sensitivity * (cumulatedY / displayDensity) * canvas.getZoomLevelFactor();
+
+        cumulatedX = 0;
+        cumulatedY = 0;
+
+        lastScrollTimeMs = System.currentTimeMillis();
 
         // If in swiping mode, indicate a swipe at regular intervals.
         if (inSwiping || immersiveSwipeX || immersiveSwipeY) {
@@ -126,30 +147,6 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             scrollLeft = false;
 
             if (doScroll(getX(e2), getY(e2), distanceX, distanceY, meta)) return true;
-
-            return true;
-        }
-
-        if (e1 != null && !twoFingers) {
-            if (distanceX > 0 && distanceX < 1) {
-                distanceX = (float) Math.floor(distanceX);
-            } else if (distanceX > -1 && distanceX < 0) {
-                distanceX = (float) Math.ceil(distanceX);
-            }
-
-            if (distanceY > 0 && distanceY < 1) {
-                distanceY = (float) Math.ceil(distanceY);
-            } else if (distanceY > -1 && distanceY < 0) {
-                distanceY = (float) Math.floor(distanceY);
-            }
-
-            // Compute the absolute new mouse position.
-            int newX = Math.round(pointer.getX() + -distanceX);
-            int newY = Math.round(pointer.getY() + -distanceY);
-
-            pointer.moveMouse(newX, newY, meta);
-
-            canvas.movePanToMakePointerVisible();
 
             return true;
         }
