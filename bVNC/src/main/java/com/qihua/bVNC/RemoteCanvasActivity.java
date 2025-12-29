@@ -827,10 +827,10 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         int layoutKeysBottom = layoutKeys.getBottom();
         int toolbarBottom = toolbar.getBottom();
         int rootViewBottom = layoutKeys.getRootView().getBottom();
-        int diffLayoutKeysPosition = r.bottom - re.top - layoutKeysBottom;
-        int diffToolbarPosition = r.bottom - re.top - toolbarBottom - r.bottom / 2;
+        int diffLayoutKeysPosition = r.bottom - layoutKeysBottom;
+        int diffToolbarPosition = r.bottom - toolbarBottom - r.bottom / 2;
         int diffToolbarPositionRightAbsolute = r.right - toolbar.getWidth();
-        int diffToolbarPositionTopAbsolute = r.bottom - re.top - toolbar.getHeight() - r.bottom / 2;
+        int diffToolbarPositionTopAbsolute = r.bottom - toolbar.getHeight() - r.bottom / 2;
         android.util.Log.d(TAG, "onGlobalLayout: before: r.bottom: " + r.bottom +
                 " rootViewHeight: " + rootViewHeight + " re.top: " + re.top + " re.bottom: " + re.bottom +
                 " layoutKeysBottom: " + layoutKeysBottom + " rootViewBottom: " + rootViewBottom + " toolbarBottom: " + toolbarBottom +
