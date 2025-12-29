@@ -1000,7 +1000,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             extraKeysHidden = false;
             setExtraKeysVisibility(View.VISIBLE, true);
         }
-        setKeyStowDrawableAndVisibility(m);
+//        setKeyStowDrawableAndVisibility(m);
         relayoutViews(rootView);
     }
 
