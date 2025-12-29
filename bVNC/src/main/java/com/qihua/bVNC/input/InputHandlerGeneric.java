@@ -887,7 +887,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                         }
 
                         if (thirdPointerWasDown
-                                && (Math.abs(e.getX() - dragX) > 30 || Math.abs(e.getY() - dragY) > 30)) {
+                                && (Math.abs(e.getX() - dragX) > 80 || Math.abs(e.getY() - dragY) > 80)) {
                             thirdPointerGesture = true;
                             // Here we mock a ACTION_DOWN event for gestureOverlayView to transmit the touch events to it flawlessly
                             // further touch events will be transmitted in method onTouchEvent.
@@ -945,8 +945,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                         thirdPointerWasDown = false;
                         break;
                     case MotionEvent.ACTION_POINTER_UP:
-
-
                         break;
                 }
                 break;
@@ -959,21 +957,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
                         break;
                     case MotionEvent.ACTION_POINTER_UP:
-                    case MotionEvent.ACTION_UP:
-                        if (!inScaling && thirdPointerWasDown && !thirdPointerGesture) {
-                            String threePointerAction = Utils.querySharedPreferenceString(activity,
-                                    Constants.threePointerTouchAction, "keyboard");
-
-                            if ("keyboard".equals(threePointerAction)) {
-                                activity.toggleKeyboard(null);
-                            } else {
-                                pointer.middleButtonDown(getX(e), getY(e), meta);
-                                SystemClock.sleep(100);
-                                pointer.releaseButton(getX(e), getY(e), meta);
-                            }
-
-                            thirdPointerWasDown = false;
-                        }
                         break;
                 }
                 break;
@@ -991,6 +974,26 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                 pointer.releaseButton(getX(e), getY(e), meta);
 
                 secondPointerWasDown = false;
+            }
+
+            if (!inSwiping && !inScaling && thirdPointerWasDown) {
+                String threePointerAction = Utils.querySharedPreferenceString(activity,
+                        Constants.threePointerTouchAction, "keyboard");
+
+                if ("keyboard".equals(threePointerAction)) {
+                    activity.toggleKeyboard(null);
+                } else {
+                    pointer.middleButtonDown(getX(e), getY(e), meta);
+
+                    if (touchpadFeedback) {
+                        activity.sendShortVibration();
+                    }
+
+                    SystemClock.sleep(100);
+                    pointer.releaseButton(getX(e), getY(e), meta);
+                }
+
+                thirdPointerWasDown = false;
             }
 
             canEnlarge = true;
