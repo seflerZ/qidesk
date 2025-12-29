@@ -1543,9 +1543,15 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     protected void onDestroy() {
         super.onDestroy();
 
+        disconnectAndClose();
+
         Log.i(TAG, "onDestroy called.");
-        if (canvas != null)
+        if (canvas != null) {
             canvas.closeConnection();
+            if (canvas.isOutDisplay()) {
+                touchpad.closeConnection();
+            }
+        }
 
         if (managerBinder != null) {
             unbindService(serviceConnection);

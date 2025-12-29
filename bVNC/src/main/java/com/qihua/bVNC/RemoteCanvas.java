@@ -1583,6 +1583,14 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             rfbconn.close();
         }
 
+        if (nvcomm != null) {
+            nvcomm.close();
+        }
+
+        if (rdpcomm != null) {
+            rdpcomm.close();
+        }
+
         if (handler != null) {
             handler.removeCallbacksAndMessages(null);
         }
