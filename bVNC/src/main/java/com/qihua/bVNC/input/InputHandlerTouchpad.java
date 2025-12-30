@@ -71,7 +71,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         cumulatedX += distanceX;
         cumulatedY += distanceY;
 
-        if (System.currentTimeMillis() - lastScrollTimeMs < 13) {
+        if (System.currentTimeMillis() - lastScrollTimeMs < MOUSE_SAMPLING_MS) {
             return true;
         }
 

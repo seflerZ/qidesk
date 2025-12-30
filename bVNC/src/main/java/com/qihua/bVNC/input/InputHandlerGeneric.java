@@ -48,6 +48,7 @@ import java.util.concurrent.Semaphore;
 abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureListener
         implements InputHandler, ScaleGestureDetector.OnScaleGestureListener {
     private static final String TAG = "InputHandlerGeneric";
+    public static final int MOUSE_SAMPLING_MS = 13;
     protected final boolean debugLogging;
 
     // If swipe events are registered once every baseSwipeTime miliseconds, then
@@ -313,7 +314,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         float diffX = e.getX();
         float diffY = e.getY();
 
-        if (System.currentTimeMillis() - lastPointerEventTime < 16 && action == MotionEvent.ACTION_MOVE) {
+        if (System.currentTimeMillis() - lastPointerEventTime < MOUSE_SAMPLING_MS && action == MotionEvent.ACTION_MOVE) {
             cumulatedX += diffX;
             cumulatedY += diffY;
 
@@ -550,11 +551,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
             float x = e.getX();
             float y = e.getY();
-            if (e.getPointerCount() == 3) {
-                // 获取当前触摸坐标（需转换为手势层坐标系）
-                x = (e.getX(0) + e.getX(1) + e.getX(2)) / 3;
-                y = (e.getY(0) + e.getY(1) + e.getY(2)) / 3;
-            }
 
             // 生成并分发模拟事件
             MotionEvent downEvent = MotionEvent.obtain(
@@ -738,12 +734,23 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                 return true;
             }
 
+            float x = e.getX();
+            float y = e.getY();
+
+            if (e.getPointerCount() == 2) {
+                x = (e.getX(0) + e.getX(1)) / 2;
+                y = (e.getY(0) + e.getY(1)) / 2;
+            } else if (e.getPointerCount() == 3) {
+                x = (e.getX(0) + e.getX(1) + e.getX(2)) / 3;
+                y = (e.getY(0) + e.getY(1) + e.getY(2)) / 3;
+            }
+
             MotionEvent translatedEvent = MotionEvent.obtain(
                     e.getDownTime(),
                     e.getEventTime(),
                     e.getAction(),
-                    e.getX(),
-                    e.getY(),
+                    x,
+                    y,
                     e.getMetaState()
             );
 
@@ -894,14 +901,9 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                             gestureOverlay.setVisibility(View.VISIBLE);
 
                             // 获取当前触摸坐标（需转换为手势层坐标系）
-                            float x = e.getX();
-                            float y = e.getY();
-                            if (e.getPointerCount() == 3) {
-                                // 获取当前触摸坐标（需转换为手势层坐标系）
-                                x = (e.getX(0) + e.getX(1) + e.getX(2)) / 3;
-                                y = (e.getY(0) + e.getY(1) + e.getY(2)) / 3;
-                            }
 
+                            float x = (e.getX(0) + e.getX(1) + e.getX(2)) / 3;
+                            float y = (e.getY(0) + e.getY(1) + e.getY(2)) / 3;
 
                             // 生成并分发模拟事件
                             MotionEvent downEvent = MotionEvent.obtain(
