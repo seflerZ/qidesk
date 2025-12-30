@@ -444,7 +444,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         // 1. 降低角度阈值（允许更大方向偏差）
         gestureOverlayView.setGestureStrokeAngleThreshold(90.0f);
         // 2. 降低点间距离阈值（允许轻微抖动）
-        gestureOverlayView.setGestureStrokeLengthThreshold(50f); // 默认 100f
+        gestureOverlayView.setGestureStrokeLengthThreshold(80f); // 默认 100f
 
         gestureOverlayView.addOnGesturePerformedListener((overlay, gesture) -> {
             ArrayList<Prediction> predictions = gestureLibrary.recognize(gesture);
@@ -457,7 +457,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 
             // if highest score is less than 2.3, not recognized
             Prediction pre = predictions.get(0);
-            if (pre.score < 0.3f) {
+            if (pre.score < 0.4f) {
                 Toast.makeText(RemoteCanvasActivity.this, getString(R.string.gesture_not_recognized), Toast.LENGTH_SHORT).show();
                 hideToolbar();
 
@@ -543,39 +543,51 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 
         if (keys.contains("←") || keys.contains("LEFT")) {
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_DPAD_LEFT, new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_LEFT));
+            SystemClock.sleep(100);
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_DPAD_LEFT, new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_LEFT));
         } else if (keys.contains("↑") || keys.contains("UP")) {
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_DPAD_UP, new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_UP));
+            SystemClock.sleep(100);
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_DPAD_UP, new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_UP));
         } else if (keys.contains("↓") || keys.contains("DOWN")) {
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_DPAD_DOWN, new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_DOWN));
+            SystemClock.sleep(100);
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_DPAD_DOWN, new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_DOWN));
         } else if (keys.contains("→") || keys.contains("RIGHT")) {
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_DPAD_RIGHT, new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT));
+            SystemClock.sleep(100);
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_DPAD_RIGHT, new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_RIGHT));
         } else if (keys.contains("TAB")) {
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_TAB, new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_TAB));
+            SystemClock.sleep(100);
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_TAB, new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_TAB));
         } else if (keys.contains("ESC")) {
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_ESCAPE, new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ESCAPE));
+            SystemClock.sleep(100);
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_ESCAPE, new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ESCAPE));
         } else if (keys.contains("␡") || keys.contains("BKSP")) {
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_DEL, new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL));
+            SystemClock.sleep(100);
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_DEL, new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL));
         } else if (keys.contains("DEL")) {
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_DEL, new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL));
+            SystemClock.sleep(100);
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_DEL, new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL));
         } else if (keys.contains("PGUP")) {
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_PAGE_UP, new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_PAGE_UP));
+            SystemClock.sleep(100);
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_PAGE_UP, new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_PAGE_UP));
         } else if (keys.contains("PGDN")) {
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_PAGE_DOWN, new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_PAGE_DOWN));
+            SystemClock.sleep(100);
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_PAGE_DOWN, new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_PAGE_DOWN));
         } else if (keys.contains("HOME")) {
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_MOVE_HOME, new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MOVE_HOME));
+            SystemClock.sleep(100);
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_MOVE_HOME, new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MOVE_HOME));
         }  else if (keys.contains("END")) {
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_MOVE_END, new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MOVE_END));
+            SystemClock.sleep(100);
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_MOVE_END, new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MOVE_END));
         } else if (keys.contains("FUNC")) {
             try {
@@ -587,6 +599,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
                 int keycode = KeyEvent.KEYCODE_F1 + num - 1;
 
                 canvas.getKeyboard().keyEvent(keycode, new KeyEvent(KeyEvent.ACTION_DOWN, keycode));
+                SystemClock.sleep(100);
                 canvas.getKeyboard().keyEvent(keycode, new KeyEvent(KeyEvent.ACTION_UP, keycode));
             } catch (NumberFormatException e) {
                 Toast.makeText(this, getText(R.string.gesture_func_num_error), Toast.LENGTH_SHORT).show();
@@ -1016,7 +1029,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         }
     }
 
-    /**
+    /**A
      * Initializes the on-screen keys for meta keys and arrow keys.
      */
     private void initializeOnScreenKeys() {

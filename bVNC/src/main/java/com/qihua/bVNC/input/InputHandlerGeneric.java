@@ -47,7 +47,7 @@ import java.util.concurrent.Semaphore;
 abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureListener
         implements InputHandler, ScaleGestureDetector.OnScaleGestureListener {
     private static final String TAG = "InputHandlerGeneric";
-    public static final int POINTER_SAMPLING_MS = 13;
+    public static final int POINTER_SAMPLING_MS = 10;
     protected final boolean debugLogging;
 
     // If swipe events are registered once every baseSwipeTime miliseconds, then
@@ -736,14 +736,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             float x = e.getX();
             float y = e.getY();
 
-            if (e.getPointerCount() == 2) {
-                x = (e.getX(0) + e.getX(1)) / 2;
-                y = (e.getY(0) + e.getY(1)) / 2;
-            } else if (e.getPointerCount() == 3) {
-                x = (e.getX(0) + e.getX(1) + e.getX(2)) / 3;
-                y = (e.getY(0) + e.getY(1) + e.getY(2)) / 3;
-            }
-
             MotionEvent translatedEvent = MotionEvent.obtain(
                     e.getDownTime(),
                     e.getEventTime(),
@@ -899,18 +891,13 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                             gestureOverlay = activity.findViewById(R.id.gestureOverlay);
                             gestureOverlay.setVisibility(View.VISIBLE);
 
-                            // 获取当前触摸坐标（需转换为手势层坐标系）
-
-                            float x = (e.getX(0) + e.getX(1) + e.getX(2)) / 3;
-                            float y = (e.getY(0) + e.getY(1) + e.getY(2)) / 3;
-
                             // 生成并分发模拟事件
                             MotionEvent downEvent = MotionEvent.obtain(
                                     SystemClock.uptimeMillis(),
                                     SystemClock.uptimeMillis(),
                                     MotionEvent.ACTION_DOWN,
-                                    x,
-                                    y,
+                                    e.getX(),
+                                    e.getY(),
                                     0
                             );
                             gestureOverlay.dispatchTouchEvent(downEvent);
