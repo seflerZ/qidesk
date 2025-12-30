@@ -1010,7 +1010,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 
     public void sendShortVibration() {
         if (myVibrator != null) {
-            myVibrator.vibrate(VibrationEffect.createOneShot(12, 8));
+            myVibrator.vibrate(VibrationEffect.createOneShot(12, 30));
         } else {
             Log.i(TAG, "Device cannot vibrate, not sending vibration");
         }
