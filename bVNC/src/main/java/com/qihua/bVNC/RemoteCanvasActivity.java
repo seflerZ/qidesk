@@ -1270,7 +1270,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 //        }
 
         // Auto change extra keys to horizontal or vertical mode
-        recreateExtraKeys(canvas.getWidth() > canvas.getHeight());
+        recreateExtraKeys(touchpad.getWidth() > touchpad.getHeight());
     }
 
     @Override
