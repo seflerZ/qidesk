@@ -146,7 +146,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             scrollRight = false;
             scrollLeft = false;
 
-            if (doScroll(getX(e2), getY(e2), distanceX, distanceY, meta)) return true;
+            doScroll(getX(e2), getY(e2), distanceX, distanceY, meta);
 
             return true;
         }
