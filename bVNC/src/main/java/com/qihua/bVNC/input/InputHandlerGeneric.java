@@ -32,7 +32,6 @@ import android.widget.FrameLayout;
 
 import androidx.core.view.InputDeviceCompat;
 
-import com.freerdp.freerdpcore.domain.ManualBookmark;
 import com.qihua.bVNC.Constants;
 import com.qihua.bVNC.FpsCounter;
 import com.qihua.bVNC.RemoteCanvas;
@@ -48,7 +47,7 @@ import java.util.concurrent.Semaphore;
 abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureListener
         implements InputHandler, ScaleGestureDetector.OnScaleGestureListener {
     private static final String TAG = "InputHandlerGeneric";
-    public static final int MOUSE_SAMPLING_MS = 13;
+    public static final int POINTER_SAMPLING_MS = 13;
     protected final boolean debugLogging;
 
     // If swipe events are registered once every baseSwipeTime miliseconds, then
@@ -314,7 +313,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         float diffX = e.getX();
         float diffY = e.getY();
 
-        if (System.currentTimeMillis() - lastPointerEventTime < MOUSE_SAMPLING_MS && action == MotionEvent.ACTION_MOVE) {
+        if (System.currentTimeMillis() - lastPointerEventTime < POINTER_SAMPLING_MS && action == MotionEvent.ACTION_MOVE) {
             cumulatedX += diffX;
             cumulatedY += diffY;
 

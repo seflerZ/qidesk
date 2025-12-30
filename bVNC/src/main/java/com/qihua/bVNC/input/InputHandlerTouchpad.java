@@ -30,6 +30,7 @@ import com.qihua.bVNC.R;
 public class InputHandlerTouchpad extends InputHandlerGeneric {
     public static final String ID = "TOUCHPAD_MODE";
     static final String TAG = "InputHandlerTouchpad";
+    public static final int SCROLL_SAMPLING_MS = 33;
 
     public InputHandlerTouchpad(RemoteCanvasActivity activity, RemoteCanvas canvas, RemoteCanvas touchpad,
                                 RemotePointer pointer, boolean debugLogging) {
@@ -68,12 +69,10 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             return true;
         }
 
+        long timeMs = System.currentTimeMillis();
+
         cumulatedX += distanceX;
         cumulatedY += distanceY;
-
-        if (System.currentTimeMillis() - lastScrollTimeMs < MOUSE_SAMPLING_MS) {
-            return true;
-        }
 
         //        if (Math.abs(cumulatedX) < baseSwipeDist && Math.abs(cumulatedY) < baseSwipeDist) {
 //            return true;
@@ -95,6 +94,10 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
 //            } else if (distanceY > -1 && distanceY < 0) {
 //                distanceY = (float) Math.floor(distanceY);
 //            }
+
+            if (System.currentTimeMillis() - lastScrollTimeMs < POINTER_SAMPLING_MS) {
+                return true;
+            }
 
             // Compute the absolute new mouse position.
             int newX = Math.round(pointer.getX() + -cumulatedX);
@@ -120,11 +123,15 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             return true;
         }
 
+        if (System.currentTimeMillis() - lastScrollTimeMs < SCROLL_SAMPLING_MS) {
+            return true;
+        }
+
         if (!inScrolling && twoFingers) {
             inScrolling = true;
 
-            distXQueue.clear();
-            distYQueue.clear();
+//            distXQueue.clear();
+//            distYQueue.clear();
 
             inSwiping = true;
         }
@@ -134,11 +141,6 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         distanceX = sensitivity * (cumulatedX / displayDensity) * canvas.getZoomLevelFactor();
         distanceY = sensitivity * (cumulatedY / displayDensity) * canvas.getZoomLevelFactor();
 
-        cumulatedX = 0;
-        cumulatedY = 0;
-
-        lastScrollTimeMs = System.currentTimeMillis();
-
         // If in swiping mode, indicate a swipe at regular intervals.
         if (inSwiping || immersiveSwipeX || immersiveSwipeY) {
             scrollDown = false;
@@ -147,9 +149,13 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             scrollLeft = false;
 
             doScroll(getX(e2), getY(e2), distanceX, distanceY, meta);
-
-            return true;
         }
+
+        cumulatedX = 0;
+        cumulatedY = 0;
+
+//        GeneralUtils.errorLog(TAG, "onScroll, timeMs: " + (timeMs - lastScrollTimeMs));
+        lastScrollTimeMs = System.currentTimeMillis();
 
         return false;
     }

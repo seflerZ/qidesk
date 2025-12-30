@@ -20,6 +20,10 @@ public class GeneralUtils {
         }
     }
 
+    public static void errorLog(String tag, String message) {
+        android.util.Log.e(tag, message);
+    }
+
     public static boolean isTv(Context context) {
         return context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_TELEVISION)
                 || context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_LEANBACK);
