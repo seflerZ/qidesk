@@ -69,7 +69,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             return true;
         }
 
-        long timeMs = System.currentTimeMillis();
+//        long timeMs = System.currentTimeMillis();
 
         cumulatedX += distanceX;
         cumulatedY += distanceY;

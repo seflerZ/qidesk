@@ -166,7 +166,9 @@ public class RemoteRdpPointer extends RemotePointer {
 //                ", " + pointerY + ", pointerMask: " + pointerMask);
         protocomm.writePointerEvent(pointerX, pointerY, combinedMetaState, pointerMask, false);
 
-        canvas.invalidateMousePosition();
+        if (isMoving) {
+            canvas.invalidateMousePosition();
+        }
     }
 
 }
