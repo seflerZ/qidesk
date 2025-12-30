@@ -10,16 +10,6 @@
         android:layout_height="fill_parent"
         android:layout_gravity="bottom|center"/>
 
-    <!-- prevent surface view overlay -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-
-    <!-- prevent surface view overlay -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-
     <View
         android:id="@+id/edgeTop"
         android:layout_width="match_parent"
