@@ -610,27 +610,28 @@ public class MyGestureDectector
 
         @Override public void handleMessage(Message msg)
         {
-            switch (msg.what)
-            {
-                case SHOW_PRESS:
-                    mListener.onShowPress(mCurrentDownEvent);
-                    break;
+            try {
+                switch (msg.what)
+                {
+                    case SHOW_PRESS:
+                        mListener.onShowPress(mCurrentDownEvent);
+                        return;
 
-                case LONG_PRESS:
-                    dispatchLongPress();
-                    break;
+                    case LONG_PRESS:
+                        dispatchLongPress();
+                        return;
 
-                case TAP:
-                    // If the user's finger is still down, do not count it as a tap
-                    if (mDoubleTapListener != null && !mStillDown)
-                    {
-                        mDoubleTapListener.onSingleTapConfirmed(mCurrentDownEvent);
-                    }
-                    break;
+                    case TAP:
+                        // If the user's finger is still down, do not count it as a tap
+                        if (mDoubleTapListener != null && !mStillDown)
+                        {
+                            mDoubleTapListener.onSingleTapConfirmed(mCurrentDownEvent);
+                        }
+                        return;
+                }
+            } catch (Exception ignore) {}
 
-                default:
-                    throw new RuntimeException("Unknown message " + msg); // never
-            }
+            throw new RuntimeException("Unknown message " + msg); // never
         }
     }
 }
