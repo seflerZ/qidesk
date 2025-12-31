@@ -217,6 +217,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     private GestureActionLibrary gestureActionLibrary;
     private float lastPanDist = 0f;
     private ExtraKeysView extraKeysView;
+    private float keyboardHeight;
 
     /**
      * Enables sticky immersive mode if supported.
@@ -401,7 +402,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             // the absoluteYPosition is in image's coordinate system. if positive, the image on the screen will move upward
             float pointerYPos = (canvas.pointer.getY() - canvas.absoluteYPosition) * canvas.getZoomFactor();
 
-            float panDistance = (pointerYPos + keyBoardHeight - canvas.getHeight()) / canvas.getZoomFactor() + 150;
+            float panDistance = (pointerYPos + keyBoardHeight - canvas.getHeight() + extraKeysView.getHeight()) / canvas.getZoomFactor();
             if (isShow && panDistance > 0) {
                 // this pan be force because the extra panning added above may exceed the visible desktop height(in image's resolution)
                 lastPanDist = panDistance;
@@ -412,6 +413,8 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
                 canvas.relativePan(0, -lastPanDist, false);
                 lastPanDist = 0;
             }
+
+            this.keyboardHeight = ((float) keyBoardHeight / canvas.getHeight()) * canvas.getVisibleDesktopHeight();
 
 //            canvas.setVisibleDesktopHeight(r.bottom - re.top);
         });
@@ -1845,6 +1848,10 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         public void run() {
             hideToolbar();
         }
+    }
+
+    public float getKeyboardHeight() {
+        return keyboardHeight;
     }
 
     public void disconnectAndClose() {

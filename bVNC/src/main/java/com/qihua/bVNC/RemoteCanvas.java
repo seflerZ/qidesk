@@ -1732,11 +1732,15 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             panned = true;
         }
 
+        // when the soft keyboard shown, the bottom space decreased, we must
+        // cut off the height to make the bottom edge pan work properly.
+        float keyboardHeight = activity.getKeyboardHeight();
+
         // do not pan when there is space left on the screen
-        if ((y + bHeight > h + absoluteYPosition - hthresh) && (absoluteYPosition + h < bHeight + ih)) {
-            newY += ((y) - (h + absoluteYPosition - hthresh) - bHeight);
-            if (newY + h > ih + bHeight) {
-                newY = ih + bHeight - h;
+        if ((y + bHeight > h + absoluteYPosition - hthresh - keyboardHeight) && (absoluteYPosition + h < bHeight + ih + keyboardHeight)) {
+            newY += ((y) - (h + absoluteYPosition - hthresh - keyboardHeight) - bHeight);
+            if (newY + h > ih + bHeight + keyboardHeight) {
+                newY = (int) (ih + bHeight + keyboardHeight - h);
             }
         } else if ((y + bHeight < absoluteYPosition + hthresh) && y > 0) {
             newY += (y - (absoluteYPosition + hthresh - bHeight));
