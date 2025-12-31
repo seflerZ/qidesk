@@ -1927,11 +1927,16 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                         fpsCounter.count();
                     }
 
+                    // prevent the pointer refresh event goes too fast
                     if (task.getInTimeMs() - lastDraw < 13) {
+                        continue;
+                    }
+
+                    // when isCount is true, it means the update event comes from the real image update
+                    if (System.currentTimeMillis() - task.getInTimeMs() > 16 && task.isCount()) {
                         // drop frame, lagging
                         fpsCounter.finish(task.getInTimeMs());
                         fpsCounter.frameDrop();
-                        continue;
                     }
 
                     canvas = surfaceHolder.lockHardwareCanvas();
