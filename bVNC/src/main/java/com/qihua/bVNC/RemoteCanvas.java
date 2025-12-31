@@ -1923,17 +1923,15 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                 try {
                     DrawTask task = queue.take();
 
-                    if (System.currentTimeMillis() - task.getInTimeMs() > 16) {
+                    if (isShowFps() && task.isCount()) {
+                        fpsCounter.count();
+                    }
+
+                    if (task.getInTimeMs() - lastDraw < 13) {
                         // drop frame, lagging
                         fpsCounter.finish(task.getInTimeMs());
                         fpsCounter.frameDrop();
                         continue;
-                    }
-
-                    lastDraw = System.currentTimeMillis();
-
-                    if (isShowFps()) {
-                        fpsCounter.count();
                     }
 
                     canvas = surfaceHolder.lockHardwareCanvas();
@@ -1948,6 +1946,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                         fpsCounter.finish(task.getInTimeMs());
                         fpsCounter.drawFps(canvas);
                     }
+
+                    lastDraw = System.currentTimeMillis();
                 } catch (Exception e) {
 
                 } finally {

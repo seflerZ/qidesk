@@ -71,11 +71,12 @@ public class FpsCounter {
 
             fps = 0;
             inputCount = 0;
+            frameDropped = 0;
         }
     }
 
     public void drawFps(Canvas canvas) {
-        char[] text = ("FPS-DRAW:" + lst + ", AVG:" + avg).toCharArray();
+        char[] text = ("FPS-DRAW:" + lst + ", AVG:" + avg +", DROP:" + frameDropped).toCharArray();
         canvas.drawText(text, 0, text.length, 100f, 100f, _textPaint);
 
         char[] latText = ("DRAW COST: MAX-5:" + maxlatency + ", AVG:" + avglatency).toCharArray();
