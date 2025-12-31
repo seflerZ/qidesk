@@ -336,7 +336,7 @@ public class MyGestureDectector
 
                     handled = mListener.onScroll(mCurrentDownEvent, ev, scrollX, scrollY);
                 }
-                else if ((Math.abs(scrollX) >= 1) || (Math.abs(scrollY) >= 1))
+                else
                 {
                     handled = mListener.onScroll(mCurrentDownEvent, ev, scrollX, scrollY);
                     mLastMotionX = x;
