@@ -23,18 +23,18 @@
         <item>@string/pref_longpress_type_gesture</item>
     </array>
 
-    <string name="pref_three_pointer_type_keyboard">@string/three_pointers_touch_action_keyboard</string>
-    <string name="pref_three_pointer_type_middle">@string/three_pointers_touch_action_middle</string>
-
     <array name="pref_three_pointer_touch">
-        <item>@string/pref_three_pointer_type_keyboard</item>
-        <item>@string/pref_three_pointer_type_middle</item>
+        <item>@string/three_pointers_touch_action_keyboard</item>
+        <item>@string/three_pointers_touch_action_middle</item>
     </array>
 
     <array name="pref_three_pointer_touch_values">
-        <item>keyboard</item>
-        <item>middle</item>
+        <item>@string/pref_three_pointer_touch_value_keyboard</item>
+        <item>@string/pref_three_pointer_touch_value_middle</item>
     </array>
+
+    <string name="pref_three_pointer_touch_value_keyboard">keyboard</string>
+    <string name="pref_three_pointer_touch_value_middle">middle</string>
 
     <string name="pref_longpress_type_left">Left Button</string>
     <string name="pref_longpress_type_middle">Middle Button</string>

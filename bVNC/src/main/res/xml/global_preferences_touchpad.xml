@@ -20,7 +20,7 @@
             android:key="touchpadLongPressAction"
             android:title="@string/touchpad_longpress_action" />
         <ListPreference
-            android:defaultValue="@string/pref_three_pointer_type_keyboard"
+            android:defaultValue="@string/pref_three_pointer_touch_value_keyboard"
             android:entries="@array/pref_three_pointer_touch"
             android:entryValues="@array/pref_three_pointer_touch_values"
             android:key="threePointerTouchAction"

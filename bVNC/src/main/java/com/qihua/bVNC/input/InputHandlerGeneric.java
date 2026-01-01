@@ -1144,7 +1144,11 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         }
 
 //        GeneralUtils.debugLog(debugLogging, TAG, "onKeyDown, e: " + e);
-        return canvas.getKeyboard().keyEvent(keyCode, e);
+        try {
+            return canvas.getKeyboard().keyEvent(keyCode, e);
+        } catch (Exception ignore) {
+            return false;
+        }
     }
 
     /*
