@@ -16,7 +16,7 @@ public class ExtraKeysConstants {
         "PGUP", "PGDN");
 
     public static final String DEFAULT_VER_IVALUE_EXTRA_KEYS = "[['ESC','SHIFT', {key: 'BKSP', display: 'DEL'},'HOME','UP','END','PGUP'], ['TAB','CTRL','ALT','LEFT','DOWN','RIGHT','PGDN']]"; // Double row
-    public static final String DEFAULT_HOR_IVALUE_EXTRA_KEYS = "[['ESC','SHIFT', {key: 'BKSP', display: 'DEL'}, 'CTRL','ALT', '~', '|','HOME','UP', 'END', {key:'<', popup: '>'}], ['TAB', {key:'\\{', popup:'\\}'}, {key:'[', popup:']'}, '^', '`', {key:'\"', popup:'\\''}, '\\\\', 'LEFT','DOWN','RIGHT', {key: '=', popup: '+'}]]"; // Double row
+    public static final String DEFAULT_HOR_IVALUE_EXTRA_KEYS = "[['ESC','SHIFT', {key: 'BKSP', display: 'DEL'}, 'CTRL','ALT', 'META', '|',{key:'<', popup: '>'}, 'HOME','UP', 'END', 'PGUP'], ['TAB', {key:'\\{', popup:'\\}'}, {key:'[', popup:']'}, {key:'~', popup:'^'}, '`', {key:'\"', popup:'\\''}, '\\\\',{key: '=', popup: '+'}, 'LEFT','DOWN','RIGHT', 'PGDN']]"; // Double row
     public static final String DEFAULT_IVALUE_EXTRA_KEYS_STYLE = "default";
 
     /** Defines the {@link KeyEvent} for common keys. */
