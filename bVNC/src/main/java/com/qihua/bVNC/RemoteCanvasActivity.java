@@ -217,7 +217,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     private GestureActionLibrary gestureActionLibrary;
     private float lastPanDist = 0f;
     private ExtraKeysView extraKeysView;
-    private float keyboardHeight;
+    private int keyboardHeight;
 
     /**
      * Enables sticky immersive mode if supported.
@@ -410,8 +410,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
                 lastPanDist = 0;
             }
 
-            this.keyboardHeight = ((float) keyBoardHeight / canvas.getHeight()) * canvas.getVisibleDesktopHeight();
-
+            this.keyboardHeight = keyBoardHeight;
 //            canvas.setVisibleDesktopHeight(r.bottom - re.top);
         });
 
@@ -1771,9 +1770,9 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             float zoomRatio;
             float diff = (float) canvas.getWidth() / canvas.getHeight() - (float) canvas.getImageWidth() / canvas.getImageHeight();
             if (diff > 0) {
-                zoomRatio = (float) canvas.getWidth() / canvas.getImageWidth();
+                zoomRatio = (float) (canvas.getWidth() - keyboardHeight) / (canvas.getImageWidth());
             } else {
-                zoomRatio = (float) canvas.getHeight() / canvas.getImageHeight();
+                zoomRatio = (float) (canvas.getHeight() - keyboardHeight) / (canvas.getImageHeight());
             }
 
             // Because the zoom action is relative, we should divide the current zoom factor
@@ -1883,8 +1882,8 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         }
     }
 
-    public float getKeyboardHeight() {
-        return keyboardHeight;
+    public float getKeyboardHeightInVisibleImage() {
+        return (float) keyboardHeight / canvas.getHeight() * canvas.getVisibleDesktopHeight();
     }
 
     public void disconnectAndClose() {

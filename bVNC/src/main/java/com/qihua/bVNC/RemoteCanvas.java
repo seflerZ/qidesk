@@ -30,14 +30,9 @@
 
 package com.qihua.bVNC;
 
-import static com.qihua.bVNC.App.getContext;
-
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.Application;
-import android.content.ComponentName;
 import android.content.Context;
-import android.content.ServiceConnection;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -50,7 +45,6 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
-import android.os.IBinder;
 import android.os.SystemClock;
 import android.provider.Settings;
 import android.text.ClipboardManager;
@@ -68,19 +62,14 @@ import android.view.SurfaceView;
 import android.view.inputmethod.BaseInputConnection;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
-import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
-import com.limelight.binding.crypto.AndroidCryptoProvider;
 import com.limelight.binding.input.ControllerHandler;
-import com.limelight.computers.ComputerManagerListener;
-import com.limelight.computers.ComputerManagerService;
 import com.limelight.nvstream.http.ComputerDetails;
-import com.limelight.nvstream.http.PairingManager;
 import com.limelight.nvstream.jni.MoonBridge;
 import com.limelight.preferences.PreferenceConfiguration;
 import com.qihua.android.bc.BCFactory;
@@ -115,7 +104,6 @@ import com.undatech.opaque.proxmox.pojo.PveResource;
 import com.undatech.opaque.proxmox.pojo.SpiceDisplay;
 import com.undatech.opaque.proxmox.pojo.VmStatus;
 import com.undatech.opaque.util.FileUtils;
-import com.qihua.bVNC.R;
 
 import org.apache.http.HttpException;
 import org.json.JSONException;
@@ -1734,7 +1722,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
         // when the soft keyboard shown, the bottom space decreased, we must
         // cut off the height to make the bottom edge pan work properly.
-        float keyboardHeight = activity.getKeyboardHeight();
+        float keyboardHeight = activity.getKeyboardHeightInVisibleImage();
 
         // do not pan when there is space left on the screen
         if ((y + bHeight > h + absoluteYPosition - hthresh - keyboardHeight) && (absoluteYPosition + h < bHeight + ih + keyboardHeight)) {
