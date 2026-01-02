@@ -30,22 +30,22 @@ public class RemoteRdpKeyboard extends RemoteKeyboard {
     public boolean processLocalKeyEvent(int keyCode, KeyEvent evt, int additionalMetaState) {
         debugLog(App.debugLog, TAG, "processLocalKeyEvent: " + evt.toString() + " " + keyCode);
         // Drop repeated modifiers
-        if (shouldDropModifierKeys(evt))
-            return true;
+//        if (shouldDropModifierKeys(evt))
+//            return true;
         boolean isRepeat = evt.getRepeatCount() > 0;
         rdpcomm.remoteKeyboardState.detectHardwareMetaState(evt);
 
         if (rdpcomm != null && rdpcomm.isInNormalProtocol()) {
-            RemotePointer pointer = canvas.getPointer();
+//            RemotePointer pointer = canvas.getPointer();
             boolean down = (evt.getAction() == KeyEvent.ACTION_DOWN) ||
                     (evt.getAction() == KeyEvent.ACTION_MULTIPLE);
             int metaState = additionalMetaState | convertEventMetaState(evt);
 
-            if (keyCode == KeyEvent.KEYCODE_MENU)
-                return true;                           // Ignore menu key
+//            if (keyCode == KeyEvent.KEYCODE_MENU)
+//                return true;                           // Ignore menu key
 
-            if (pointer.hardwareButtonsAsMouseEvents(keyCode, evt, metaState | onScreenMetaState))
-                return true;
+//            if (pointer.hardwareButtonsAsMouseEvents(keyCode, evt, metaState | onScreenMetaState))
+//                return true;
 
             // Detect whether this event is coming from a default hardware keyboard.
             metaState = onScreenMetaState | metaState;

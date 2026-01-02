@@ -69,6 +69,7 @@ public final class ExtraKeysView extends GridLayout {
          */
         boolean performExtraKeyButtonHapticFeedback(View view, ExtraKeyButton buttonInfo, MaterialButton button);
 
+        void onExtraKeySpecialButtonState(String key, boolean down);
     }
 
     /** Defines the default fallback value for {@link #mButtonTextColor}.  */
@@ -447,6 +448,11 @@ public final class ExtraKeysView extends GridLayout {
             mExtraKeysViewClient.onExtraKeyButtonClick(view, buttonInfo, button);
     }
 
+    public void onExtraKeySpecialButtonState(String key, boolean down) {
+        if (mExtraKeysViewClient != null)
+            mExtraKeysViewClient.onExtraKeySpecialButtonState(key, down);
+    }
+
     public void performExtraKeyButtonHapticFeedback(View view, ExtraKeyButton buttonInfo, MaterialButton button) {
         if (mExtraKeysViewClient != null) {
             // If client handled the feedback, then just return
@@ -480,6 +486,8 @@ public final class ExtraKeysView extends GridLayout {
             state.setIsActive(!state.isActive);
             if (!state.isActive)
                 state.setIsLocked(false);
+
+            onExtraKeySpecialButtonState(buttonInfo.getKey(), state.isActive);
         } else {
             onExtraKeyButtonClick(view, buttonInfo, button);
         }
@@ -535,6 +543,8 @@ public final class ExtraKeysView extends GridLayout {
             mState.setIsLocked(!mState.isActive);
             mState.setIsActive(!mState.isActive);
             mLongPressCount++;
+
+            onExtraKeySpecialButtonState((String) mState.buttons.get(0).getText(), mState.isActive);
         }
     }
 
@@ -602,8 +612,12 @@ public final class ExtraKeysView extends GridLayout {
             return false;
 
         // Disable active state only if not locked
-        if (autoSetInActive && !state.isLocked)
-            state.setIsActive(false);
+        if (autoSetInActive && !state.isLocked) {
+            getHandler().postDelayed(() -> {
+                state.setIsActive(false);
+                onExtraKeySpecialButtonState(specialButton.getKey(), false);
+            }, 250);
+        }
 
         return true;
     }

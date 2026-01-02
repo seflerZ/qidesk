@@ -360,20 +360,16 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 
         myVibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
 
-        Runnable setModes = new Runnable() {
-            public void run() {
-                try {
-                    setModes();
-                } catch (NullPointerException e) {
-                }
+        Runnable setModes = () -> {
+            try {
+                setModes();
+            } catch (NullPointerException e) {
             }
         };
-        Runnable hideKeyboardAndExtraKeys = new Runnable() {
-            public void run() {
-                try {
-                    hideKeyboardAndExtraKeys();
-                } catch (NullPointerException e) {
-                }
+        Runnable hideKeyboardAndExtraKeys = () -> {
+            try {
+                hideKeyboardAndExtraKeys();
+            } catch (NullPointerException e) {
             }
         };
 
@@ -493,6 +489,37 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             @Override
             public boolean performExtraKeyButtonHapticFeedback(View view, ExtraKeyButton buttonInfo, MaterialButton button) {
                 return false;
+            }
+
+            @Override
+            public void onExtraKeySpecialButtonState(String key, boolean down) {
+                KeyEvent evt;
+                switch (key) {
+                    case "SHIFT":
+                        evt = new KeyEvent(0, 0, down ? KeyEvent.ACTION_DOWN : KeyEvent.ACTION_UP,
+                                KeyEvent.KEYCODE_SHIFT_LEFT, 0, KeyEvent.META_SHIFT_LEFT_ON | KeyEvent.META_SHIFT_ON,
+                                0, RemoteKeyboard.SCAN_LEFTSHIFT);
+                        break;
+                    case "CTRL":
+                        evt = new KeyEvent(0, 0, down ? KeyEvent.ACTION_DOWN : KeyEvent.ACTION_UP,
+                        KeyEvent.KEYCODE_CTRL_LEFT, 0, KeyEvent.META_CTRL_LEFT_ON | KeyEvent.META_CTRL_ON,
+                        0, RemoteKeyboard.SCAN_LEFTCTRL);
+                        break;
+                    case "ALT":
+                        evt = new KeyEvent(0, 0, down ? KeyEvent.ACTION_DOWN : KeyEvent.ACTION_UP,
+                                KeyEvent.KEYCODE_ALT_LEFT, 0, KeyEvent.META_ALT_LEFT_ON | KeyEvent.META_ALT_ON,
+                                0, RemoteKeyboard.SCAN_LEFTALT);
+                        break;
+                    case "META":
+                        evt = new KeyEvent(0, 0, down ? KeyEvent.ACTION_DOWN : KeyEvent.ACTION_UP,
+                                KeyEvent.KEYCODE_META_LEFT, 0, KeyEvent.META_META_LEFT_ON | KeyEvent.META_META_ON,
+                                0, RemoteKeyboard.SCAN_LEFTSUPER);
+                        break;
+                    default:
+                        return;
+                }
+
+                canvas.getKeyboard().keyEvent(evt.getKeyCode(), evt);
             }
         });
         extraKeysView.setButtonTextAllCaps(true);
