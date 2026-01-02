@@ -553,6 +553,12 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         } else {
             canvas.getKeyboard().onScreenShiftOff();
         }
+
+        if (Boolean.TRUE.equals(extraKeysView.readSpecialButton(SpecialButton.META, true))) {
+            canvas.getKeyboard().onScreenSuperOn();
+        } else {
+            canvas.getKeyboard().onScreenSuperOff();
+        }
     }
 
     private void performShortKeys(List<String> keys) {

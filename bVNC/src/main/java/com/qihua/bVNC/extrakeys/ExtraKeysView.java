@@ -322,6 +322,7 @@ public final class ExtraKeysView extends GridLayout {
             put(SpecialButton.CTRL, new SpecialButtonState(extraKeysView));
             put(SpecialButton.ALT, new SpecialButtonState(extraKeysView));
             put(SpecialButton.SHIFT, new SpecialButtonState(extraKeysView));
+            put(SpecialButton.META, new SpecialButtonState(extraKeysView));
             put(SpecialButton.FN, new SpecialButtonState(extraKeysView));
         }};
     }
@@ -616,7 +617,7 @@ public final class ExtraKeysView extends GridLayout {
             getHandler().postDelayed(() -> {
                 state.setIsActive(false);
                 onExtraKeySpecialButtonState(specialButton.getKey(), false);
-            }, 250);
+            }, 200);
         }
 
         return true;

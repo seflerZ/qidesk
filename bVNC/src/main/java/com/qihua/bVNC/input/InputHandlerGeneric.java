@@ -1112,6 +1112,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                 canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_DPAD_RIGHT, new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_RIGHT));
 
                 canvas.getKeyboard().onScreenAltOff();
+
                 return true;
             }
         }

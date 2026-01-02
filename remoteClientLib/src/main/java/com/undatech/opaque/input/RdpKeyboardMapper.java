@@ -305,6 +305,8 @@ public class RdpKeyboardMapper {
         keymapAndroid[114] = VK_RCONTROL | VK_EXT_KEY;
         keymapAndroid[115] = VK_CAPITAL;
         keymapAndroid[116] = VK_SCROLL;
+        keymapAndroid[117] = VK_LWIN | VK_EXT_KEY;
+        keymapAndroid[118] = VK_RWIN | VK_EXT_KEY;
         keymapAndroid[120] = VK_PRINT;
         keymapAndroid[121] = VK_PAUSE;
         keymapAndroid[122] = VK_HOME | VK_EXT_KEY;
