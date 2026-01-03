@@ -145,7 +145,9 @@ public class RdpCommunicator extends RfbConnectable implements RdpKeyboardMapper
 //            sendModifierKeys(true);
 //        }
 
-        LibFreeRDP.sendCursorEvent(session.getInstance(), x, y, pointerMask);
+        synchronized (viewable) {
+            LibFreeRDP.sendCursorEvent(session.getInstance(), x, y, pointerMask);
+        }
 
 //        if ((pointerMask & RemotePointer.POINTER_DOWN_MASK) == 0) {
 //            sendModifierKeys(false);
@@ -217,38 +219,45 @@ public class RdpCommunicator extends RfbConnectable implements RdpKeyboardMapper
     // KeyboardMapper.KeyProcessingListener implementation
     @Override
     public void processVirtualKey(int virtualKeyCode, boolean down) {
-        GeneralUtils.debugLog(this.debugLogging, TAG, "processVirtualKey: " +
-                "Processing VK key: " + virtualKeyCode + ". Is it down: " + down);
+//        GeneralUtils.debugLog(this.debugLogging, TAG, "processVirtualKey: " +
+//                "Processing VK key: " + virtualKeyCode + ". Is it down: " + down);
 
-        if (down) {
-            sendModifierKeys(true);
-        }
+        synchronized (viewable) {
+            if (down) {
+                sendModifierKeys(true);
+            }
 
-        GeneralUtils.debugLog(this.debugLogging, TAG, "processVirtualKey: " +
-                "Sending VK key: " + virtualKeyCode + ". Is it down: " + down);
-        LibFreeRDP.sendKeyEvent(session.getInstance(), virtualKeyCode, down);
+//        GeneralUtils.debugLog(this.debugLogging, TAG, "processVirtualKey: " +
+//                "Sending VK key: " + virtualKeyCode + ". Is it down: " + down);
 
-        if (!down) {
-            sendModifierKeys(false);
+
+            LibFreeRDP.sendKeyEvent(session.getInstance(), virtualKeyCode, down);
+
+            if (!down) {
+                sendModifierKeys(false);
+            }
         }
     }
 
     @Override
     public void processUnicodeKey(int unicodeKey, boolean down, boolean suppressMetaState) {
-        GeneralUtils.debugLog(this.debugLogging, TAG, "processUnicodeKey: " +
-                "Processing unicode key: " + unicodeKey + ", down: " + down +
-                ", metaState: " + metaState + ", suppressMetaState: " + suppressMetaState);
+//        GeneralUtils.debugLog(this.debugLogging, TAG, "processUnicodeKey: " +
+//                "Processing unicode key: " + unicodeKey + ", down: " + down +
+//                ", metaState: " + metaState + ", suppressMetaState: " + suppressMetaState);
 
-        if (down && !suppressMetaState) {
-            sendModifierKeys(true);
-        }
+        synchronized (viewable) {
+            if (down && !suppressMetaState) {
+                sendModifierKeys(true);
+            }
 
-        GeneralUtils.debugLog(this.debugLogging, TAG, "processUnicodeKey: " +
-                "Sending unicode key: " + unicodeKey + ", down: " + down + ", metaState: " + metaState);
-        LibFreeRDP.sendUnicodeKeyEvent(session.getInstance(), unicodeKey, down);
+//        GeneralUtils.debugLog(this.debugLogging, TAG, "processUnicodeKey: " +
+//                "Sending unicode key: " + unicodeKey + ", down: " + down + ", metaState: " + metaState);
 
-        if (!down && !suppressMetaState) {
-            sendModifierKeys(false);
+            LibFreeRDP.sendUnicodeKeyEvent(session.getInstance(), unicodeKey, down);
+
+            if (!down && !suppressMetaState) {
+                sendModifierKeys(false);
+            }
         }
     }
 
