@@ -185,12 +185,26 @@ public class RdpCommunicator extends RfbConnectable implements RdpKeyboardMapper
         setIsInNormalProtocol(false);
         disconnectRequested = true;
         long instance = session.getInstance();
-        DisconnectThread d = new DisconnectThread(instance);
-        d.start();
+        if (instance != 0) {
+            DisconnectThread d = new DisconnectThread(instance);
+            d.start();
+        }
     }
 
     @Override
     public void reconnect() {
+        // 首先关闭当前连接，释放资源
+        close();
+
+        // 等待资源释放完成（添加适当延迟）
+        try {
+            Thread.sleep(500);
+        } catch (InterruptedException e) {
+            android.util.Log.e(TAG, "Interrupted while waiting for disconnect: " + e.getMessage());
+            Thread.currentThread().interrupt();
+        }
+
+        // 然后重新初始化会话并连接
         initSession(username, domain, password);
         connect();
     }
@@ -563,7 +577,7 @@ public class RdpCommunicator extends RfbConnectable implements RdpKeyboardMapper
 
         public void run() {
             LibFreeRDP.disconnect(instance);
-            //LibFreeRDP.freeInstance(instance);
+            LibFreeRDP.freeInstance(instance);
         }
     }
 }
