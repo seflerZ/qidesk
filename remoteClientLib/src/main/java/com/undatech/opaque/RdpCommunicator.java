@@ -186,8 +186,10 @@ public class RdpCommunicator extends RfbConnectable implements RdpKeyboardMapper
         disconnectRequested = true;
         long instance = session.getInstance();
         if (instance != 0) {
-            DisconnectThread d = new DisconnectThread(instance);
-            d.start();
+            handler.postDelayed(() -> {
+                LibFreeRDP.disconnect(instance);
+                LibFreeRDP.freeInstance(instance);
+            }, 500);
         }
     }
 
@@ -566,18 +568,5 @@ public class RdpCommunicator extends RfbConnectable implements RdpKeyboardMapper
     public void OnRemoteClipboardChanged(String data) {
         android.util.Log.d(TAG, "OnRemoteClipboardChanged called.");
         remoteClipboardChanged(data);
-    }
-
-    public class DisconnectThread extends Thread {
-        long instance;
-
-        public DisconnectThread(long i) {
-            this.instance = i;
-        }
-
-        public void run() {
-            LibFreeRDP.disconnect(instance);
-            LibFreeRDP.freeInstance(instance);
-        }
     }
 }
