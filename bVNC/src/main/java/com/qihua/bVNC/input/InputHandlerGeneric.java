@@ -467,7 +467,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
         activity.readSpecialKeysState();
 
-        if (dragMode) {
+        if (dragMode || rightDragMode || middleDragMode) {
             return true;
         }
 
@@ -498,7 +498,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
      */
     @Override
     public boolean onDoubleTap(MotionEvent e) {
-        if (dragMode || detectImmersiveRange(e.getX(), e.getY())) {
+        if (dragMode || rightDragMode || middleDragMode || detectImmersiveRange(e.getX(), e.getY())) {
             return true;
         }
 
@@ -527,10 +527,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             GeneralUtils.debugLog(debugLogging, TAG,
                     "onLongPress: right/middle-click gesture in progress, not starting drag mode");
             return;
-        }
-
-        if (touchpadFeedback) {
-            activity.sendShortVibration();
         }
 
         totalDragX = 0;
@@ -1003,7 +999,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                 inertiaSemaphore.release();
             }
 
-            if (!endDragModesAndScrolling()) {
+            if (dragMode || rightDragMode || middleDragMode) {
                 if (dragHelped) {
                     canvas.scaler.changeZoom(activity, lastZoomFactor / canvas.getZoomFactor(), pointer.getX(), pointer.getY());
                     dragHelped = false;
@@ -1012,17 +1008,23 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                 // release the drag button down
                 pointer.releaseButton(getX(e), getY(e), meta);
 
-                // if the double tap performed without any movement, perform a additional click
-                // to form a double click. note that the first click is performed during the drag
-                if (totalDragX < 8 && totalDragY < 8) {
+                SystemClock.sleep(100);
+
+                if (dragMode && totalDragX < 8 && totalDragY < 8) {
+                    // if the double tap performed without any movement, perform a additional click
+                    // to form a double click. note that the first click is performed during the drag
+
                     pointer.leftButtonDown(getX(e), getY(e), meta);
-                    SystemClock.sleep(100);
-                    pointer.releaseButton(getX(e), getY(e), meta);
 
                     if (touchpadFeedback) {
                         activity.sendShortVibration();
                     }
+                    SystemClock.sleep(100);
+
+                    pointer.releaseButton(getX(e), getY(e), meta);
                 }
+
+                endDragModesAndScrolling();
             }
         }
 

@@ -1566,17 +1566,10 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             keyboard.clearMetaState();
             keyboard.keyEvent(0, new KeyEvent(KeyEvent.ACTION_UP, 0));
         }
+
         // Close the rfb connection.
         if (rfbconn != null) {
             rfbconn.close();
-        }
-
-        if (nvcomm != null) {
-            nvcomm.close();
-        }
-
-        if (rdpcomm != null) {
-            rdpcomm.close();
         }
 
         if (handler != null) {

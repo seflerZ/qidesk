@@ -186,10 +186,8 @@ public class RdpCommunicator extends RfbConnectable implements RdpKeyboardMapper
         disconnectRequested = true;
         long instance = session.getInstance();
         if (instance != 0) {
-            handler.postDelayed(() -> {
-                LibFreeRDP.disconnect(instance);
-                LibFreeRDP.freeInstance(instance);
-            }, 500);
+//            LibFreeRDP.disconnect(instance);
+            LibFreeRDP.freeInstance(instance);
         }
     }
 
