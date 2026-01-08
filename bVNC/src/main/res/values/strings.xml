@@ -956,4 +956,5 @@ Below that is where you configure your connection.
     <string name="description_rdp">Remote Desktop Protocol, for Windows Desktops.</string>
     <string name="description_nvstream">Nvidia Game stream, best for gaming.</string>
     <string name="description_ssh">[Coming soon] Pure SSH terminal, for server management.</string>
+    <string name="touchpad_touch_feedback_hint">In Android 16 and later, you must enable system haptic first.</string>
 </resources>
