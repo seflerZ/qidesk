@@ -55,9 +55,11 @@ import android.os.StrictMode;
 import android.os.SystemClock;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.Display;
 import android.view.Gravity;
+import android.view.HapticFeedbackConstants;
 import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -479,10 +481,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             @Override
             public void onExtraKeyButtonClick(View view, ExtraKeyButton buttonInfo, MaterialButton button) {
                 performShortKeys(Collections.singletonList(buttonInfo.getKey()));
-
-                if (touchpadFeedback) {
-                    sendShortVibration();
-                }
+//                sendShortVibration();
             }
 
             @Override
@@ -1057,11 +1056,20 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     }
 
     public void sendShortVibration() {
-        if (myVibrator != null) {
-            myVibrator.vibrate(VibrationEffect.createOneShot(12, 30));
+        if (Build.VERSION.SDK_INT >= 28) {
+            rootView.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
         } else {
-            Log.i(TAG, "Device cannot vibrate, not sending vibration");
+            // Perform haptic feedback only if no total silence mode enabled.
+            if (Settings.Global.getInt(getContext().getContentResolver(), "zen_mode", 0) != 2) {
+                rootView.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+            }
         }
+
+//        if (myVibrator != null) {
+//            myVibrator.vibrate(VibrationEffect.createOneShot(12, 30));
+//        } else {
+//            Log.i(TAG, "Device cannot vibrate, not sending vibration");
+//        }
     }
 
     /**A
@@ -1571,15 +1579,16 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     protected void onDestroy() {
         super.onDestroy();
 
-        disconnectAndClose();
+        // already called when handling BACK_BUTTON
+//        disconnectAndClose();
 
-        Log.i(TAG, "onDestroy called.");
-        if (canvas != null) {
-            canvas.closeConnection();
-            if (canvas.isOutDisplay()) {
-                touchpad.closeConnection();
-            }
-        }
+//        Log.i(TAG, "onDestroy called.");
+//        if (canvas != null) {
+//            canvas.closeConnection();
+//            if (canvas.isOutDisplay()) {
+//                touchpad.closeConnection();
+//            }
+//        }
 
         if (managerBinder != null) {
             unbindService(serviceConnection);

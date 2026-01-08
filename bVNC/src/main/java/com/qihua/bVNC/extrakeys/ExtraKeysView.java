@@ -8,7 +8,6 @@ import android.os.Looper;
 import android.provider.Settings;
 import android.util.AttributeSet;
 import android.view.HapticFeedbackConstants;
-import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
@@ -20,9 +19,9 @@ import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 
 import com.google.android.material.button.MaterialButton;
-import com.qihua.bVNC.input.RemoteKeyboard;
-import com.qihua.bVNC.theme.ThemeUtils;
+import com.qihua.bVNC.Constants;
 import com.qihua.bVNC.R;
+import com.qihua.bVNC.Utils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -278,6 +277,8 @@ public final class ExtraKeysView extends GridLayout {
     /** Set {@link #mButtonActiveBackgroundColor}. */
     public void setButtonActiveBackgroundColor(int buttonActiveBackgroundColor) {
         mButtonActiveBackgroundColor = buttonActiveBackgroundColor;
+
+
     }
 
     /** Set {@link #mButtonTextAllCaps}. */
@@ -371,7 +372,7 @@ public final class ExtraKeysView extends GridLayout {
                 button.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
 
                 button.setOnClickListener(view -> {
-                    performExtraKeyButtonHapticFeedback(view, buttonInfo, button);
+//                    performExtraKeyButtonHapticFeedback(view, buttonInfo, button);
                     onAnyExtraKeyButtonClick(view, buttonInfo, button);
                 });
 
@@ -379,6 +380,7 @@ public final class ExtraKeysView extends GridLayout {
                     switch (event.getAction()) {
                         case MotionEvent.ACTION_DOWN:
                             view.setBackgroundColor(mButtonActiveBackgroundColor);
+                            performExtraKeyButtonHapticFeedback(view, buttonInfo, button);
                             // Start long press scheduled executors which will be stopped in next MotionEvent
                             startScheduledExecutors(view, buttonInfo, button);
                             return true;
@@ -461,9 +463,9 @@ public final class ExtraKeysView extends GridLayout {
                 return;
         }
 
-        if (Settings.System.getInt(getContext().getContentResolver(),
-            Settings.System.HAPTIC_FEEDBACK_ENABLED, 0) != 0) {
+        boolean feedback = Utils.querySharedPreferenceBoolean(getContext(), Constants.touchpadFeedback, false);
 
+        if (feedback) {
             if (Build.VERSION.SDK_INT >= 28) {
                 button.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
             } else {
