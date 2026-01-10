@@ -21,55 +21,27 @@ package com.qihua.bVNC;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.Service;
-import android.content.ComponentName;
-import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
-import android.content.res.Configuration;
-import android.graphics.Color;
 import android.os.Bundle;
-import android.os.IBinder;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.CheckBox;
-import android.widget.CompoundButton;
-import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.RadioGroup;
 import android.widget.Spinner;
-import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.ToggleButton;
 
 import androidx.annotation.NonNull;
 
-import com.limelight.utils.Dialog;
-import com.limelight.utils.ServerHelper;
-import com.limelight.utils.SpinnerDialog;
-import com.morpheusly.common.Utilities;
 import com.qihua.bVNC.gesture.GestureEditorActivity;
 import com.qihua.util.PermissionGroups;
 import com.qihua.util.PermissionsManager;
 import com.undatech.opaque.Connection;
 import com.undatech.opaque.util.ConnectionLoader;
 
-import org.xmlpull.v1.XmlPullParserException;
-
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.StringReader;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -254,6 +226,7 @@ public class ConfigVNC extends MainConfiguration {
             textPassword.setText(selected.getPassword());
         }
 
+        selectedConnType = Constants.CONN_TYPE_VNC;
         checkboxKeepPassword.setChecked(selected.getKeepPassword());
         checkboxUseDpadAsArrows.setChecked(selected.getUseDpadAsArrows());
         checkboxRotateDpad.setChecked(selected.getRotateDpad());

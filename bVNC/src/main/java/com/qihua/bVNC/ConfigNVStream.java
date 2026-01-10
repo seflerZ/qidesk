@@ -412,6 +412,7 @@ public class ConfigNVStream extends MainConfiguration {
             textPassword.setText(selected.getPassword());
         }
 
+        selectedConnType = Constants.CONN_TYPE_NVSTREAM;
         checkboxKeepPassword.setChecked(selected.getKeepPassword());
         checkboxUseLastPositionToolbar.setChecked((!isNewConnection) ? selected.getUseLastPositionToolbar() : this.useLastPositionToolbarDefault());
         nickText.setText(selected.getNickname());
