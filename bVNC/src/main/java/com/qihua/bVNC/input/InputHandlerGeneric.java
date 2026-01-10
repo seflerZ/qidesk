@@ -607,10 +607,9 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             return false;
         }
 
-        float immersiveXDistance = Math.max(touchpad.getWidth() * immersiveSwipeRatio, 20);
+        float immersiveXDistance = Math.min(Math.max(touchpad.getWidth() * immersiveSwipeRatio, 50), 150);
 
-        return Constants.SDK_INT >= Build.VERSION_CODES.KITKAT &&
-                (x <= immersiveXDistance || touchpad.getWidth() - x <= immersiveXDistance);
+        return x <= immersiveXDistance || touchpad.getWidth() - x <= immersiveXDistance;
     }
 
     protected boolean detectImmersiveHorizontal(float y) {
@@ -618,7 +617,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             return false;
         }
 
-        float immersiveYDistance = Math.max(touchpad.getHeight() * immersiveSwipeRatio, 20);
+        float immersiveYDistance = Math.min(Math.max(touchpad.getHeight() * immersiveSwipeRatio, 50), 150);
 
         return Constants.SDK_INT >= Build.VERSION_CODES.KITKAT &&
                 (y <= immersiveYDistance || touchpad.getHeight() - y <= immersiveYDistance);
@@ -655,7 +654,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             inSwiping = true;
             immersiveSwipeY = true;
 
-            if (x < immersiveXDistance) {
+            if (x <= immersiveXDistance) {
                 edgeLeft.setVisibility(View.VISIBLE);
                 setEdgeWidth(edgeLeft, (int) immersiveXDistance);
             } else {
@@ -670,7 +669,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             inSwiping = true;
             immersiveSwipeX = true;
 
-            if (y < immersiveYDistance) {
+            if (y <= immersiveYDistance) {
                 edgeTop.setVisibility(View.VISIBLE);
                 setEdgeHeight(edgeTop, (int) immersiveYDistance);
             } else {
