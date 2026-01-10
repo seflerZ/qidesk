@@ -145,6 +145,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     private final View edgeLeft;
     private final View edgeTop;
     private final View edgeBottom;
+    private long lastDragHelpTimeMs;
 
     InputHandlerGeneric(RemoteCanvasActivity activity, RemoteCanvas canvas, RemoteCanvas touchpad, RemotePointer pointer,
                         boolean debugLogging) {
@@ -607,9 +608,17 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             return false;
         }
 
-        float immersiveXDistance = Math.min(Math.max(touchpad.getWidth() * immersiveSwipeRatio, 50), 150);
+        float immersiveXDistance = getImmersiveXDistance();
 
         return x <= immersiveXDistance || touchpad.getWidth() - x <= immersiveXDistance;
+    }
+
+    private float getImmersiveXDistance() {
+        return Math.min(Math.max(touchpad.getWidth() * immersiveSwipeRatio, 50), 150);
+    }
+
+    private float getImmersiveYDistance() {
+        return Math.min(Math.max(touchpad.getHeight() * immersiveSwipeRatio, 50), 150);
     }
 
     protected boolean detectImmersiveHorizontal(float y) {
@@ -617,7 +626,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             return false;
         }
 
-        float immersiveYDistance = Math.min(Math.max(touchpad.getHeight() * immersiveSwipeRatio, 50), 150);
+        float immersiveYDistance = getImmersiveYDistance();
 
         return Constants.SDK_INT >= Build.VERSION_CODES.KITKAT &&
                 (y <= immersiveYDistance || touchpad.getHeight() - y <= immersiveYDistance);
@@ -647,8 +656,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
         GeneralUtils.debugLog(debugLogging, TAG, "detectImmersiveSwipe");
 
-        float immersiveXDistance = Math.min(Math.max(touchpad.getWidth() * immersiveSwipeRatio, 50), 150);
-        float immersiveYDistance = Math.min(Math.max(touchpad.getHeight() * immersiveSwipeRatio, 50), 150);
+        float immersiveXDistance = getImmersiveXDistance();
+        float immersiveYDistance = getImmersiveYDistance();
 
         if (detectImmersiveVertical(x)) {
             inSwiping = true;
@@ -874,7 +883,28 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                                 dragHelped = true;
                             }
 
-                            pointer.moveMouseButtonDown(getX(e), getY(e), meta);
+                            // when reached to the edge, keep the cursor continue moving
+                            int x = getX(e);
+                            int y = getY(e);
+
+                            if (dragMode
+                                    && System.currentTimeMillis() - lastDragHelpTimeMs > 200) {
+                                if (e.getX() >= touchpad.getWidth() - getImmersiveXDistance()) {
+                                    x += 50;
+                                } else if (e.getX() <= getImmersiveXDistance()) {
+                                    x -= 50;
+                                }
+
+                                if (e.getY() >= touchpad.getHeight() - getImmersiveYDistance()) {
+                                    y += 50;
+                                } else if (e.getY() <= getImmersiveYDistance()) {
+                                    y -= 50;
+                                }
+
+                                lastDragHelpTimeMs = System.currentTimeMillis();
+                            }
+
+                            pointer.moveMouseButtonDown(x, y, meta);
                             canvas.movePanToMakePointerVisible();
                             GeneralUtils.debugLog(debugLogging, TAG, "onTouchEvent: ACTION_MOVE in a drag mode, moving mouse with button down");
                             break;
