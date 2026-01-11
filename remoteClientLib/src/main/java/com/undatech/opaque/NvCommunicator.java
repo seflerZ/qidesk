@@ -62,6 +62,7 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
     private static final int MOUSE_BUTTON_SCROLL_DOWN = PTRFLAGS_WHEEL | PTRFLAGS_WHEEL_NEGATIVE | 0x00a8;
     private static final int MOUSE_BUTTON_SCROLL_LEFT = PTRFLAGS_HWHEEL | 0x0058;
     private static final int MOUSE_BUTTON_SCROLL_RIGHT = PTRFLAGS_HWHEEL | PTRFLAGS_WHEEL_NEGATIVE | 0x00a8;
+    private String debugMsg;
 
     public NvCommunicator(Activity activity, Viewable viewable, Handler handler) {
         super(false, handler);
@@ -188,6 +189,7 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
                     }
 
                     DrawTask drawTask = new DrawTask(x, y, width, height, true);
+                    drawTask.setDebugMsg(debugMsg);
 
                     viewable.reDraw(drawTask);
                 }, handler);
@@ -273,7 +275,9 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
 
     @Override
     public void onPerfUpdate(String text) {
-
+        if (prefConfig.enablePerfOverlay) {
+            debugMsg = text;
+        }
     }
 
     @Override

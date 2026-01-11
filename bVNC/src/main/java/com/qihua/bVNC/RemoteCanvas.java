@@ -665,6 +665,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         prefConfig.incomingFrameQueueSize = 1;
         prefConfig.videoFormat = PreferenceConfiguration.FormatOption.AUTO;
         prefConfig.enableLatencyToast = Utils.querySharedPreferenceBoolean(activity, Constants.enableDebugInfo, false);
+        prefConfig.enablePerfOverlay = prefConfig.enableLatencyToast;
 //        prefConfig.videoFormat = PreferenceConfiguration.FormatOption.FORCE_H264;
 
         // reduce bitrate if on cellular connection
@@ -1936,6 +1937,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                     if (fpsCounter != null && task != null) {
                         fpsCounter.finish(task.getInTimeMs());
                         fpsCounter.drawFps(canvas);
+                        fpsCounter.drawDebugMsg(canvas, task.getDebugMsg());
                     }
 
                     lastDraw = System.currentTimeMillis();

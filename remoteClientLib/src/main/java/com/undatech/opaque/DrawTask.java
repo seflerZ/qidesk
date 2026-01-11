@@ -7,6 +7,7 @@ public class DrawTask {
     private Rect dirtyRect;
     private boolean count;
     private long inTimeMs;
+    private String debugMsg;
     public DrawTask(int x, int y, int width, int height) {
         this(x, y, width, height, false);
     }
@@ -16,6 +17,14 @@ public class DrawTask {
 
         this.count = count;
         inTimeMs = System.currentTimeMillis();
+    }
+
+    public void setDebugMsg(String debugMsg) {
+        this.debugMsg = debugMsg;
+    }
+
+    public String getDebugMsg() {
+        return debugMsg;
     }
 
     public long getInTimeMs() {

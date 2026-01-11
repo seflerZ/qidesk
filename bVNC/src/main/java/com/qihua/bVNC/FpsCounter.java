@@ -89,4 +89,16 @@ public class FpsCounter {
     public synchronized void frameDrop() {
         frameDropped += 1;
     }
+
+    public void drawDebugMsg(Canvas canvas, String debugMsg) {
+        if (debugMsg == null) {
+            return;
+        }
+
+        String[] lines = debugMsg.split("\n");
+        for (int i = 0; i < lines.length; i++) {
+            char[] text = lines[i].toCharArray();
+            canvas.drawText(text, 0, text.length, 100f, 240f + i * 40, _textPaint);
+        }
+    }
 }
