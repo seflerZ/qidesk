@@ -12,7 +12,6 @@ import com.limelight.LimeLog;
 import com.limelight.binding.PlatformBinding;
 import com.limelight.binding.audio.AndroidAudioRenderer;
 import com.limelight.binding.input.KeyboardTranslator;
-import com.limelight.binding.video.CrashListener;
 import com.limelight.binding.video.MediaCodecDecoderRenderer;
 import com.limelight.binding.video.MediaCodecHelper;
 import com.limelight.binding.video.PerfOverlayListener;
@@ -212,7 +211,10 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
 
     @Override
     public void stageFailed(String stage, int portFlags, int errorCode) {
-
+        activity.runOnUiThread(() -> {
+            String text = "Connection failed\nStage: " + stage + ", Error code: " + errorCode;
+            Toast.makeText(activity, text, Toast.LENGTH_LONG).show();
+        });
     }
 
     @Override
@@ -232,12 +234,16 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
 
     @Override
     public void displayMessage(String message) {
-
+        activity.runOnUiThread(() -> {
+            Toast.makeText(activity, message, Toast.LENGTH_LONG).show();
+        });
     }
 
     @Override
     public void displayTransientMessage(String message) {
-
+        activity.runOnUiThread(() -> {
+            Toast.makeText(activity, message, Toast.LENGTH_SHORT).show();
+        });
     }
 
     @Override
@@ -430,6 +436,53 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
 
     @Override
     public void close() {
+        if (prefConfig.enableLatencyToast) {
+            int averageEndToEndLat = decoderRenderer.getAverageEndToEndLatency();
+            int averageDecoderLat = decoderRenderer.getAverageDecoderLatency();
+            String message = null;
+            if (averageEndToEndLat > 0) {
+                message = activity.getApplicationContext().getString
+                        (R.string.conn_client_latency)+" "+averageEndToEndLat+" ms";
+                if (averageDecoderLat > 0) {
+                    message += " ("+activity.getApplicationContext().getString
+                            (R.string.conn_client_latency_hw)+" "+averageDecoderLat+" ms)";
+                }
+            }
+            else if (averageDecoderLat > 0) {
+                message = activity.getApplicationContext().getString
+                        (R.string.conn_hardware_latency)+" "+averageDecoderLat+" ms";
+            }
+
+            int videoFormat = decoderRenderer.getActiveVideoFormat();
+            // Add the video codec to the post-stream toast
+            if (message != null) {
+                message += " [";
+
+                if ((videoFormat & MoonBridge.VIDEO_FORMAT_MASK_H264) != 0) {
+                    message += "H.264";
+                }
+                else if ((videoFormat & MoonBridge.VIDEO_FORMAT_MASK_H265) != 0) {
+                    message += "HEVC";
+                }
+                else if ((videoFormat & MoonBridge.VIDEO_FORMAT_MASK_AV1) != 0) {
+                    message += "AV1";
+                }
+                else {
+                    message += "UNKNOWN";
+                }
+
+                if ((videoFormat & MoonBridge.VIDEO_FORMAT_MASK_10BIT) != 0) {
+                    message += " HDR";
+                }
+
+                message += "]";
+            }
+
+            if (message != null) {
+                displayMessage(message);
+            }
+        }
+
         conn.stop();
     }
 

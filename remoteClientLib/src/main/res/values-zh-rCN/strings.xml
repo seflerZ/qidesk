@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="conn_client_latency"> 平均每帧解码延迟：</string>
+    <string name="conn_client_latency_hw"> 硬件解码器延迟：</string>
+    <string name="conn_hardware_latency"> 硬件解码器平均延迟：</string>
+</resources>
