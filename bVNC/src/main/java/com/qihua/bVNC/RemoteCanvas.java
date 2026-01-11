@@ -1905,6 +1905,9 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
         @Override
         public void run() {
+            // use the highest priority to draw the frame to avoid micro stutter
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
+
             while (true) {
                 Canvas canvas = null;
                 try {
