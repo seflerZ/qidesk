@@ -2370,9 +2370,9 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         return progressDialog;
     }
 
-    public float getZoomLevelFactor() {
-        return connection.getZoomLevel() / 100;
-    }
+//    public float getZoomLevelFactor() {
+//        return connection.getZoomLevel() / 100;
+//    }
 
     public FpsCounter getFpsCounter() {
         return fpsCounter;

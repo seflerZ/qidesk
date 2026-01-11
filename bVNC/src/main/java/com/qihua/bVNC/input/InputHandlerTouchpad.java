@@ -30,7 +30,7 @@ import com.qihua.bVNC.R;
 public class InputHandlerTouchpad extends InputHandlerGeneric {
     public static final String ID = "TOUCHPAD_MODE";
     static final String TAG = "InputHandlerTouchpad";
-    public static final int SCROLL_SAMPLING_MS = 25;
+    public static final int SCROLL_SAMPLING_MS = 30;
 
     public InputHandlerTouchpad(RemoteCanvasActivity activity, RemoteCanvas canvas, RemoteCanvas touchpad,
                                 RemotePointer pointer, boolean debugLogging) {
@@ -138,8 +138,8 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
 
         // Make distanceX/Y display density independent.
         float sensitivity = pointer.getSensitivity();
-        distanceX = sensitivity * (cumulatedX / displayDensity) * canvas.getZoomLevelFactor();
-        distanceY = sensitivity * (cumulatedY / displayDensity) * canvas.getZoomLevelFactor();
+        distanceX = sensitivity * (cumulatedX / displayDensity) * canvas.getZoomFactor();
+        distanceY = sensitivity * (cumulatedY / displayDensity) * canvas.getZoomFactor();
 
         // If in swiping mode, indicate a swipe at regular intervals.
         if (inSwiping || immersiveSwipeX || immersiveSwipeY) {
