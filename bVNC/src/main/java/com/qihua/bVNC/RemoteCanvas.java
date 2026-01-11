@@ -664,6 +664,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         prefConfig.bitrate = 15000 * (remoteWidth / 1920);
         prefConfig.disableWarnings = false;
         prefConfig.incomingFrameQueueSize = 1;
+        prefConfig.videoFormat = PreferenceConfiguration.FormatOption.AUTO;
 //        prefConfig.videoFormat = PreferenceConfiguration.FormatOption.FORCE_H264;
 
         // reduce bitrate if on cellular connection
