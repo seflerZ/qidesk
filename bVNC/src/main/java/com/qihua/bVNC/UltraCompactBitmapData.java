@@ -51,8 +51,8 @@ class UltraCompactBitmapData extends AbstractBitmapData {
             mbitmap.setHasAlpha(false);
         }
 
-        memGraphics = new Canvas(mbitmap);
-        drawable.startDrawing();
+//        memGraphics = new Canvas(mbitmap);
+//        drawable.startDrawing();
     }
 
     @Override
@@ -77,9 +77,9 @@ class UltraCompactBitmapData extends AbstractBitmapData {
 
     @Override
     public void updateBitmap(Bitmap b, int x, int y, int w, int h) {
-        synchronized (mbitmap) {
-            memGraphics.drawBitmap(b, x, y, null);
-        }
+//        synchronized (mbitmap) {
+//            memGraphics.drawBitmap(b, x, y, null);
+//        }
     }
 
     @Override
@@ -119,9 +119,9 @@ class UltraCompactBitmapData extends AbstractBitmapData {
 
     @Override
     void drawRect(int x, int y, int w, int h, Paint paint) {
-        synchronized (mbitmap) {
-            memGraphics.drawRect(x, y, x + w, y + h, paint);
-        }
+//        synchronized (mbitmap) {
+//            memGraphics.drawRect(x, y, x + w, y + h, paint);
+//        }
     }
 
     @Override
@@ -142,9 +142,9 @@ class UltraCompactBitmapData extends AbstractBitmapData {
             bitmapwidth = framebufferwidth;
             bitmapheight = framebufferheight;
             mbitmap = Bitmap.createBitmap(bitmapwidth, bitmapheight, cfg);
-            memGraphics = new Canvas(mbitmap);
-            drawable = createDrawable();
-            drawable.startDrawing();
+//            memGraphics = new Canvas(mbitmap);
+//            drawable = createDrawable();
+//            drawable.startDrawing();
         } else {
             android.util.Log.i(TAG, "Both bitmap dimensions same or smaller, no realloc = ("
                     + framebufferwidth + "," + framebufferheight + ")");
