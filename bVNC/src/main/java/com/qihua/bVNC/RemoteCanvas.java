@@ -653,7 +653,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         prefConfig.enableSops = true;
         prefConfig.bindAllUsb = true;
         prefConfig.audioConfiguration = MoonBridge.AUDIO_CONFIGURATION_STEREO;
-        prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_MIN_LATENCY;
+        prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_BALANCED;
         prefConfig.multiController = false;
         prefConfig.disableWarnings = true;
         prefConfig.enablePip = false;
