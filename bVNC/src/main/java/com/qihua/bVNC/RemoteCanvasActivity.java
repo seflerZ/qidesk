@@ -1582,14 +1582,6 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         // already called when handling BACK_BUTTON
         disconnectAndClose();
 
-        Log.i(TAG, "onDestroy called.");
-        if (canvas != null) {
-            canvas.closeConnection();
-            if (canvas.isOutDisplay()) {
-                touchpad.closeConnection();
-            }
-        }
-
         if (managerBinder != null) {
             unbindService(serviceConnection);
         }
@@ -1901,6 +1893,9 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         }
 
         canvas.disconnectWithoutMessage();
+        if (canvas.isOutDisplay()) {
+            touchpad.closeConnection();
+        }
 
         finish();
     }
