@@ -636,16 +636,28 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         float bottomXDistance = Math.max(touchpad.getWidth() * immersiveSwipeRatio, 20);
         float bottomYDistance = touchpad.getHeight() / 2f;
 
-        return Constants.SDK_INT >= Build.VERSION_CODES.KITKAT &&
-                (x <= bottomXDistance || touchpad.getWidth() - x <= bottomXDistance) && y > bottomYDistance;
+        return x <= bottomXDistance;
     }
 
     private boolean detectRightRange(float x, float y) {
         float bottomXDistance = Math.max(touchpad.getWidth() * immersiveSwipeRatio, 20);
         float bottomYDistance = touchpad.getHeight() / 2f;
 
-        return Constants.SDK_INT >= Build.VERSION_CODES.KITKAT &&
-                (x <= bottomXDistance || touchpad.getWidth() - x <= bottomXDistance) && y < bottomYDistance;
+        return x >= touchpad.getWidth() - bottomXDistance;
+    }
+
+    private boolean detectUpRange(float x, float y) {
+        float bottomXDistance = Math.max(touchpad.getWidth() * immersiveSwipeRatio, 20);
+        float bottomYDistance = touchpad.getHeight() / 2f;
+
+        return y <= bottomYDistance;
+    }
+
+    private boolean detectDownRange(float x, float y) {
+        float bottomXDistance = Math.max(touchpad.getWidth() * immersiveSwipeRatio, 20);
+        float bottomYDistance = touchpad.getHeight() / 2f;
+
+        return y >= touchpad.getHeight() - bottomYDistance;
     }
 
     private void detectImmersiveSwipe(float x, float y) {
