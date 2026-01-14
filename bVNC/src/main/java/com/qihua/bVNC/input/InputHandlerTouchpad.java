@@ -55,7 +55,13 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         return ID;
     }
 
+    // Add the following variables in the class member variable area
     private long lastScrollTimeMs = System.currentTimeMillis();
+    private float lastScrollDistanceX = 0;
+    private float lastScrollDistanceY = 0;
+    private long lastScrollTimestamp = 0;
+    private static final float SPEED_ACCELERATION_FACTOR = 0.5f; // Acceleration factor, can be adjusted as needed
+    private static final float MAX_ACCELERATION = 3.0f; // Maximum acceleration multiplier
 
     /*
      * (non-Javadoc)
@@ -64,99 +70,121 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
     @Override
     public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
         GeneralUtils.debugLog(debugLogging, TAG, "onScroll, e1: " + e1 + ", e2:" + e2);
-
+    
         if (activity.isToolbarShowing()) {
             return true;
         }
-
-//        long timeMs = System.currentTimeMillis();
-
+    
         cumulatedX += distanceX;
         cumulatedY += distanceY;
-
-        //        if (Math.abs(cumulatedX) < baseSwipeDist && Math.abs(cumulatedY) < baseSwipeDist) {
-//            return true;
-//        }
-
+    
         final int meta = e2.getMetaState();
         boolean twoFingers = (e1.getPointerCount() == 2);
         twoFingers = twoFingers || (e2.getPointerCount() == 2);
-
+    
         if (!twoFingers && !immersiveSwipeX && !immersiveSwipeY) {
-//            if (distanceX > 0 && distanceX < 1) {
-//                distanceX = (float) Math.floor(distanceX);
-//            } else if (distanceX > -1 && distanceX < 0) {
-//                distanceX = (float) Math.ceil(distanceX);
-//            }
-//
-//            if (distanceY > 0 && distanceY < 1) {
-//                distanceY = (float) Math.ceil(distanceY);
-//            } else if (distanceY > -1 && distanceY < 0) {
-//                distanceY = (float) Math.floor(distanceY);
-//            }
-
             if (System.currentTimeMillis() - lastScrollTimeMs < POINTER_SAMPLING_MS) {
                 return true;
             }
-
-            // Compute the absolute new mouse position.
-            int newX = Math.round(pointer.getX() + -cumulatedX);
-            int newY = Math.round(pointer.getY() + -cumulatedY);
-
+    
+            // Calculate swipe speed and apply acceleration
+            long currentTime = System.currentTimeMillis();
+            float speedMultiplier = 1.0f;
+            
+            if (lastScrollTimestamp > 0) {
+                long timeDiff = currentTime - lastScrollTimestamp;
+                if (timeDiff > 0) {
+                    // Calculate speed in X and Y directions
+                    float speedX = Math.abs(cumulatedX - lastScrollDistanceX) / timeDiff;
+                    float speedY = Math.abs(cumulatedY - lastScrollDistanceY) / timeDiff;
+                    float speed = Math.max(speedX, speedY);
+                    
+                    // Calculate acceleration multiplier based on speed
+                    speedMultiplier = 1.0f + (speed * SPEED_ACCELERATION_FACTOR);
+                    speedMultiplier = Math.min(speedMultiplier, MAX_ACCELERATION); // Limit maximum acceleration
+                }
+            }
+            
+            // Save current scroll distance and timestamp
+            lastScrollDistanceX = cumulatedX;
+            lastScrollDistanceY = cumulatedY;
+            lastScrollTimestamp = currentTime;
+    
+            // Compute the absolute new mouse position with speed-based acceleration.
+            int newX = Math.round(pointer.getX() + -cumulatedX * speedMultiplier * canvas.getZoomFactor());
+            int newY = Math.round(pointer.getY() + -cumulatedY * speedMultiplier * canvas.getZoomFactor());
+    
             pointer.moveMouse(newX, newY, meta);
-
+    
             canvas.movePanToMakePointerVisible();
-
+    
             cumulatedX = 0;
             cumulatedY = 0;
-
+    
             lastScrollTimeMs = System.currentTimeMillis();
-
+    
             return true;
         }
-
+    
         if (inScaling) {
             return true;
         }
-
+    
         if (thirdPointerWasDown) {
             return true;
         }
-
+    
         if (System.currentTimeMillis() - lastScrollTimeMs < SCROLL_SAMPLING_MS) {
             return true;
         }
-
+    
         if (!inScrolling && twoFingers && (Math.abs(distanceX) > 5 || Math.abs(distanceY) > 5)) {
             inScrolling = true;
-
-//            distXQueue.clear();
-//            distYQueue.clear();
-
             inSwiping = true;
         }
-
-        // Make distanceX/Y display density independent.
-        float sensitivity = pointer.getSensitivity();
-        distanceX = sensitivity * (cumulatedX / displayDensity) * canvas.getZoomFactor();
-        distanceY = sensitivity * (cumulatedY / displayDensity) * canvas.getZoomFactor();
-
+    
+        // Calculate swipe speed and apply acceleration
+        long currentTime = System.currentTimeMillis();
+        float speedMultiplier = 1.0f;
+        
+        if (lastScrollTimestamp > 0) {
+            long timeDiff = currentTime - lastScrollTimestamp;
+            if (timeDiff > 0) {
+                // Calculate speed in X and Y directions
+                float speedX = Math.abs(cumulatedX - lastScrollDistanceX) / timeDiff;
+                float speedY = Math.abs(cumulatedY - lastScrollDistanceY) / timeDiff;
+                float speed = Math.max(speedX, speedY);
+                
+                // Calculate acceleration multiplier based on speed
+                speedMultiplier = 1.0f + (speed * SPEED_ACCELERATION_FACTOR);
+                speedMultiplier = Math.min(speedMultiplier, MAX_ACCELERATION); // Limit maximum acceleration
+            }
+        }
+        
+        // Save current scroll distance and timestamp
+        lastScrollDistanceX = cumulatedX;
+        lastScrollDistanceY = cumulatedY;
+        lastScrollTimestamp = currentTime;
+    
+        // Make distanceX/Y display density independent with speed-based acceleration.
+        distanceX = (cumulatedX / displayDensity) * canvas.getZoomFactor() * speedMultiplier;
+        distanceY = (cumulatedY / displayDensity) * canvas.getZoomFactor() * speedMultiplier;
+    
         // If in swiping mode, indicate a swipe at regular intervals.
         if (inSwiping || immersiveSwipeX || immersiveSwipeY) {
             scrollDown = false;
             scrollUp = false;
             scrollRight = false;
             scrollLeft = false;
-
+    
             doScroll(getX(e2), getY(e2), distanceX, distanceY, meta);
         }
-
+    
         cumulatedX = 0;
         cumulatedY = 0;
-
-//        GeneralUtils.errorLog(TAG, "onScroll, timeMs: " + (timeMs - lastScrollTimeMs));
+    
         lastScrollTimeMs = System.currentTimeMillis();
-
+    
         return false;
     }
 

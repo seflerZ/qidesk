@@ -547,6 +547,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             GestureOverlayView gestureOverlay = activity.findViewById(R.id.gestureOverlay);
             gestureOverlay.setVisibility(View.VISIBLE);
 
+            activity.sendShortVibration();
+
             float x = e.getX();
             float y = e.getY();
 
