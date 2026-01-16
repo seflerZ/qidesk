@@ -273,11 +273,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     public RemoteCanvas(final Context context, AttributeSet attrs) {
         super(context, attrs);
 
-        boolean showFps = Utils.querySharedPreferenceBoolean(getContext(),
-                Constants.enableDebugInfo, false);
-        if (showFps) {
-            fpsCounter = new FpsCounter();
-        }
+        fpsCounter = new FpsCounter();
 
         // 👇 关键：让 MIUI 知道这个 View 是“有意图”接收触摸的
         setClickable(true);           // 必须
@@ -1879,8 +1875,12 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         private long lastDraw;
         private Thread thread;
         private LinkedBlockingQueue<DrawTask> queue = new LinkedBlockingQueue<DrawTask>();
+        private boolean showFps = false;
 
         public DrawWorker() {
+            showFps = Utils.querySharedPreferenceBoolean(getContext(),
+                    Constants.enableDebugInfo, false);
+
             lastDraw = System.currentTimeMillis();
 
             thread = new Thread(this, "DrawWorker");
@@ -1939,8 +1939,11 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
                     if (fpsCounter != null && task != null) {
                         fpsCounter.finish(task.getInTimeMs());
-                        fpsCounter.drawFps(canvas);
-                        fpsCounter.drawDebugMsg(canvas, task.getDebugMsg());
+
+                        if (showFps) {
+                            fpsCounter.drawFps(canvas);
+                            fpsCounter.drawDebugMsg(canvas, task.getDebugMsg());
+                        }
                     }
 
                     lastDraw = System.currentTimeMillis();

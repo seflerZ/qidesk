@@ -134,7 +134,8 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             return true;
         }
 
-        if (System.currentTimeMillis() - lastScrollTimeMs < SCROLL_SAMPLING_MS) {
+        long scrollSamplingTimeMs = Math.min(1000 / canvas.fpsCounter.getAvgFps(), SCROLL_SAMPLING_MS);
+        if (System.currentTimeMillis() - lastScrollTimeMs < scrollSamplingTimeMs) {
             return true;
         }
     
