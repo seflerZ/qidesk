@@ -246,7 +246,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
     // Internal bitmap data
     private int capacity;
-    private FpsCounter fpsCounter;
+    public FpsCounter fpsCounter;
 
     private Runnable showMessage = new Runnable() {
         public void run() {

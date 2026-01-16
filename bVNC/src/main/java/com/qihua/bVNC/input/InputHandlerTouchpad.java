@@ -30,7 +30,7 @@ import com.qihua.bVNC.R;
 public class InputHandlerTouchpad extends InputHandlerGeneric {
     public static final String ID = "TOUCHPAD_MODE";
     static final String TAG = "InputHandlerTouchpad";
-    public static final int SCROLL_SAMPLING_MS = 30;
+    public static final int SCROLL_SAMPLING_MS = 40;
 
     public InputHandlerTouchpad(RemoteCanvasActivity activity, RemoteCanvas canvas, RemoteCanvas touchpad,
                                 RemotePointer pointer, boolean debugLogging) {
@@ -133,7 +133,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         if (thirdPointerWasDown) {
             return true;
         }
-    
+
         if (System.currentTimeMillis() - lastScrollTimeMs < SCROLL_SAMPLING_MS) {
             return true;
         }
@@ -156,7 +156,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                 float speed = Math.max(speedX, speedY);
                 
                 // Calculate acceleration multiplier based on speed
-                speedMultiplier = 1.0f + (speed * SPEED_ACCELERATION_FACTOR);
+                speedMultiplier = 1.6f + (speed * SPEED_ACCELERATION_FACTOR);
                 speedMultiplier = Math.min(speedMultiplier, MAX_ACCELERATION); // Limit maximum acceleration
             }
         }

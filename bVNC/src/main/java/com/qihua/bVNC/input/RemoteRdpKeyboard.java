@@ -3,6 +3,7 @@ package com.qihua.bVNC.input;
 import static com.undatech.opaque.util.GeneralUtils.debugLog;
 
 import android.os.Handler;
+import android.os.SystemClock;
 import android.view.KeyCharacterMap;
 import android.view.KeyEvent;
 

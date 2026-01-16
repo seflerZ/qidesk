@@ -616,11 +616,11 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     }
 
     private float getImmersiveXDistance() {
-        return Math.min(Math.max(touchpad.getWidth() * immersiveSwipeRatio, 50), 150);
+        return Math.min(Math.max(touchpad.getWidth() * immersiveSwipeRatio, 60), 150);
     }
 
     private float getImmersiveYDistance() {
-        return Math.min(Math.max(touchpad.getHeight() * immersiveSwipeRatio, 50), 150);
+        return Math.min(Math.max(touchpad.getHeight() * immersiveSwipeRatio, 60), 150);
     }
 
     protected boolean detectImmersiveHorizontal(float y) {
@@ -1192,11 +1192,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         }
 
 //        GeneralUtils.debugLog(debugLogging, TAG, "onKeyDown, e: " + e);
-        try {
-            return canvas.getKeyboard().keyEvent(keyCode, e);
-        } catch (Exception ignore) {
-            return false;
-        }
+        return canvas.getKeyboard().keyEvent(keyCode, e);
     }
 
     /*

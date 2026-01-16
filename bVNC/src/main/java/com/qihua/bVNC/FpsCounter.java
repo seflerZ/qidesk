@@ -41,6 +41,10 @@ public class FpsCounter {
         return lastCountMs;
     }
 
+    public long getAvgFps() {
+        return avg;
+    }
+
     public void finish(long inFpsMs) {
         long latency = System.currentTimeMillis() - inFpsMs;
         avglatency = (avglatency + latency)/ 2;
@@ -100,5 +104,9 @@ public class FpsCounter {
             char[] text = lines[i].toCharArray();
             canvas.drawText(text, 0, text.length, 100f, 240f + i * 40, _textPaint);
         }
+    }
+
+    public float getMaxFps() {
+        return max;
     }
 }

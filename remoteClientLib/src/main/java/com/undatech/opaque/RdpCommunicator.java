@@ -147,9 +147,7 @@ public class RdpCommunicator extends RfbConnectable implements RdpKeyboardMapper
 //            sendModifierKeys(true);
 //        }
 
-        synchronized (viewable) {
-            LibFreeRDP.sendCursorEvent(session.getInstance(), x, y, pointerMask);
-        }
+        LibFreeRDP.sendCursorEvent(session.getInstance(), x, y, pointerMask);
 
 //        if ((pointerMask & RemotePointer.POINTER_DOWN_MASK) == 0) {
 //            sendModifierKeys(false);
@@ -233,9 +231,7 @@ public class RdpCommunicator extends RfbConnectable implements RdpKeyboardMapper
                 GeneralUtils.debugLog(this.debugLogging, TAG, "sendModifierKeys, modifierMask:" +
                         modifierMask + ", sending: " + modifier + ", down: " + down);
 
-                synchronized (viewable) {
-                    LibFreeRDP.sendKeyEvent(session.getInstance(), modifier, down);
-                }
+                LibFreeRDP.sendKeyEvent(session.getInstance(), modifier, down);
 
                 remoteKeyboardState.updateRemoteMetaState(modifierMask, down);
             }
@@ -249,23 +245,24 @@ public class RdpCommunicator extends RfbConnectable implements RdpKeyboardMapper
 //        GeneralUtils.debugLog(this.debugLogging, TAG, "processVirtualKey: " +
 //                "Processing VK key: " + virtualKeyCode + ". Is it down: " + down);
 
-        synchronized (viewable) {
-            if (down) {
-                sendModifierKeys(true);
-            }
+
+        if (down) {
+            sendModifierKeys(true);
+        }
 
 //        GeneralUtils.debugLog(this.debugLogging, TAG, "processVirtualKey: " +
 //                "Sending VK key: " + virtualKeyCode + ". Is it down: " + down);
 
 
-            synchronized (viewable) {
-                LibFreeRDP.sendKeyEvent(session.getInstance(), virtualKeyCode, down);
-            }
+        LibFreeRDP.sendKeyEvent(session.getInstance(), virtualKeyCode, down);
 
-            if (!down) {
-                sendModifierKeys(false);
-            }
+
+        SystemClock.sleep(20);
+
+        if (!down) {
+            sendModifierKeys(false);
         }
+
     }
 
     @Override
@@ -281,9 +278,9 @@ public class RdpCommunicator extends RfbConnectable implements RdpKeyboardMapper
 
 //        GeneralUtils.debugLog(this.debugLogging, TAG, "processUnicodeKey: " +
 //                "Sending unicode key: " + unicodeKey + ", down: " + down + ", metaState: " + metaState);
-        synchronized (viewable) {
-            LibFreeRDP.sendUnicodeKeyEvent(session.getInstance(), unicodeKey, down);
-        }
+        LibFreeRDP.sendUnicodeKeyEvent(session.getInstance(), unicodeKey, down);
+
+        SystemClock.sleep(0);
 
         if (!down && !suppressMetaState) {
             sendModifierKeys(false);
