@@ -134,6 +134,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             return true;
         }
 
+        // Decrease sampling time intervals when screen fresh rate is high.
         long scrollSamplingTimeMs = Math.min(1000 / canvas.fpsCounter.getAvgFps(), SCROLL_SAMPLING_MS);
         if (System.currentTimeMillis() - lastScrollTimeMs < scrollSamplingTimeMs) {
             return true;

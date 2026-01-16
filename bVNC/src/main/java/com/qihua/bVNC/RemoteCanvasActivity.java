@@ -599,14 +599,14 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_ESCAPE, new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ESCAPE));
             SystemClock.sleep(100);
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_ESCAPE, new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ESCAPE));
-        } else if (keys.contains("␡") || keys.contains("BKSP")) {
+        } else if (keys.contains("BKSP")) {
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_DEL, new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL));
             SystemClock.sleep(100);
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_DEL, new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL));
-        } else if (keys.contains("DEL")) {
-            canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_DEL, new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL));
+        } else if (keys.contains("DEL") || keys.contains("␡")) {
+            canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_DEL, new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_FORWARD_DEL));
             SystemClock.sleep(100);
-            canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_DEL, new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL));
+            canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_DEL, new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_FORWARD_DEL));
         } else if (keys.contains("PGUP")) {
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_PAGE_UP, new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_PAGE_UP));
             SystemClock.sleep(100);
