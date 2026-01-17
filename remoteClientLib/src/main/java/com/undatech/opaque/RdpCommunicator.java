@@ -280,7 +280,7 @@ public class RdpCommunicator extends RfbConnectable implements RdpKeyboardMapper
 //                "Sending unicode key: " + unicodeKey + ", down: " + down + ", metaState: " + metaState);
         LibFreeRDP.sendUnicodeKeyEvent(session.getInstance(), unicodeKey, down);
 
-        SystemClock.sleep(0);
+        SystemClock.sleep(20);
 
         if (!down && !suppressMetaState) {
             sendModifierKeys(false);
