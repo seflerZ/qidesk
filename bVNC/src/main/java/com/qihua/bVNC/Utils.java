@@ -697,19 +697,19 @@ public class Utils {
     }
 
     public static void hideKeyboard(Context context, View view) {
-        if (view != null) {
+        if (context != null && view != null) {
             InputMethodManager imm = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
-            if (imm != null && imm.isActive()) {
-                imm.hideSoftInputFromWindow(view.getWindowToken(), InputMethodManager.HIDE_IMPLICIT_ONLY);
+            if (imm != null) {
+                imm.hideSoftInputFromWindow(view.getWindowToken(), InputMethodManager.HIDE_NOT_ALWAYS);
             }
         }
     }
 
     public static void showKeyboard(Context context, View view) {
-        if (view != null) {
+        if (view != null && context != null) {
             InputMethodManager imm = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
-            if (imm != null && imm.isActive()) {
-                view.requestFocus(0);
+            if (imm != null) {
+                view.requestFocus();
                 imm.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT);
             }
         }

@@ -48,6 +48,7 @@ import android.os.Handler;
 import android.os.SystemClock;
 import android.provider.Settings;
 import android.text.ClipboardManager;
+import android.text.InputType;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -2115,14 +2116,18 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
     @Override
     public InputConnection onCreateInputConnection(EditorInfo outAttrs) {
-        Log.d(TAG, "onCreateInputConnection called");
-        BaseInputConnection bic = new BaseInputConnection(this, false);
-        outAttrs.actionLabel = null;
-        outAttrs.inputType = getKeyboardVariation();
-        String currentIme = Settings.Secure.getString(getContext().getContentResolver(), Settings.Secure.DEFAULT_INPUT_METHOD);
-        Log.d(TAG, "currentIme: " + currentIme);
-        outAttrs.imeOptions |= EditorInfo.IME_FLAG_NO_FULLSCREEN;
-        return bic;
+        // ★★★ 核心2：创建输入法连接，配置输入法的工作模式（解决退格延迟的核心配置）
+        if (outAttrs == null) {
+            return null;
+        }
+        // 关键配置：和之前EditText的inputType="textUri|textNoSuggestions" 等效！
+        // 禁用联想+强制输入法走【原始按键模式】，让搜狗输入法实时下发退格/字母按键事件
+        outAttrs.inputType = InputType.TYPE_TEXT_VARIATION_URI | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS;
+        outAttrs.imeOptions = EditorInfo.IME_FLAG_NO_EXTRACT_UI; // 隐藏输入法的全屏模式，可选优化
+
+        // 创建基础的输入法连接对象，无缓冲、实时转发事件
+        BaseInputConnection inputConnection = new BaseInputConnection(this, false);
+        return inputConnection;
     }
 
     private int getKeyboardVariation() {
@@ -2385,6 +2390,12 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
     public FpsCounter getFpsCounter() {
         return fpsCounter;
+    }
+
+    @Override
+    public boolean onCheckIsTextEditor() {
+        // ★★★ 核心1：返回true，告诉系统「我这个View是文本编辑器」，具备输入能力
+        return true;
     }
 
     public void drawTouchpadHint() {

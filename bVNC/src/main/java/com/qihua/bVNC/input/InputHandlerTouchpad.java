@@ -61,7 +61,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
     private float lastScrollDistanceY = 0;
     private long lastScrollTimestamp = 0;
     private static final float SPEED_ACCELERATION_FACTOR = 0.5f; // Acceleration factor, can be adjusted as needed
-    private static final float MAX_ACCELERATION = 3.0f; // Maximum acceleration multiplier
+    private static final float MAX_ACCELERATION = 2.5f; // Maximum acceleration multiplier
 
     /*
      * (non-Javadoc)
@@ -100,7 +100,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                     float speed = Math.max(speedX, speedY);
                     
                     // Calculate acceleration multiplier based on speed
-                    speedMultiplier = 1.0f + (speed * SPEED_ACCELERATION_FACTOR);
+                    speedMultiplier = 0.8f + (speed * SPEED_ACCELERATION_FACTOR);
                     speedMultiplier = Math.min(speedMultiplier, MAX_ACCELERATION); // Limit maximum acceleration
                 }
             }

@@ -94,7 +94,7 @@ public final class ExtraKeysView extends GridLayout {
     /** Defines the maximum allowed duration in milliseconds for {@link #mLongPressRepeatDelay}. */
     public static final int MAX_LONG_PRESS__REPEAT_DELAY = 2000;
     /** Defines the default duration in milliseconds for {@link #mLongPressRepeatDelay}. */
-    public static final int DEFAULT_LONG_PRESS_REPEAT_DELAY = 80;
+    public static final int DEFAULT_LONG_PRESS_REPEAT_DELAY = 20;
 
 
 
