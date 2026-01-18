@@ -70,10 +70,9 @@
 
     <RelativeLayout
         android:id="@+id/layoutKeys"
-        android:layout_width="fill_parent"
+        android:layout_width="match_parent"
         android:layout_height="74dp"
-        android:layout_gravity="bottom|center"
-        android:orientation="horizontal"
+        android:layout_gravity="bottom"
         android:visibility="gone">
 
     </RelativeLayout>

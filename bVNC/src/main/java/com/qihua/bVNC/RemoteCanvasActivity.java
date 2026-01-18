@@ -864,15 +864,10 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 
         int layoutKeysBottom = layoutKeys.getBottom();
         int toolbarBottom = toolbar.getBottom();
-        int rootViewBottom = layoutKeys.getRootView().getBottom();
         int diffLayoutKeysPosition = r.bottom - layoutKeysBottom;
         int diffToolbarPosition = r.bottom - toolbarBottom - r.bottom / 2;
         int diffToolbarPositionRightAbsolute = r.right - toolbar.getWidth();
         int diffToolbarPositionTopAbsolute = r.bottom - toolbar.getHeight() - r.bottom / 2;
-        android.util.Log.d(TAG, "onGlobalLayout: before: r.bottom: " + r.bottom +
-                " rootViewHeight: " + rootViewHeight + " re.top: " + re.top + " re.bottom: " + re.bottom +
-                " layoutKeysBottom: " + layoutKeysBottom + " rootViewBottom: " + rootViewBottom + " toolbarBottom: " + toolbarBottom +
-                " diffLayoutKeysPosition: " + diffLayoutKeysPosition + " diffToolbarPosition: " + diffToolbarPosition);
 
         boolean softKeyboardPositionChanged = false;
         if (r.bottom > rootViewHeight * 0.81) {
@@ -932,12 +927,6 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
                 canvas.invalidate();
             }
         }
-        layoutKeysBottom = layoutKeys.getBottom();
-        rootViewBottom = layoutKeys.getRootView().getBottom();
-        android.util.Log.d(TAG, "onGlobalLayout: after: r.bottom: " + r.bottom +
-                " rootViewHeight: " + rootViewHeight + " re.top: " + re.top + " re.bottom: " + re.bottom +
-                " layoutKeysBottom: " + layoutKeysBottom + " rootViewBottom: " + rootViewBottom + " toolbarBottom: " + toolbarBottom +
-                " diffLayoutKeysPosition: " + diffLayoutKeysPosition + " diffToolbarPosition: " + diffToolbarPosition);
     }
 
     /**
@@ -1680,12 +1669,12 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 
             extraKeysView.getGlobalVisibleRect(extraKeysRect);
 
-            if (extraKeysRect.contains(x, y)
+            // 判断触摸点是否落在 ExtraKeyboardView 的可见区域内，且可见
+            if (extraKeysRect.contains(x, y) && layoutKeys.getVisibility() == View.VISIBLE
                     && event.getAction() == MotionEvent.ACTION_DOWN) {
                 nonTouchDown = true;
             }
 
-            // 判断触摸点是否落在 ExtraKeyboardView 的可见区域内
             if (!toolbar.isShown() && !nonTouchDown) {
                 if (inputHandler.onTouchEvent(event)) {
                     return true;
@@ -1745,18 +1734,16 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     }
 
     public void toggleKeyboard() {
-        handler.post(() -> {
-            // show gesture overlay
-            if (gestureOverlayView != null && canvas.connection.getEnableGesture()) {
-                gestureOverlayView.setVisibility(View.GONE);
-            }
+        // show gesture overlay
+        if (gestureOverlayView != null && canvas.connection.getEnableGesture()) {
+            gestureOverlayView.setVisibility(View.GONE);
+        }
 
-            if (softKeyboardUp) {
-                hideKeyboardAndExtraKeys();
-            } else {
-                showKeyboardAndExtraKeys();
-            }
-        });
+        if (softKeyboardUp) {
+            hideKeyboardAndExtraKeys();
+        } else {
+            showKeyboardAndExtraKeys();
+        }
     }
 
     public void fillScreen(MenuItem menuItem) {
