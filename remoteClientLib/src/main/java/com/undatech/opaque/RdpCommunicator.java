@@ -256,7 +256,7 @@ public class RdpCommunicator extends RfbConnectable implements RdpKeyboardMapper
 
         LibFreeRDP.sendKeyEvent(session.getInstance(), virtualKeyCode, down);
 
-
+        // will crash if too fast key sending, possibly FreeRDP bugs
         SystemClock.sleep(20);
 
         if (!down) {
@@ -280,6 +280,7 @@ public class RdpCommunicator extends RfbConnectable implements RdpKeyboardMapper
 //                "Sending unicode key: " + unicodeKey + ", down: " + down + ", metaState: " + metaState);
         LibFreeRDP.sendUnicodeKeyEvent(session.getInstance(), unicodeKey, down);
 
+        // will crash if too fast key sending, possibly FreeRDP bugs
         SystemClock.sleep(20);
 
         if (!down && !suppressMetaState) {

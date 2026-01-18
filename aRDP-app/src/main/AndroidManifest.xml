@@ -79,7 +79,7 @@
             android:exported="true"
             android:resizeableActivity="true"
             android:theme="@style/AppTheme"
-            android:windowSoftInputMode="stateHidden|adjustResize">
+            android:windowSoftInputMode="stateHidden">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
             </intent-filter>

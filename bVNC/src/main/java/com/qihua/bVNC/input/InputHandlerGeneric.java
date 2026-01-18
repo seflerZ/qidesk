@@ -630,8 +630,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
         float immersiveYDistance = getImmersiveYDistance();
 
-        return Constants.SDK_INT >= Build.VERSION_CODES.KITKAT &&
-                (y <= immersiveYDistance || touchpad.getHeight() - y <= immersiveYDistance);
+        return y <= immersiveYDistance || touchpad.getHeight() - y <= immersiveYDistance;
     }
 
     private boolean detectLeftRange(float x, float y) {

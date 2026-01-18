@@ -128,7 +128,6 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyListener, OnGenericMotionListener, GameGestures {
-    private boolean touchpadFeedback = false;
     public static final int[] inputModeIds = {R.id.itemInputTouchpad};
     public static final Map<Integer, String> inputModeMap;
     private final static String TAG = "RemoteCanvasActivity";
@@ -339,9 +338,6 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             touchpad = canvas;
         }
 
-        touchpadFeedback
-                = Utils.querySharedPreferenceBoolean(canvas.getContext(), Constants.touchpadFeedback);
-
         canvas.setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                         | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
@@ -365,13 +361,13 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         Runnable setModes = () -> {
             try {
                 setModes();
-            } catch (NullPointerException e) {
+            } catch (NullPointerException ignored) {
             }
         };
         Runnable hideKeyboardAndExtraKeys = () -> {
             try {
                 hideKeyboardAndExtraKeys();
-            } catch (NullPointerException e) {
+            } catch (NullPointerException ignored) {
             }
         };
 
@@ -380,6 +376,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         } else {
             initialize(setModes, hideKeyboardAndExtraKeys);
         }
+
         if (connection != null && connection.isReadyForConnection()) {
             continueConnecting();
         }
@@ -625,8 +622,9 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_MOVE_END, new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MOVE_END));
         } else if (keys.contains("FUNC")) {
             try {
-                int num = Integer.parseInt(keys.get(keys.size() - 1));
-                if (num <= 0 || num > 9) {
+                char c = keys.get(keys.size() - 1).charAt(0);
+                int num = c - (c < 'a' ? '0' : ('a' - 10));
+                if (num <= 0 || num > 12) {
                     throw new NumberFormatException();
                 }
 
