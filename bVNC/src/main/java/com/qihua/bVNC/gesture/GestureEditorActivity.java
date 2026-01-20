@@ -210,6 +210,7 @@ public class GestureEditorActivity extends AppCompatActivity implements GestureE
         View gestureView = inflater.inflate(R.layout.gesture_editor_activity, null);
         GestureOverlayView gestureOverlayView = gestureView.findViewById(R.id.popupGestureAdd);
         gestureOverlayView.setOrientation(GestureOverlayView.ORIENTATION_VERTICAL);
+        gestureOverlayView.setGestureStrokeType(GestureOverlayView.GESTURE_STROKE_TYPE_MULTIPLE);
         gestureOverlayView.setGestureStrokeWidth(20f);
 
         EditText gestureNameView = gestureView.findViewById(R.id.popupGestureName);

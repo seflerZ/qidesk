@@ -436,7 +436,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         gestureOverlayView.setUncertainGestureColor(getColor(R.color.black_overlay));
         gestureOverlayView.setFadeEnabled(false);
         gestureOverlayView.setFadeOffset(0);
-        gestureOverlayView.setGestureStrokeType(GestureOverlayView.GESTURE_STROKE_TYPE_SINGLE);
+        gestureOverlayView.setGestureStrokeType(GestureOverlayView.GESTURE_STROKE_TYPE_MULTIPLE);
 
         // 1. 降低角度阈值（允许更大方向偏差）
         gestureOverlayView.setGestureStrokeAngleThreshold(90.0f);

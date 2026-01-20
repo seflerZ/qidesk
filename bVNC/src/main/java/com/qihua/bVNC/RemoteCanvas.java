@@ -658,8 +658,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         prefConfig.height = remoteHeight;
         prefConfig.enableHdr = false;
         prefConfig.bitrate = 15000 * (remoteWidth / 1920);
-        prefConfig.disableWarnings = false;
-        prefConfig.incomingFrameQueueSize = 1;
+        prefConfig.disableWarnings = true;
+        prefConfig.incomingFrameQueueSize = 2;
         prefConfig.videoFormat = PreferenceConfiguration.FormatOption.AUTO;
         prefConfig.enableLatencyToast = Utils.querySharedPreferenceBoolean(activity, Constants.enableDebugInfo, false);
         prefConfig.enablePerfOverlay = prefConfig.enableLatencyToast;
