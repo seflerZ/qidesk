@@ -100,7 +100,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                     float speed = Math.max(speedX, speedY);
                     
                     // Calculate acceleration multiplier based on speed
-                    speedMultiplier = 0.8f + (speed * SPEED_ACCELERATION_FACTOR);
+                    speedMultiplier = 0.0f + (speed * SPEED_ACCELERATION_FACTOR);
                     speedMultiplier = Math.min(speedMultiplier, MAX_ACCELERATION); // Limit maximum acceleration
                 }
             }

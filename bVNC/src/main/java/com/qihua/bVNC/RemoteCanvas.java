@@ -661,14 +661,14 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         prefConfig.disableWarnings = true;
         prefConfig.incomingFrameQueueSize = 2;
         prefConfig.videoFormat = PreferenceConfiguration.FormatOption.AUTO;
-        prefConfig.enableLatencyToast = Utils.querySharedPreferenceBoolean(activity, Constants.enableDebugInfo, false);
-        prefConfig.enablePerfOverlay = prefConfig.enableLatencyToast;
+        prefConfig.enableLatencyToast = false;
+        prefConfig.enablePerfOverlay = Utils.querySharedPreferenceBoolean(activity, Constants.enableDebugInfo, false);
 //        prefConfig.videoFormat = PreferenceConfiguration.FormatOption.FORCE_H264;
 
         // reduce bitrate if on cellular connection
         if (!computerDetails.activeAddress.address.equals(computerDetails.localAddress.address)) {
             prefConfig.bitrate = 8000 * (remoteWidth / 1920);
-            prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_BALANCED;
+            prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_MIN_LATENCY;
             prefConfig.incomingFrameQueueSize = 3;
             prefConfig.fps = 60;
 
