@@ -547,16 +547,22 @@ If you are looking for a quick performance boost, try setting the Color mode to 
     </string-array>
 
     <string name="rdp_zoom_level_none">No Zoom</string>
-    <string name="rdp_zoom_level_middle">Middle Zoom Level(125%)</string>
-    <string name="rdp_zoom_level_large">Large Zoom Level (140%)</string>
-    <string name="rdp_zoom_level_larger">Larger Zoom Level (160%)</string>
-    <string name="rdp_zoom_level_huge">Huge Zoom Level (200%)</string>
+    <string name="rdp_zoom_level_middle">125%</string>
+    <string name="rdp_zoom_level_large">150%</string>
+    <string name="rdp_zoom_level_larger">175%</string>
+    <string name="rdp_zoom_level_huge">200%</string>
+    <string name="rdp_zoom_level_huger">225%</string>
+    <string name="rdp_zoom_level_gaint">250%</string>
+    <string name="rdp_zoom_level_max">300%</string>
     <string-array name="rdp_zoom_level">
         <item>@string/rdp_zoom_level_none</item>
         <item>@string/rdp_zoom_level_middle</item>
         <item>@string/rdp_zoom_level_large</item>
         <item>@string/rdp_zoom_level_larger</item>
         <item>@string/rdp_zoom_level_huge</item>
+        <item>@string/rdp_zoom_level_huger</item>
+        <item>@string/rdp_zoom_level_gaint</item>
+        <item>@string/rdp_zoom_level_max</item>
     </string-array>
 
     <string-array name="spice_geometry">

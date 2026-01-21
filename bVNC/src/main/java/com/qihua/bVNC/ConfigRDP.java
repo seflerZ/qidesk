@@ -220,13 +220,22 @@ public class ConfigRDP extends MainConfiguration {
                         level = 125;
                         break;
                     case 2:
-                        level = 140;
+                        level = 150;
                         break;
                     case 3:
-                        level = 160;
+                        level = 175;
                         break;
                     case 4:
                         level = 200;
+                        break;
+                    case 5:
+                        level = 225;
+                        break;
+                    case 6:
+                        level = 250;
+                        break;
+                    case 7:
+                        level = 300;
                         break;
                     default:
                         level = 100;
@@ -372,16 +381,28 @@ public class ConfigRDP extends MainConfiguration {
             return 1;
         }
 
-        if (zoomLevel == 140) {
+        if (zoomLevel == 150) {
             return 2;
         }
 
-        if (zoomLevel == 160) {
+        if (zoomLevel == 175) {
             return 3;
         }
 
         if (zoomLevel == 200) {
             return 4;
+        }
+
+        if (zoomLevel == 225) {
+            return 5;
+        }
+
+        if (zoomLevel == 250) {
+            return 6;
+        }
+
+        if (zoomLevel == 300) {
+            return 7;
         }
 
         return 0;

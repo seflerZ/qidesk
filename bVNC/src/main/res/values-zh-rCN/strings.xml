@@ -491,16 +491,22 @@ bVNC对应的功能如下：
     </string-array>
 
     <string name="rdp_zoom_level_none">无缩放</string>
-    <string name="rdp_zoom_level_middle">中缩放(125%)</string>
-    <string name="rdp_zoom_level_large">大缩放(140%)</string>
-    <string name="rdp_zoom_level_larger">较大缩放(160%)</string>
-    <string name="rdp_zoom_level_huge">超大缩放(200%)</string>
+    <string name="rdp_zoom_level_middle">125%</string>
+    <string name="rdp_zoom_level_large">150%</string>
+    <string name="rdp_zoom_level_larger">175%</string>
+    <string name="rdp_zoom_level_huge">200%</string>
+    <string name="rdp_zoom_level_huger">225%</string>
+    <string name="rdp_zoom_level_gaint">250%</string>
+    <string name="rdp_zoom_level_max">300%</string>
     <string-array name="rdp_zoom_level">
         <item>@string/rdp_zoom_level_none</item>
         <item>@string/rdp_zoom_level_middle</item>
         <item>@string/rdp_zoom_level_large</item>
         <item>@string/rdp_zoom_level_larger</item>
         <item>@string/rdp_zoom_level_huge</item>
+        <item>@string/rdp_zoom_level_huger</item>
+        <item>@string/rdp_zoom_level_gaint</item>
+        <item>@string/rdp_zoom_level_max</item>
     </string-array>
 
     <string-array name="vnc_geometry">
