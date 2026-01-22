@@ -299,6 +299,13 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
     private long lastPointerEventTime = 0;
 
+    // 在InputHandlerGeneric类的成员变量区域添加以下变量
+    private long lastMouseMoveTimeMs = System.currentTimeMillis();
+    private float lastMouseMoveDistanceX = 0;
+    private float lastMouseMoveDistanceY = 0;
+    private static final float SPEED_ACCELERATION_FACTOR = 0.5f; // 加速度因子
+    private static final float MAX_ACCELERATION = 2.5f; // 最大加速度乘数
+
     /**
      * Handles actions performed by a mouse-like device.
      * @param e touch or generic motion event
@@ -344,17 +351,32 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             fpsCounter.countInput();
         }
 
-        // position stabilize
-//        if (Math.abs(diffX) / Math.abs(diffY) > 10) {
-//            diffY = 0;
-//        } else if (Math.abs(diffY) / Math.abs(diffX) > 10) {
-//            diffX = 0;
-//        }
+        long currentTime = System.currentTimeMillis();
+        float speedMultiplier = 1.0f;
+        
+        if (lastMouseMoveTimeMs > 0) {
+            long timeDiff = currentTime - lastMouseMoveTimeMs;
+            if (timeDiff > 0) {
+                // Calculate speed in X and Y directions
+                float speedX = Math.abs(diffX - lastMouseMoveDistanceX) / timeDiff;
+                float speedY = Math.abs(diffY - lastMouseMoveDistanceY) / timeDiff;
+                float speed = Math.max(speedX, speedY);
+                
+                // Apply acceleration based on speed
+                speedMultiplier = 1.0f + (speed * SPEED_ACCELERATION_FACTOR);
+                speedMultiplier = Math.min(speedMultiplier, MAX_ACCELERATION);
+            }
+        }
 
-        // Make distanceX/Y display density independent.
+        // Make distanceX/Y display density independent and apply acceleration
         float sensitivity = pointer.getSensitivity() / 2;
-        int x = (int) (diffX * sensitivity + pointer.pointerX);
-        int y = (int) (diffY * sensitivity + pointer.pointerY);
+        int x = (int) (diffX * sensitivity * speedMultiplier + pointer.pointerX);
+        int y = (int) (diffY * sensitivity * speedMultiplier + pointer.pointerY);
+        
+        // Update last movement time and distance
+        lastMouseMoveTimeMs = currentTime;
+        lastMouseMoveDistanceX = diffX;
+        lastMouseMoveDistanceY = diffY;
 
         switch (action) {
             // If a mouse button was pressed or mouse was moved.
