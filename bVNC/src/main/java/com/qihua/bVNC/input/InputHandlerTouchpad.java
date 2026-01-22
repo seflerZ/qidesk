@@ -140,7 +140,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             return true;
         }
     
-        if (!inScrolling && twoFingers && (Math.abs(distanceX) > 5 || Math.abs(distanceY) > 5)) {
+        if (!inScrolling && twoFingers && (Math.abs(distanceX) > 4 || Math.abs(distanceY) > 4)) {
             inScrolling = true;
             inSwiping = true;
         }
