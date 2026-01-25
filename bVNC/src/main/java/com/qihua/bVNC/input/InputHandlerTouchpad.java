@@ -35,6 +35,10 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
     public InputHandlerTouchpad(RemoteCanvasActivity activity, RemoteCanvas canvas, RemoteCanvas touchpad,
                                 RemotePointer pointer, boolean debugLogging) {
         super(activity, canvas, touchpad, pointer, debugLogging);
+
+        this.displayDensity = activity.getResources().getDisplayMetrics().density;
+        // 初始化指针加速助手
+        pointerAccelerationHelper = new PointerAccelerationHelper(SPEED_ACCELERATION_FACTOR, MAX_ACCELERATION);
     }
 
     /*
@@ -57,11 +61,6 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
 
     // Add the following variables in the class member variable area
     private long lastScrollTimeMs = System.currentTimeMillis();
-    private float lastScrollDistanceX = 0;
-    private float lastScrollDistanceY = 0;
-    private long lastScrollTimestamp = 0;
-    private static final float SPEED_ACCELERATION_FACTOR = 0.5f; // Acceleration factor, can be adjusted as needed
-    private static final float MAX_ACCELERATION = 2.5f; // Maximum acceleration multiplier
 
     /*
      * (non-Javadoc)
@@ -87,28 +86,11 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                 return true;
             }
     
-            // Calculate swipe speed and apply acceleration
+            // Calculate swipe speed and apply acceleration using the helper
             long currentTime = System.currentTimeMillis();
-            float speedMultiplier = 1.0f;
-            
-            if (lastScrollTimestamp > 0) {
-                long timeDiff = currentTime - lastScrollTimestamp;
-                if (timeDiff > 0) {
-                    // Calculate speed in X and Y directions
-                    float speedX = Math.abs(cumulatedX - lastScrollDistanceX) / timeDiff;
-                    float speedY = Math.abs(cumulatedY - lastScrollDistanceY) / timeDiff;
-                    float speed = Math.max(speedX, speedY);
-                    
-                    // Calculate acceleration multiplier based on speed
-                    speedMultiplier = 0.8f + (speed * SPEED_ACCELERATION_FACTOR);
-                    speedMultiplier = Math.min(speedMultiplier, MAX_ACCELERATION); // Limit maximum acceleration
-                }
-            }
-            
-            // Save current scroll distance and timestamp
-            lastScrollDistanceX = cumulatedX;
-            lastScrollDistanceY = cumulatedY;
-            lastScrollTimestamp = currentTime;
+            // 使用指针加速助手计算加速倍数，单指滑动的基础倍数为0.8f
+            float speedMultiplier = pointerAccelerationHelper.calculateAccelerationMultiplier(
+                currentTime, cumulatedX, cumulatedY, 0.8f);
     
             // Compute the absolute new mouse position with speed-based acceleration.
             int newX = Math.round(pointer.getX() + -cumulatedX * speedMultiplier * canvas.getZoomFactor());
@@ -145,28 +127,11 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             inSwiping = true;
         }
     
-        // Calculate swipe speed and apply acceleration
+        // Calculate swipe speed and apply acceleration using the helper
         long currentTime = System.currentTimeMillis();
-        float speedMultiplier = 1.0f;
-        
-        if (lastScrollTimestamp > 0) {
-            long timeDiff = currentTime - lastScrollTimestamp;
-            if (timeDiff > 0) {
-                // Calculate speed in X and Y directions
-                float speedX = Math.abs(cumulatedX - lastScrollDistanceX) / timeDiff;
-                float speedY = Math.abs(cumulatedY - lastScrollDistanceY) / timeDiff;
-                float speed = Math.max(speedX, speedY);
-                
-                // Calculate acceleration multiplier based on speed
-                speedMultiplier = 1.6f + (speed * SPEED_ACCELERATION_FACTOR);
-                speedMultiplier = Math.min(speedMultiplier, MAX_ACCELERATION); // Limit maximum acceleration
-            }
-        }
-        
-        // Save current scroll distance and timestamp
-        lastScrollDistanceX = cumulatedX;
-        lastScrollDistanceY = cumulatedY;
-        lastScrollTimestamp = currentTime;
+        // 使用指针加速助手计算加速倍数，双指滑动的基础倍数为1.6f
+        float speedMultiplier = pointerAccelerationHelper.calculateAccelerationMultiplier(
+            currentTime, cumulatedX, cumulatedY, 1.6f);
     
         // Make distanceX/Y display density independent with speed-based acceleration.
         distanceX = (cumulatedX / displayDensity) * canvas.getZoomFactor() * speedMultiplier;

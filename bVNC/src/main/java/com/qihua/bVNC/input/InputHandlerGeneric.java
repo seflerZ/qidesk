@@ -303,8 +303,11 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     private long lastMouseMoveTimeMs = System.currentTimeMillis();
     private float lastMouseMoveDistanceX = 0;
     private float lastMouseMoveDistanceY = 0;
-    private static final float SPEED_ACCELERATION_FACTOR = 0.5f; // 加速度因子
-    private static final float MAX_ACCELERATION = 2.5f; // 最大加速度乘数
+    protected static final float SPEED_ACCELERATION_FACTOR = 0.5f; // 加速度因子
+    protected static final float MAX_ACCELERATION = 2.5f; // 最大加速度乘数
+    
+    // 添加指针加速助手
+    protected PointerAccelerationHelper pointerAccelerationHelper;
 
     /**
      * Handles actions performed by a mouse-like device.
@@ -352,32 +355,15 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         }
 
         long currentTime = System.currentTimeMillis();
-        float speedMultiplier = 1.0f;
+        // 使用指针加速助手计算加速倍数
+        float speedMultiplier = pointerAccelerationHelper.calculateAccelerationMultiplier(
+            currentTime, diffX, diffY);
         
-        if (lastMouseMoveTimeMs > 0) {
-            long timeDiff = currentTime - lastMouseMoveTimeMs;
-            if (timeDiff > 0) {
-                // Calculate speed in X and Y directions
-                float speedX = Math.abs(diffX - lastMouseMoveDistanceX) / timeDiff;
-                float speedY = Math.abs(diffY - lastMouseMoveDistanceY) / timeDiff;
-                float speed = Math.max(speedX, speedY);
-                
-                // Apply acceleration based on speed
-                speedMultiplier = 1.0f + (speed * SPEED_ACCELERATION_FACTOR);
-                speedMultiplier = Math.min(speedMultiplier, MAX_ACCELERATION);
-            }
-        }
-
         // Make distanceX/Y display density independent and apply acceleration
         float sensitivity = pointer.getSensitivity() / 2;
         int x = (int) (diffX * sensitivity * speedMultiplier + pointer.pointerX);
         int y = (int) (diffY * sensitivity * speedMultiplier + pointer.pointerY);
         
-        // Update last movement time and distance
-        lastMouseMoveTimeMs = currentTime;
-        lastMouseMoveDistanceX = diffX;
-        lastMouseMoveDistanceY = diffY;
-
         switch (action) {
             // If a mouse button was pressed or mouse was moved.
             case MotionEvent.ACTION_DOWN:
@@ -697,7 +683,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         if (detectImmersiveVertical(x)) {
             inSwiping = true;
             immersiveSwipeY = true;
-
             if (x <= immersiveXDistance) {
                 edgeLeft.setVisibility(View.VISIBLE);
                 setEdgeWidth(edgeLeft, (int) immersiveXDistance);
