@@ -165,9 +165,9 @@ public class MyGestureDectector
             largeTouchSlop = (int)(density * LARGE_TOUCH_SLOP + 0.5f);
             doubleTapSlop = (int) (configuration.getScaledDoubleTapSlop());
         }
-        mTouchSlopSquare = 10;
+        mTouchSlopSquare = touchSlop;
         mLargeTouchSlopSquare = largeTouchSlop;
-        mDoubleTapSlopSquare = 6000;
+        mDoubleTapSlopSquare = doubleTapSlop;
     }
 
     /**

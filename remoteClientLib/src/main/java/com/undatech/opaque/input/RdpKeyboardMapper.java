@@ -487,25 +487,10 @@ public class RdpKeyboardMapper {
                 // recognized correctly. Otherwise we will send the unicode key. At the end we will reset all modifiers
                 // and notifiy our listener.
                 //android.util.Log.e("KeyMapper", "VK KeyCode is: " + vkcode);
-                if ((vkcode & KEY_FLAG_UNICODE) != 0) {
-                    //android.util.Log.i("KeyMapper", "vkcode & KEY_FLAG_UNICODE " + vkcode);
-                    listener.processUnicodeKey(vkcode & (~KEY_FLAG_UNICODE), true, suppressMetaState);
-                } else if ((vkcode & KEY_FLAG_SHIFT) != 0) {
-                    //android.util.Log.i("KeyMapper", "vkcode & KEY_FLAG_SHIFT " + vkcode);
-                    vkcode = vkcode & ~KEY_FLAG_SHIFT;
-                    listener.processVirtualKey(VK_LSHIFT, true);
-                    listener.processVirtualKey(vkcode, true);
-                    listener.processVirtualKey(vkcode, false);
-                    listener.processVirtualKey(VK_LSHIFT, false);
-                    // if we got a valid vkcode send it - except for letters/numbers if a modifier is active
-                } else if (vkcode > 0) {
+                if (vkcode > 0) {
                     //android.util.Log.i("KeyMapper", "vkcode > 0" + vkcode);
                     listener.processVirtualKey(vkcode, true);
                 } else if (event.getUnicodeChar() != 0) {
-                    //android.util.Log.i("KeyMapper", "event.getUnicodeChar() != 0 " + vkcode);
-                    //KeyEvent copy = new KeyEvent(event.getDownTime(), event.getEventTime(),
-                    //            event.getAction(), event.getKeyCode(), event.getRepeatCount(),
-                    //            0, event.getDeviceId(), event.getScanCode());
                     listener.processUnicodeKey(event.getUnicodeChar(), true, suppressMetaState);
                 } else {
                     //android.util.Log.i("KeyMapper", "else " + vkcode);
@@ -513,8 +498,8 @@ public class RdpKeyboardMapper {
                 }
 
                 // reset any pending toggle states if a modifier was pressed
-                if (modifierActive)
-                    resetModifierKeysAfterInput(false);
+//                if (modifierActive)
+//                    resetModifierKeysAfterInput(false);
                 return true;
             }
 
