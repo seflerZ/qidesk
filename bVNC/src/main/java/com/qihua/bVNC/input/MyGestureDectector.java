@@ -37,7 +37,7 @@ public class MyGestureDectector
     // double tap
     private static final int LARGE_TOUCH_SLOP = 18;
     // Distance between the first touch and second touch to still be considered a double tap
-    private static final int DOUBLE_TAP_SLOP = 300;
+    private static final int DOUBLE_TAP_SLOP = 350;
     // constants for Message.what used by GestureHandler below
     private static final int SHOW_PRESS = 1;
     private static final int LONG_PRESS = 2;
@@ -163,7 +163,7 @@ public class MyGestureDectector
             final ViewConfiguration configuration = ViewConfiguration.get(context);
             touchSlop = configuration.getScaledTouchSlop();
             largeTouchSlop = (int)(density * LARGE_TOUCH_SLOP + 0.5f);
-            doubleTapSlop = (int) (configuration.getScaledDoubleTapSlop());
+            doubleTapSlop = (int) (configuration.getScaledDoubleTapSlop() * density + 0.5f);
         }
         mTouchSlopSquare = touchSlop;
         mLargeTouchSlopSquare = largeTouchSlop;
