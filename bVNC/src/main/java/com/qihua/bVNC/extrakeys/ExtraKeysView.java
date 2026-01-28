@@ -452,8 +452,9 @@ public final class ExtraKeysView extends GridLayout {
     }
 
     public void onExtraKeySpecialButtonState(String key, boolean down) {
-        if (mExtraKeysViewClient != null)
+        if (mExtraKeysViewClient != null) {
             mExtraKeysViewClient.onExtraKeySpecialButtonState(key, down);
+        }
     }
 
     public void performExtraKeyButtonHapticFeedback(View view, ExtraKeyButton buttonInfo, MaterialButton button) {
@@ -494,6 +495,19 @@ public final class ExtraKeysView extends GridLayout {
         } else {
             onExtraKeyButtonClick(view, buttonInfo, button);
         }
+    }
+
+    public void clickSpecialExtraButton(String key) {
+        if (mLongPressCount > 0) return;
+        SpecialButtonState state = mSpecialButtons.get(SpecialButton.valueOf(key));
+        if (state == null) return;
+
+        // Toggle active state and disable lock state if new state is not active
+        state.setIsActive(!state.isActive);
+        if (!state.isActive)
+            state.setIsLocked(false);
+
+        onExtraKeySpecialButtonState(key, state.isActive);
     }
 
 

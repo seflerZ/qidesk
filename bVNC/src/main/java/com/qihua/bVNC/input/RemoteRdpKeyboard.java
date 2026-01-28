@@ -34,13 +34,13 @@ public class RemoteRdpKeyboard extends RemoteKeyboard {
 //        if (shouldDropModifierKeys(evt))
 //            return true;
         boolean isRepeat = evt.getRepeatCount() > 0;
-        rdpcomm.remoteKeyboardState.detectHardwareMetaState(evt);
+//        rdpcomm.remoteKeyboardState.detectHardwareMetaState(evt);
 
         if (rdpcomm != null && rdpcomm.isInNormalProtocol()) {
 //            RemotePointer pointer = canvas.getPointer();
-            boolean down = (evt.getAction() == KeyEvent.ACTION_DOWN) ||
-                    (evt.getAction() == KeyEvent.ACTION_MULTIPLE);
-            int metaState = additionalMetaState | convertEventMetaState(evt);
+//            boolean down = (evt.getAction() == KeyEvent.ACTION_DOWN) ||
+//                    (evt.getAction() == KeyEvent.ACTION_MULTIPLE);
+//            int metaState = additionalMetaState | convertEventMetaState(evt);
 
 //            if (keyCode == KeyEvent.KEYCODE_MENU)
 //                return true;                           // Ignore menu key
@@ -49,18 +49,18 @@ public class RemoteRdpKeyboard extends RemoteKeyboard {
 //                return true;
 
             // Detect whether this event is coming from a default hardware keyboard.
-            metaState = onScreenMetaState | metaState;
+//            metaState = onScreenMetaState | metaState;
 
             // Update the meta-state with writeKeyEvent.
-            if (down) {
-                rdpcomm.writeKeyEvent(keyCode, metaState, down);
-                evt = injectMetaState(evt, metaState);
-                lastDownMetaState = metaState;
-            } else {
-                rdpcomm.writeKeyEvent(keyCode, lastDownMetaState, down);
-                evt = injectMetaState(evt, lastDownMetaState);
-                lastDownMetaState = 0;
-            }
+//            if (down) {
+//                rdpcomm.writeKeyEvent(keyCode, metaState, down);
+//                evt = injectMetaState(evt, metaState);
+//                lastDownMetaState = metaState;
+//            } else {
+//                rdpcomm.writeKeyEvent(keyCode, lastDownMetaState, down);
+//                evt = injectMetaState(evt, lastDownMetaState);
+//                lastDownMetaState = 0;
+//            }
 
             if (keyCode == 0 && evt.getCharacters() != null /*KEYCODE_UNKNOWN*/) {
                 String s = evt.getCharacters();
@@ -108,10 +108,10 @@ public class RemoteRdpKeyboard extends RemoteKeyboard {
                     pointer.scrollDown(x, y, -1, meta.getMetaFlags() | onScreenMetaState);
                     break;
             }
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-            }
+//            try {
+//                Thread.sleep(100);
+//            } catch (InterruptedException e) {
+//            }
             pointer.releaseButton(x, y, meta.getMetaFlags() | onScreenMetaState);
 
             //rfb.writePointerEvent(x, y, meta.getMetaFlags()|onScreenMetaState, button);

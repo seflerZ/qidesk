@@ -444,6 +444,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 //        }
 //        canvas.setMousePointerPosition(pointer.getX(), pointer.getY());
 
+        activity.readSpecialKeysState();
+
         return used;
     }
 
@@ -474,8 +476,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     public boolean onSingleTapConfirmed(MotionEvent e) {
 //        GeneralUtils.debugLog(debugLogging, TAG, "onSingleTapConfirmed, e: " + e);
 
-        activity.readSpecialKeysState();
-
         if (dragMode || rightDragMode || middleDragMode) {
             return true;
         }
@@ -488,6 +488,9 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         int metaState = e.getMetaState() | canvas.getKeyboard().getMetaState();
         int x = getX(e);
         int y = getY(e);
+
+        activity.readSpecialKeysState();
+
         pointer.leftButtonDown(x, y, metaState);
 
         if (touchpadFeedback) {

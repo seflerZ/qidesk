@@ -245,9 +245,9 @@ public class RdpCommunicator extends RfbConnectable implements RdpKeyboardMapper
 //                "Processing VK key: " + virtualKeyCode + ". Is it down: " + down);
 
 
-        if (down) {
-            sendModifierKeys(true);
-        }
+//        if (down) {
+//            sendModifierKeys(true);
+//        }
 
 //        GeneralUtils.debugLog(this.debugLogging, TAG, "processVirtualKey: " +
 //                "Sending VK key: " + virtualKeyCode + ". Is it down: " + down);
@@ -258,9 +258,9 @@ public class RdpCommunicator extends RfbConnectable implements RdpKeyboardMapper
         // will crash if too fast key sending, possibly FreeRDP bugs
         SystemClock.sleep(20);
 
-        if (!down) {
-            sendModifierKeys(false);
-        }
+//        if (!down) {
+//            sendModifierKeys(false);
+//        }
 
     }
 
@@ -270,10 +270,10 @@ public class RdpCommunicator extends RfbConnectable implements RdpKeyboardMapper
 //                "Processing unicode key: " + unicodeKey + ", down: " + down +
 //                ", metaState: " + metaState + ", suppressMetaState: " + suppressMetaState);
 
-
-        if (down && !suppressMetaState) {
-            sendModifierKeys(true);
-        }
+//
+//        if (down && !suppressMetaState) {
+//            sendModifierKeys(true);
+//        }
 
 //        GeneralUtils.debugLog(this.debugLogging, TAG, "processUnicodeKey: " +
 //                "Sending unicode key: " + unicodeKey + ", down: " + down + ", metaState: " + metaState);
@@ -282,9 +282,9 @@ public class RdpCommunicator extends RfbConnectable implements RdpKeyboardMapper
         // will crash if too fast key sending, possibly FreeRDP bugs
         SystemClock.sleep(20);
 
-        if (!down && !suppressMetaState) {
-            sendModifierKeys(false);
-        }
+//        if (!down && !suppressMetaState) {
+//            sendModifierKeys(false);
+//        }
     }
 
     @Override

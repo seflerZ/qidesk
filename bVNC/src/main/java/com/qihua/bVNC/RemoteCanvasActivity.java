@@ -557,19 +557,17 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     }
 
     private void performShortKeys(List<String> keys) {
-        readSpecialKeysState();
-
         if (keys.contains("ALT")) {
-            canvas.getKeyboard().onScreenAltOn();
+            extraKeysView.clickSpecialExtraButton("ALT");
         }
         if (keys.contains("CTRL")) {
-            canvas.getKeyboard().onScreenCtrlOn();
+            extraKeysView.clickSpecialExtraButton("CTRL");
         }
         if (keys.contains("SHIFT")) {
-            canvas.getKeyboard().onScreenShiftOn();
+            extraKeysView.clickSpecialExtraButton("SHIFT");
         }
         if (keys.contains("META")) {
-            canvas.getKeyboard().onScreenSuperOn();
+            extraKeysView.clickSpecialExtraButton("META");
         }
 
         if (keys.contains("←") || keys.contains("LEFT")) {
@@ -630,7 +628,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             }
         }
 
-        resetOnScreenKeys(0);
+        readSpecialKeysState();
     }
 
     @SuppressLint("SourceLockedOrientationActivity")
@@ -1057,28 +1055,10 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
      * Resets the state and image of the on-screen keys.
      */
     public void resetOnScreenKeys(int keyCode) {
-        // Do not reset on-screen keys if keycode is SHIFT.
-//        switch (keyCode) {
-//            case KeyEvent.KEYCODE_SHIFT_LEFT:
-//            case KeyEvent.KEYCODE_SHIFT_RIGHT:
-//                return;
-//        }
-        if (!keyCtrlToggled) {
-//            keyCtrl.setImageResource(R.drawable.ctrloff);
-            canvas.getKeyboard().onScreenCtrlOff();
-        }
-        if (!keyAltToggled) {
-//            keyAlt.setImageResource(R.drawable.altoff);
-            canvas.getKeyboard().onScreenAltOff();
-        }
-        if (!keySuperToggled) {
-//            keySuper.setImageResource(R.drawable.superoff);
-            canvas.getKeyboard().onScreenSuperOff();
-        }
-        if (!keyShiftToggled) {
-//            keyShift.setImageResource(R.drawable.shiftoff);
-            canvas.getKeyboard().onScreenShiftOff();
-        }
+//        canvas.getKeyboard().onScreenCtrlOff();
+//        canvas.getKeyboard().onScreenShiftOff();
+//        canvas.getKeyboard().onScreenSuperOff();
+//        canvas.getKeyboard().onScreenAltOff();
     }
 
     /**
