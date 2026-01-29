@@ -19,15 +19,40 @@ public class RemoteRdpPointer extends RemotePointer {
     private final static int MOUSE_BUTTON_LEFT = 0x1000;
     private final static int MOUSE_BUTTON_RIGHT = 0x2000;
 
+    // Touch event flags - 与 FreeRDP 头文件定义一致
+    public final static int CONTACT_FLAG_DOWN = 0x0001;
+    public final static int CONTACT_FLAG_UPDATE = 0x0002;
+    public final static int CONTACT_FLAG_UP = 0x0004;
+    public final static int CONTACT_FLAG_INRANGE = 0x0008;
+    public final static int CONTACT_FLAG_INCONTACT = 0x0010;
+    public final static int CONTACT_FLAG_CANCELED = 0x0020;
+
     private static final int MOUSE_BUTTON_MIDDLE = 0x4000;
     private static final int MOUSE_BUTTON_SCROLL_UP = PTRFLAGS_WHEEL | 0x0058;
     private static final int MOUSE_BUTTON_SCROLL_DOWN = PTRFLAGS_WHEEL | PTRFLAGS_WHEEL_NEGATIVE | 0x00a8;
     private static final int MOUSE_BUTTON_SCROLL_LEFT = PTRFLAGS_HWHEEL | 0x0058;
     private static final int MOUSE_BUTTON_SCROLL_RIGHT = PTRFLAGS_HWHEEL | PTRFLAGS_WHEEL_NEGATIVE | 0x00a8;
 
-    public RemoteRdpPointer(RfbConnectable spicecomm, RemoteCanvas canvas, Handler handler,
+    public RemoteRdpPointer(RfbConnectable rfbConnectable, RemoteCanvas canvas, Handler handler,
                             boolean debugLogging) {
-        super(spicecomm, canvas, handler, debugLogging);
+        super(rfbConnectable, canvas, handler, debugLogging);
+    }
+    
+    // 添加触摸事件方法
+    public void touchDown(int x, int y, int contactId) {
+        protocomm.writeTouchEvent(x, y, CONTACT_FLAG_DOWN, contactId);
+    }
+
+    public void touchUpdate(int x, int y, int contactId) {
+        protocomm.writeTouchEvent(x, y, CONTACT_FLAG_UPDATE, contactId);
+    }
+
+    public void touchUp(int x, int y, int contactId) {
+        protocomm.writeTouchEvent(x, y, CONTACT_FLAG_UP, contactId);
+    }
+
+    public void touchCancel(int x, int y, int contactId) {
+        protocomm.writeTouchEvent(x, y, CONTACT_FLAG_CANCELED, contactId);
     }
 
     private void sendButtonDownOrMoveButtonDown(int x, int y, int metaState) {

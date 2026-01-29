@@ -78,6 +78,11 @@ public abstract class RfbConnectable {
 
     public abstract void writeFramebufferUpdateRequest(int x, int y, int w, int h, boolean b);
 
+    // 添加触摸事件方法，默认为空实现，子类可以选择实现
+    public void writeTouchEvent(int x, int y, int flags, int contactId) {
+        // 默认不执行任何操作，子类可以重写此方法以支持触摸事件
+    }
+
     public abstract void close();
 
     public abstract void reconnect();
