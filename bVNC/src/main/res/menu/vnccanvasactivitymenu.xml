@@ -50,18 +50,12 @@
         android:visible="false">
         <menu>
             <group android:checkableBehavior="single">
-<!--                <item-->
-<!--                    android:id="@+id/itemInputTouchPanZoomMouse"-->
-<!--                    android:title="@string/input_method_direct_swipe_pan" />-->
-<!--                <item-->
-<!--                    android:id="@+id/itemInputDragPanZoomMouse"-->
-<!--                    android:title="@string/input_method_direct_drag_pan" />-->
                 <item
                     android:id="@+id/itemInputTouchpad"
                     android:title="@string/input_method_touchpad" />
-<!--                <item-->
-<!--                    android:id="@+id/itemInputSingleHanded"-->
-<!--                    android:title="@string/input_method_single_handed" />-->
+                <item
+                    android:id="@+id/itemInputDirectTouch"
+                    android:title="@string/input_method_direct_touch" />
             </group>
         </menu>
     </item>

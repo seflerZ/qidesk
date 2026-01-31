@@ -154,6 +154,10 @@ public class RdpCommunicator extends RfbConnectable implements RdpKeyboardMapper
 //        }
     }
 
+    public void writeTouchEvent(int x, int y, int flags, int contactId) {
+        LibFreeRDP.sendTouchEvent(session.getInstance(), x, y, flags, contactId);
+    }
+
     @Override
     public void writeKeyEvent(int key, int metaState, boolean down) {
         // Not used for actually sending keyboard events, but rather to record the current metastate.
