@@ -88,9 +88,9 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
     
             // Calculate swipe speed and apply acceleration using the helper
             long currentTime = System.currentTimeMillis();
-            // 使用指针加速助手计算加速倍数，单指滑动的基础倍数为0.8f
+            // 使用指针加速助手计算加速倍数，单指滑动的基础倍数为0.6f
             float speedMultiplier = pointerAccelerationHelper.calculateAccelerationMultiplier(
-                currentTime, cumulatedX, cumulatedY, 0.8f);
+                currentTime, cumulatedX, cumulatedY, 0.6f);
     
             // Compute the absolute new mouse position with speed-based acceleration.
             int newX = Math.round(pointer.getX() + -cumulatedX * speedMultiplier * canvas.getZoomFactor());

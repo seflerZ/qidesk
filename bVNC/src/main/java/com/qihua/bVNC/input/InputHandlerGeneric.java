@@ -298,11 +298,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     }
 
     private long lastPointerEventTime = 0;
-
-    // 在InputHandlerGeneric类的成员变量区域添加以下变量
-    private long lastMouseMoveTimeMs = System.currentTimeMillis();
-    private float lastMouseMoveDistanceX = 0;
-    private float lastMouseMoveDistanceY = 0;
     protected static final float SPEED_ACCELERATION_FACTOR = 0.5f; // 加速度因子
     protected static final float MAX_ACCELERATION = 2.5f; // 最大加速度乘数
     
