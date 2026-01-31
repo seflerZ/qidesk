@@ -98,6 +98,7 @@ import com.qihua.bVNC.extrakeys.ExtraKeysView;
 import com.qihua.bVNC.extrakeys.SpecialButton;
 import com.qihua.bVNC.gesture.GestureActionLibrary;
 import com.qihua.bVNC.input.InputHandler;
+import com.qihua.bVNC.input.InputHandlerDirectTouch;
 import com.qihua.bVNC.input.InputHandlerTouchpad;
 import com.qihua.bVNC.input.KeyBoardListenerHelper;
 import com.qihua.bVNC.input.Panner;
@@ -128,7 +129,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyListener, OnGenericMotionListener, GameGestures {
-    public static final int[] inputModeIds = {R.id.itemInputTouchpad};
+    public static final int[] inputModeIds = {R.id.itemInputTouchpad, R.id.itemInputDirectTouch};
     public static final Map<Integer, String> inputModeMap;
     private final static String TAG = "RemoteCanvasActivity";
     private static final int[] scalingModeIds = {R.id.itemZoomable, R.id.itemFitToScreen,
@@ -141,6 +142,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     static {
         Map<Integer, String> temp = new HashMap<>();
         temp.put(R.id.itemInputTouchpad, InputHandlerTouchpad.ID);
+        temp.put(R.id.itemInputDirectTouch, InputHandlerDirectTouch.ID);
         inputModeMap = Collections.unmodifiableMap(temp);
     }
 
@@ -1419,6 +1421,8 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
                 if (inputModeHandlers[i] == null) {
                     if (id == R.id.itemInputTouchpad) {
                         inputModeHandlers[i] = new InputHandlerTouchpad(this, canvas, touchpad, canvas.getPointer(), App.debugLog);
+                    } else if (id == R.id.itemInputDirectTouch) {
+                        inputModeHandlers[i] = new InputHandlerDirectTouch(this, canvas, canvas.getPointer(), App.debugLog);
                     } else {
                         throw new IllegalStateException("Unexpected value: " + id);
                     }

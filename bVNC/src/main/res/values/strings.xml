@@ -306,6 +306,8 @@
     <string name="input_method_direct_drag_pan">Direct, Hold Pan</string>
     <string name="input_method_single_handed">Single Handed</string>
     <string name="input_method_touchpad">Simulated Touchpad</string>
+    <string name="input_method_direct_touch">Direct Touch</string>
+    <string name="input_method_direct_touch_description">Direct Touch: Directly map touch points to remote desktop. Supports multi-touch gestures and touch interactions.</string>
 
     <string name="input_mode_help">Input Mode Help</string>
     <string name="input_mode_help_text">"
@@ -909,7 +911,11 @@ Below that is where you configure your connection.
     <string name="extrakeys_pref">Extra Key Customization</string>
     <string name="pref_extrakeys_vertical_pref">Configs for Vertical Screen</string>
     <string name="pref_extrakeys_horizontal_pref">Configs for Horizontal Screen</string>
-    <string name="pref_extrakeys_tutor">Example:\n- One single token is \'a\'\n- {key:\'a\', popup:\'b\'} stands for a token with popup alternative\n- [[...],[...]] for two rows\n- Some character like \' should be escaped with \\</string>
+    <string name="pref_extrakeys_tutor">Example:
+- One single token is \'a\'
+- {key:\'a\', popup:\'b\'} stands for a token with popup alternative
+- [[...],[...]] for two rows
+- Some character like \' should be escaped with \\</string>
     <string name="pref_extrakeys_parsing_error">Error parsing extra keys config, using default</string>
 
     <string name="theme_mode">Theme Settings</string>
