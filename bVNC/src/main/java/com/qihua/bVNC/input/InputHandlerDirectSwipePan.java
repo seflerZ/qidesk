@@ -57,17 +57,6 @@ public class InputHandlerDirectSwipePan extends InputHandlerGeneric {
 
     /*
      * (non-Javadoc)
-     * @see android.view.GestureDetector.SimpleOnGestureListener#onDown(android.view.MotionEvent)
-     */
-    @Override
-    public boolean onDown(MotionEvent e) {
-        GeneralUtils.debugLog(debugLogging, TAG, "onDown, e: " + e);
-        panRepeater.stop();
-        return true;
-    }
-
-    /*
-     * (non-Javadoc)
      * @see android.view.GestureDetector.SimpleOnGestureListener#onScroll(android.view.MotionEvent, android.view.MotionEvent, float, float)
      */
     @Override

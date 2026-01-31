@@ -61,7 +61,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     protected RemoteCanvas canvas;
     protected RemoteCanvas touchpad;
     protected RemoteCanvasActivity activity;
-    protected PanRepeater panRepeater;
+
     // Various drag modes in which we don't detect gestures.
     protected boolean panMode = false;
     protected boolean dragMode = false;
@@ -167,8 +167,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         scalingGestureDetector = new MyScaleGestureDetector(activity, this);
 
         gestureDetector.setOnDoubleTapListener(this);
-
-        this.panRepeater = new PanRepeater(canvas, canvas.handler);
 
         displayDensity = touchpad.getDisplayDensity();
 
@@ -635,11 +633,11 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         return x <= immersiveXDistance || touchpad.getWidth() - x <= immersiveXDistance;
     }
 
-    private float getImmersiveXDistance() {
+    protected float getImmersiveXDistance() {
         return Math.min(Math.max(touchpad.getWidth() * immersiveSwipeRatio, 60), 200);
     }
 
-    private float getImmersiveYDistance() {
+    protected float getImmersiveYDistance() {
         return Math.min(Math.max(touchpad.getHeight() * immersiveSwipeRatio, 60), 200);
     }
 

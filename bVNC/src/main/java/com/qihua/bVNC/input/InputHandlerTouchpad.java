@@ -264,17 +264,6 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
 
     /*
      * (non-Javadoc)
-     * @see android.view.GestureDetector.SimpleOnGestureListener#onDown(android.view.MotionEvent)
-     */
-    @Override
-    public boolean onDown(MotionEvent e) {
-        GeneralUtils.debugLog(debugLogging, TAG, "onDown, e: " + e);
-        panRepeater.stop();
-        return true;
-    }
-
-    /*
-     * (non-Javadoc)
      * @see com.qihua.bVNC.input.InputHandlerGeneric#getX(android.view.MotionEvent)
      */
     protected int getX(MotionEvent e) {
