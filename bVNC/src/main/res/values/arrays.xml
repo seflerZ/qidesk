@@ -21,6 +21,7 @@
         <item>@string/pref_longpress_type_middle</item>
         <item>@string/pref_longpress_type_right</item>
         <item>@string/pref_longpress_type_gesture</item>
+        <item>@string/pref_longpress_type_none</item>
     </array>
 
     <array name="pref_three_pointer_touch">
@@ -40,18 +41,21 @@
     <string name="pref_longpress_type_middle">Middle Button</string>
     <string name="pref_longpress_type_right">Right Button</string>
     <string name="pref_longpress_type_gesture">Activate Gesture</string>
+    <string name="pref_longpress_type_none">Disabled</string>
 
     <array name="pref_touchpad_long_press_values">
         <item>@string/pref_longpress_type_left_value</item>
         <item>@string/pref_longpress_type_middle_value</item>
         <item>@string/pref_longpress_type_right_value</item>
         <item>@string/pref_longpress_type_gesture_value</item>
+        <item>@string/pref_longpress_type_none_value</item>
     </array>
 
     <string name="pref_longpress_type_left_value">left</string>
     <string name="pref_longpress_type_middle_value">middle</string>
     <string name="pref_longpress_type_right_value">right</string>
     <string name="pref_longpress_type_gesture_value">gesture</string>
+    <string name="pref_longpress_type_none_value">none</string>
 
     <array name="pref_theme_mode_label">
         <item>@string/pref_theme_mode_auto</item>

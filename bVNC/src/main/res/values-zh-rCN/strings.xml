@@ -883,7 +883,8 @@ aSPICE对应的功能如下：
     <string name="pref_longpress_type_left">鼠标左键</string>
     <string name="pref_longpress_type_middle">鼠标中键</string>
     <string name="pref_longpress_type_right">鼠标右键</string>
-    <string name="pref_longpress_type_gesture">激活手势（代替返回键激活)</string>
+    <string name="pref_longpress_type_gesture">激活手势</string>
+    <string name="pref_longpress_type_none">禁用</string>
 
     <string name="touchpad_longpress_action">单指长按效果</string>
     <string name="touchpad_control_pref">触摸板个性化设置</string>

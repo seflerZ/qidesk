@@ -1675,14 +1675,6 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         getSupportActionBar().show();
         handler.removeCallbacks(toolbarHider);
         handler.postAtTime(toolbarHider, SystemClock.uptimeMillis() + hideToolbarDelay);
-
-        // show gesture overlay if long press action is not showing the layer
-        String longPressType = Utils.querySharedPreferenceString(getApplicationContext()
-                , Constants.touchpadLongPressAction, "left");
-
-        if (gestureOverlayView != null && canvas.connection.getEnableGesture() && !longPressType.equals("gesture")) {
-            gestureOverlayView.setVisibility(View.VISIBLE);
-        }
     }
 
     public void toggleKeyboard(MenuItem menuItem) {
@@ -1827,6 +1819,12 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         }
 
         return false;
+    }
+
+    public void hideGestureLayer() {
+        if (gestureOverlayView != null) {
+            gestureOverlayView.setVisibility(View.GONE);
+        }
     }
 
     private class ToolbarHiderRunnable implements Runnable {

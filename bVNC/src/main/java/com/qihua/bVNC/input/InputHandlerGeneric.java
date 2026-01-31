@@ -480,8 +480,22 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             return true;
         }
 
-        if (detectImmersiveRange(e.getX(), e.getY())) {
+        if (detectUpRange(e.getX(), e.getY()) || detectDownRange(e.getX(), e.getY())) {
             activity.toggleKeyboard();
+            return true;
+        }
+
+        String longPressAction = Utils.querySharedPreferenceString(activity.getApplicationContext(), Constants.touchpadLongPressAction, "left");
+        if (detectLeftRange(e.getX(), e.getY()) || detectRightRange(e.getX(), e.getY())) {
+            if (longPressAction.equals("gesture")) {
+                activity.toggleKeyboard();
+            } else {
+                activity.toggleGestureLayer();
+                canvas.getHandler().postDelayed(() -> {
+                    activity.hideGestureLayer();
+                }, 2000);
+            }
+
             return true;
         }
 
@@ -645,29 +659,29 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     }
 
     private boolean detectLeftRange(float x, float y) {
-        float bottomXDistance = Math.max(touchpad.getWidth() * immersiveSwipeRatio, 20);
+        float bottomXDistance = getImmersiveXDistance();
         float bottomYDistance = touchpad.getHeight() / 2f;
 
         return x <= bottomXDistance;
     }
 
     private boolean detectRightRange(float x, float y) {
-        float bottomXDistance = Math.max(touchpad.getWidth() * immersiveSwipeRatio, 20);
+        float bottomXDistance = getImmersiveXDistance();
         float bottomYDistance = touchpad.getHeight() / 2f;
 
         return x >= touchpad.getWidth() - bottomXDistance;
     }
 
     private boolean detectUpRange(float x, float y) {
-        float bottomXDistance = Math.max(touchpad.getWidth() * immersiveSwipeRatio, 20);
-        float bottomYDistance = touchpad.getHeight() / 2f;
+        float bottomXDistance = getImmersiveXDistance();
+        float bottomYDistance = getImmersiveYDistance();
 
         return y <= bottomYDistance;
     }
 
     private boolean detectDownRange(float x, float y) {
-        float bottomXDistance = Math.max(touchpad.getWidth() * immersiveSwipeRatio, 20);
-        float bottomYDistance = touchpad.getHeight() / 2f;
+        float bottomXDistance = getImmersiveXDistance();
+        float bottomYDistance = getImmersiveYDistance();
 
         return y >= touchpad.getHeight() - bottomYDistance;
     }
@@ -1188,12 +1202,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                 activity.showToolbar();
             }
 
-            String longPressType = Utils.querySharedPreferenceString(activity.getApplicationContext(), Constants.touchpadLongPressAction, "left");
-            // Hide gesture overlay if triggered by long press
-            if ("gesture".equals(longPressType)) {
-                GestureOverlayView gestureOverlay = activity.findViewById(R.id.gestureOverlay);
-                gestureOverlay.setVisibility(View.GONE);
-            }
+            GestureOverlayView gestureOverlay = activity.findViewById(R.id.gestureOverlay);
+            gestureOverlay.setVisibility(View.GONE);
 
             touchpad.releasePointerCapture();
 
