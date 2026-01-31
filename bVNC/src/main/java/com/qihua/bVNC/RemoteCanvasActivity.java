@@ -1032,11 +1032,11 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 
     public void sendShortVibration() {
         if (Build.VERSION.SDK_INT >= 28) {
-            rootView.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+            rootView.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
         } else {
             // Perform haptic feedback only if no total silence mode enabled.
             if (Settings.Global.getInt(getContext().getContentResolver(), "zen_mode", 0) != 2) {
-                rootView.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                rootView.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
             }
         }
 
