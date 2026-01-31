@@ -1762,11 +1762,24 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             }
 
             float zoomRatio;
+
+            boolean isDirectTouchMode = inputHandler != null && inputHandler.getId().equals(InputHandlerDirectTouch.ID);
+
             float diff = (float) canvas.getWidth() / canvas.getHeight() - (float) canvas.getImageWidth() / canvas.getImageHeight();
-            if (diff > 0) {
-                zoomRatio = (float) (canvas.getWidth() - keyboardHeight) / (canvas.getImageWidth());
+
+            // in direct touch mode, we should fill the screen with longer side so that all the screen can be covered
+            if (isDirectTouchMode) {
+                if (diff < 0) {
+                    zoomRatio = (float) (canvas.getWidth() - keyboardHeight) / (canvas.getImageWidth());
+                } else {
+                    zoomRatio = (float) (canvas.getHeight() - keyboardHeight) / (canvas.getImageHeight());
+                }
             } else {
-                zoomRatio = (float) (canvas.getHeight() - keyboardHeight) / (canvas.getImageHeight());
+                if (diff > 0) {
+                    zoomRatio = (float) (canvas.getWidth() - keyboardHeight) / (canvas.getImageWidth());
+                } else {
+                    zoomRatio = (float) (canvas.getHeight() - keyboardHeight) / (canvas.getImageHeight());
+                }
             }
 
             // Because the zoom action is relative, we should divide the current zoom factor
