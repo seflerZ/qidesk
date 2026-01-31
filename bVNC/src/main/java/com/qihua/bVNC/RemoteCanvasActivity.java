@@ -1133,6 +1133,9 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         canvas.setDrawingCacheEnabled(false);
 
         SamsungDexUtils.INSTANCE.dexMetaKeyCapture(this);
+        
+        // Update the input mode toggle icon in the action bar
+        updateInputModeToggleIcon();
     }
 
     /*
@@ -1496,8 +1499,17 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         if (inputModeToggleMenuItem != null) {
             inputModeToggleMenuItem.setIcon(getCurrentInputModeIcon());
         }
-        
+
         // Note: showPanningState is called inside setInputMode to avoid double calling
+    }
+
+    /**
+     * Updates the input mode toggle icon in the action bar
+     */
+    private void updateInputModeToggleIcon() {
+        if (inputModeToggleMenuItem != null && inputHandler != null) {
+            inputModeToggleMenuItem.setIcon(getCurrentInputModeIcon());
+        }
     }
     
     int getModeIdFromHandler(InputHandler handler) {
