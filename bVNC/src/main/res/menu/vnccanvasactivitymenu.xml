@@ -47,7 +47,7 @@
         android:icon="@android:drawable/ic_input_get"
         android:numericShortcut="5"
         android:title="@string/input_mode"
-        android:visible="true">
+        android:visible="false">
         <menu>
             <group android:checkableBehavior="single">
                 <item

@@ -148,6 +148,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 
 
     private ComputerManagerService.ComputerManagerBinder managerBinder;
+    private MenuItem inputModeToggleMenuItem;
 
     private final ServiceConnection serviceConnection = new ServiceConnection() {
         public void onServiceConnected(ComponentName className, final IBinder binder) {
@@ -1355,6 +1356,18 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             MenuItem moveToolbar = menu.findItem(R.id.moveToolbar);
             moveToolbar.setActionView(moveButton);
             moveToolbar.getActionView().setOnTouchListener(moveListener);
+            
+            // Create input mode toggle button in action bar
+            inputModeToggleMenuItem = menu.add(Menu.NONE, R.id.actionInputModeToggle, Menu.NONE, R.string.input_mode)
+                    .setIcon(getCurrentInputModeIcon())
+                    .setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+                        @Override
+                        public boolean onMenuItemClick(MenuItem item) {
+                            toggleInputMode();
+                            return true;
+                        }
+                    })
+                    .setShowAsActionFlags(MenuItem.SHOW_AS_ACTION_ALWAYS);
         } catch (NullPointerException e) {
             e.printStackTrace();
         }
@@ -1447,7 +1460,46 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         }
         return result;
     }
-
+    
+    /**
+     * Returns the appropriate icon based on the current input mode
+     */
+    private int getCurrentInputModeIcon() {
+        if (inputHandler != null) {
+            if (inputHandler.getId().equals(InputHandlerTouchpad.ID)) {
+                return R.drawable.input_touchpad_mode; // Touchpad mode icon
+            } else if (inputHandler.getId().equals(InputHandlerDirectTouch.ID)) {
+                return R.drawable.input_direct_touch_mode; // Direct touch mode icon
+            }
+        }
+        // Default to touchpad mode icon
+        return R.drawable.input_touchpad_mode;
+    }
+    
+    /**
+     * Toggles between input modes (touchpad and direct touch)
+     */
+    private void toggleInputMode() {
+        int currentModeId = getModeIdFromHandler(inputHandler);
+        int newModeId;
+        
+        if (currentModeId == R.id.itemInputTouchpad) {
+            newModeId = R.id.itemInputDirectTouch;
+        } else {
+            newModeId = R.id.itemInputTouchpad;
+        }
+        
+        // Set the new input mode
+        setInputMode(newModeId);
+        
+        // Update the icon in the action bar
+        if (inputModeToggleMenuItem != null) {
+            inputModeToggleMenuItem.setIcon(getCurrentInputModeIcon());
+        }
+        
+        // Note: showPanningState is called inside setInputMode to avoid double calling
+    }
+    
     int getModeIdFromHandler(InputHandler handler) {
         for (int id : inputModeIds) {
             if (handler == getInputHandlerById(id))
@@ -1591,19 +1643,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 
     public void showPanningState(boolean showLonger) {
         if (showLonger) {
-            final Toast t = Toast.makeText(this, inputHandler.getDescription(), Toast.LENGTH_LONG);
-            TimerTask tt = new TimerTask() {
-                @Override
-                public void run() {
-                    t.show();
-                    try {
-                        Thread.sleep(2000);
-                    } catch (InterruptedException ignored) {
-                    }
-                    t.show();
-                }
-            };
-            new Timer().schedule(tt, 2000);
+            Toast t = Toast.makeText(this, inputHandler.getDescription(), Toast.LENGTH_LONG);
             t.show();
         } else {
             Toast t = Toast.makeText(this, inputHandler.getDescription(), Toast.LENGTH_SHORT);

@@ -36,7 +36,7 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
     static final String TAG = "InputHandlerDirectTouch";
 
     // 用于跟踪多点触摸的接触ID映射
-    private Map<Integer, Integer> contactIdMap = new HashMap<>();
+    private final Map<Integer, Integer> contactIdMap = new HashMap<>();
     private int nextContactId = 0;
 
     public InputHandlerDirectTouch(RemoteCanvasActivity activity, RemoteCanvas canvas,
