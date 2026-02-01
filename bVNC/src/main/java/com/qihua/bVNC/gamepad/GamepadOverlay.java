@@ -49,6 +49,7 @@ import java.util.Map;
 public class GamepadOverlay extends FrameLayout {
     private static final String TAG = "GamepadOverlay";
     private static final String PREF_PREFIX = "gamepad_";
+    private static final int GRID_ALIGNMENT_DP = 10;
     private String connectionId = "";
 
     private InputHandlerGamepad inputHandler;
@@ -118,6 +119,21 @@ public class GamepadOverlay extends FrameLayout {
             // 重新加载按钮位置
             loadButtonPositions();
         }
+    }
+    
+    /**
+     * Aligns a value to the grid based on the specified grid size
+     */
+    private int alignToGrid(int value, int gridSize) {
+        return Math.round((float) value / gridSize) * gridSize;
+    }
+    
+    /**
+     * Gets the grid size in pixels based on dp
+     */
+    private int getGridSizeInPixels() {
+        DisplayMetrics metrics = getResources().getDisplayMetrics();
+        return (int) (GRID_ALIGNMENT_DP * metrics.density);
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -582,8 +598,14 @@ public class GamepadOverlay extends FrameLayout {
                 if (event.getPointerCount() == 1 && draggingButton != null) {
                     // Drag mode - move button
                     LayoutParams params = (LayoutParams) draggingButton.getLayoutParams();
-                    params.leftMargin = (int) (x - dragStartX);
-                    params.topMargin = (int) (y - dragStartY);
+                    int rawX = (int) (x - dragStartX);
+                    int rawY = (int) (y - dragStartY);
+                    
+                    // Align position to grid
+                    int gridSize = getGridSizeInPixels();
+                    params.leftMargin = alignToGrid(rawX, gridSize);
+                    params.topMargin = alignToGrid(rawY, gridSize);
+                    
                     draggingButton.setLayoutParams(params);
                     return true;
                 } else if (event.getPointerCount() == 2 && resizingButton != null) {
@@ -598,6 +620,10 @@ public class GamepadOverlay extends FrameLayout {
                     if (resizeStartDistance > 0) {
                         float scale = currentDistance / resizeStartDistance;
                         int newSize = (int) (resizeStartSize * scale);
+
+                        // Align size to grid
+                        int gridSize = getGridSizeInPixels();
+                        newSize = alignToGrid(newSize, gridSize);
 
                         // Limit size to reasonable bounds
                         int minSize = (int) (30 * getResources().getDisplayMetrics().density);
