@@ -274,7 +274,7 @@
     <string name="input_method_direct_drag_pan_description">直接、按住并平移：滑动并拖曳下拉。 一根手指单击相当于鼠标左击，用两根手指单击相当于鼠标右击，再用三根手指单击相当于鼠标中击。 用两根手指滑动即可滚动。 长按即可开始平移。</string>
     <string name="input_method_direct_swipe_pan_description">直接、滑动平移：滑动即可随意平移。 一根手指单击相当于鼠标左击，用两根手指单击相当于鼠标右击，再用三根手指单击相当于鼠标中击。 用两根手指滑动即可滚动。 长按即可拖曳下拉。</string>
     <string name="input_method_single_handed_description">单手操作：滑动即可随意平移。 一根手指单击相当于鼠标左击。长按可选择左击/右击/中击/拖动/滚动/缩放模式。 通常的多点触摸操作也可以使用。</string>
-    <string name="input_method_touchpad_description">模拟模拟板：滑动即可移动指针。一根手指单击相当于鼠标左击，用两根手指单击相当于鼠标右击，再用三根手指单击相当于鼠标中击。 用两根手指滑动即可滚动。 长按即可拖曳下拉。</string>
+    <string name="input_method_touchpad_description">模拟触控板：滑动即可移动指针，单击相当于鼠标左击，双指单击相当于鼠标右击，双指滑动即可滚动。</string>
     <string name="input_mode">输入模式</string>
 
     <string name="input_mode_fit_to_screen">无平移：轨迹球鼠标</string>
