@@ -341,7 +341,7 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
     private void updateAnalogStick(float x, float y, boolean isLeft) {
         float centerX = isLeft ? leftStickCenterX : rightStickCenterX;
         float centerY = isLeft ? leftStickCenterY : rightStickCenterY;
-        float maxRadius = 60 * displayDensity; // Further reduced radius for higher sensitivity
+        float maxRadius = 40 * displayDensity; // Radius reduced to 40 for shorter movement distance
 
         float dx = x - centerX;
         float dy = y - centerY;
