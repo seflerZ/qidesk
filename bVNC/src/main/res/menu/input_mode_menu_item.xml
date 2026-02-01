@@ -14,6 +14,9 @@
                     android:id="@+id/itemInputDirectTouch"
                     android:title="@string/input_method_direct_touch" />
                 <item
+                    android:id="@+id/itemInputGamepad"
+                    android:title="@string/input_method_gamepad" />
+                <item
                     android:id="@+id/itemInputTouchpad"
                     android:title="@string/input_method_touchpad" />
 <!--                <item-->

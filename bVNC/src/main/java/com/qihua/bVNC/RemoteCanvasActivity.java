@@ -99,6 +99,7 @@ import com.qihua.bVNC.extrakeys.SpecialButton;
 import com.qihua.bVNC.gesture.GestureActionLibrary;
 import com.qihua.bVNC.input.InputHandler;
 import com.qihua.bVNC.input.InputHandlerDirectTouch;
+import com.qihua.bVNC.input.InputHandlerGamepad;
 import com.qihua.bVNC.input.InputHandlerTouchpad;
 import com.qihua.bVNC.input.KeyBoardListenerHelper;
 import com.qihua.bVNC.input.Panner;
@@ -129,7 +130,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyListener, OnGenericMotionListener, GameGestures {
-    public static final int[] inputModeIds = {R.id.itemInputTouchpad, R.id.itemInputDirectTouch};
+    public static final int[] inputModeIds = {R.id.itemInputTouchpad, R.id.itemInputDirectTouch, R.id.itemInputGamepad};
     public static final Map<Integer, String> inputModeMap;
     private final static String TAG = "RemoteCanvasActivity";
     private static final int[] scalingModeIds = {R.id.itemZoomable, R.id.itemFitToScreen,
@@ -143,6 +144,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         Map<Integer, String> temp = new HashMap<>();
         temp.put(R.id.itemInputTouchpad, InputHandlerTouchpad.ID);
         temp.put(R.id.itemInputDirectTouch, InputHandlerDirectTouch.ID);
+        temp.put(R.id.itemInputGamepad, InputHandlerGamepad.ID);
         inputModeMap = Collections.unmodifiableMap(temp);
     }
 
@@ -1441,6 +1443,8 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
                         inputModeHandlers[i] = new InputHandlerTouchpad(this, canvas, touchpad, canvas.getPointer(), App.debugLog);
                     } else if (id == R.id.itemInputDirectTouch) {
                         inputModeHandlers[i] = new InputHandlerDirectTouch(this, canvas, canvas.getPointer(), App.debugLog);
+                    } else if (id == R.id.itemInputGamepad) {
+                        inputModeHandlers[i] = new InputHandlerGamepad(this, canvas, canvas.getPointer(), App.debugLog);
                     } else {
                         throw new IllegalStateException("Unexpected value: " + id);
                     }
@@ -1475,6 +1479,8 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
                 return R.drawable.input_touchpad_mode; // Touchpad mode icon
             } else if (inputHandler.getId().equals(InputHandlerDirectTouch.ID)) {
                 return R.drawable.input_direct_touch_mode; // Direct touch mode icon
+            } else if (inputHandler.getId().equals(InputHandlerGamepad.ID)) {
+                return R.drawable.input_gamepad_mode; // Gamepad mode icon
             }
         }
         // Default to touchpad mode icon
@@ -1482,26 +1488,28 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     }
     
     /**
-     * Toggles between input modes (touchpad and direct touch)
+     * Toggles between input modes (touchpad, direct touch, gamepad)
      */
     private void toggleInputMode() {
         int currentModeId = getModeIdFromHandler(inputHandler);
         int newModeId;
-        
+
         if (currentModeId == R.id.itemInputTouchpad) {
             newModeId = R.id.itemInputDirectTouch;
+        } else if (currentModeId == R.id.itemInputDirectTouch) {
+            newModeId = R.id.itemInputGamepad;
         } else {
             newModeId = R.id.itemInputTouchpad;
         }
-        
+
         // Set the new input mode
         setInputMode(newModeId);
-        
+
         // Update the icon in the action bar
         if (inputModeToggleMenuItem != null) {
             inputModeToggleMenuItem.setIcon(getCurrentInputModeIcon());
         }
-        
+
         // Note: showPanningState is called inside setInputMode to avoid double calling
     }
     
