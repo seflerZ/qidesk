@@ -35,4 +35,9 @@ public interface InputHandler {
     String getDescription();
 
     String getId();
+
+    /**
+     * Clean up any resources or views associated with this input handler
+     */
+    default void cleanup() {}
 }

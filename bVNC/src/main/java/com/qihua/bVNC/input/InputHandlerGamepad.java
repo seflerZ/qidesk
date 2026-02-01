@@ -436,4 +436,50 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
         // Could implement continuous press for d-pad
         sendGamepadButton(keyCode);
     }
+    
+    @Override
+    public void cleanup() {
+        // 移除游戏手柄覆盖层
+        // Remove the gamepad overlay
+        if (gamepadOverlay != null && gamepadOverlay.getParent() != null) {
+            ((ViewGroup) gamepadOverlay.getParent()).removeView(gamepadOverlay);
+        }
+        
+        // 停止重复按键事件
+        // Stop repeating key events
+        stopRepeatEvents();
+        
+        // 重置摇杆状态
+        // Reset stick states
+        leftStickX = 0;
+        leftStickY = 0;
+        rightStickX = 0;
+        rightStickY = 0;
+        leftStickPointerId = -1;
+        rightStickPointerId = -1;
+    }
+    
+    /**
+     * Re-add the gamepad overlay to the view hierarchy when switching back to gamepad mode
+     */
+    public void showOverlay() {
+        if (gamepadOverlay != null) {
+            // First check if it's already added
+            if (gamepadOverlay.getParent() != null) {
+                return; // Already added
+            }
+            
+            activity.runOnUiThread(() -> {
+                View touchpadView = activity.findViewById(R.id.touchpad);
+                if (touchpadView != null && touchpadView.getParent() != null) {
+                    ((android.widget.FrameLayout) touchpadView.getParent())
+                            .addView(gamepadOverlay);
+                } else {
+                    // Fallback: add to the root view if touchpad parent is not available
+                    android.view.ViewGroup rootView = (ViewGroup) activity.findViewById(android.R.id.content);
+                    rootView.addView(gamepadOverlay);
+                }
+            });
+        }
+    }
 }
