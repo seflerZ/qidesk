@@ -186,11 +186,11 @@ public class GamepadOverlay extends FrameLayout {
         float density = metrics.density;
 
         // Default button positions (percentages of screen width/height)
-        // A, B, X, Y buttons on the right side
-        buttonA = createButton("A", KeyEvent.KEYCODE_SPACE, 0.85f, 0.70f, density);
-        buttonB = createButton("B", KeyEvent.KEYCODE_B, 0.90f, 0.80f, density);
-        buttonX = createButton("X", KeyEvent.KEYCODE_X, 0.80f, 0.80f, density);
-        buttonY = createButton("Y", KeyEvent.KEYCODE_Y, 0.85f, 0.90f, density);
+        // A, B, X, Y buttons on the right side (XBOX-style layout)
+        buttonA = createButton("A", KeyEvent.KEYCODE_ENTER, 0.85f, 0.70f, density);  // Confirm/OK
+        buttonB = createButton("B", KeyEvent.KEYCODE_ESCAPE, 0.90f, 0.80f, density); // Back/Cancel
+        buttonX = createButton("X", KeyEvent.KEYCODE_X, 0.80f, 0.80f, density);      // Extra function
+        buttonY = createButton("Y", KeyEvent.KEYCODE_Y, 0.85f, 0.90f, density);      // Yet another function
 
         // Start and Select in the center
         buttonStart = createButton("START", KeyEvent.KEYCODE_ENTER, 0.70f, 0.85f, density);
