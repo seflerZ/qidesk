@@ -199,14 +199,14 @@ public class GamepadOverlay extends FrameLayout {
 
         // Default button positions (percentages of screen width/height)
         // A, B, X, Y buttons on the right side (XBOX-style layout)
-        buttonA = createButton("A", KeyEvent.KEYCODE_ENTER, 0.85f, 0.70f, density);  // Confirm/OK
-        buttonB = createButton("B", KeyEvent.KEYCODE_ESCAPE, 0.90f, 0.80f, density); // Back/Cancel
-        buttonX = createButton("X", KeyEvent.KEYCODE_X, 0.80f, 0.80f, density);      // Extra function
-        buttonY = createButton("Y", KeyEvent.KEYCODE_Y, 0.85f, 0.90f, density);      // Yet another function
+        buttonA = createButton("A", KeyEvent.KEYCODE_BUTTON_A, 0.85f, 0.70f, density);  // Confirm/OK
+        buttonB = createButton("B", KeyEvent.KEYCODE_BUTTON_B, 0.90f, 0.80f, density); // Back/Cancel
+        buttonX = createButton("X", KeyEvent.KEYCODE_BUTTON_X, 0.80f, 0.80f, density);      // Extra function
+        buttonY = createButton("Y", KeyEvent.KEYCODE_BUTTON_Y, 0.85f, 0.90f, density);      // Yet another function
 
         // Start and Select in the center
-        buttonStart = createButton("START", KeyEvent.KEYCODE_ENTER, 0.70f, 0.85f, density);
-        buttonSelect = createButton("SELECT", KeyEvent.KEYCODE_ESCAPE, 0.60f, 0.85f, density);
+        buttonStart = createButton("START", KeyEvent.KEYCODE_BUTTON_START, 0.70f, 0.85f, density);
+        buttonSelect = createButton("SELECT", KeyEvent.KEYCODE_BUTTON_SELECT, 0.60f, 0.85f, density);
 
         // D-pad on the left side
         dpadUp = createButton("▲", KeyEvent.KEYCODE_DPAD_UP, 0.15f, 0.70f, density);
@@ -215,10 +215,10 @@ public class GamepadOverlay extends FrameLayout {
         dpadRight = createButton("▶", KeyEvent.KEYCODE_DPAD_RIGHT, 0.20f, 0.80f, density);
 
         // Shoulder buttons
-        buttonL1 = createButton("L1", KeyEvent.KEYCODE_Q, 0.15f, 0.05f, density);
-        buttonL2 = createButton("L2", KeyEvent.KEYCODE_1, 0.15f, 0.12f, density);
-        buttonR1 = createButton("R1", KeyEvent.KEYCODE_E, 0.85f, 0.05f, density);
-        buttonR2 = createButton("R2", KeyEvent.KEYCODE_3, 0.85f, 0.12f, density);
+        buttonL1 = createButton("L1", KeyEvent.KEYCODE_BUTTON_L1, 0.15f, 0.05f, density);
+        buttonL2 = createButton("L2", KeyEvent.KEYCODE_BUTTON_L2, 0.15f, 0.12f, density);
+        buttonR1 = createButton("R1", KeyEvent.KEYCODE_BUTTON_R1, 0.85f, 0.05f, density);
+        buttonR2 = createButton("R2", KeyEvent.KEYCODE_BUTTON_R2, 0.85f, 0.12f, density);
 
         // Add all buttons to map
         buttonMap.put("A", buttonA);
