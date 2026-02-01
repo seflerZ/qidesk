@@ -78,43 +78,37 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
             fpsCounter.countInput();
         }
 
-        // 检查指针是否支持触摸事件（RDP或NVStream）
-        if (pointer instanceof RemoteRdpPointer || pointer instanceof RemoteNvStreamPointer) {
-            // 处理多点触摸事件
-            switch (action) {
-                case MotionEvent.ACTION_DOWN:
-                    // 第一个触摸点（总是index 0）
-                    handleTouchDown(e, 0, pointer);
-                    break;
+        // 处理多点触摸事件
+        switch (action) {
+            case MotionEvent.ACTION_DOWN:
+                // 第一个触摸点（总是index 0）
+                handleTouchDown(e, 0, pointer);
+                break;
 
-                case MotionEvent.ACTION_POINTER_DOWN:
-                    // 额外的触摸点，使用getActionIndex()获取实际的指针索引
-                    handleTouchDown(e, e.getActionIndex(), pointer);
-                    break;
+            case MotionEvent.ACTION_POINTER_DOWN:
+                // 额外的触摸点，使用getActionIndex()获取实际的指针索引
+                handleTouchDown(e, e.getActionIndex(), pointer);
+                break;
 
-                case MotionEvent.ACTION_MOVE:
-                    // 处理所有移动的触摸点
-                    handleTouchMove(e, pointer);
-                    break;
+            case MotionEvent.ACTION_MOVE:
+                // 处理所有移动的触摸点
+                handleTouchMove(e, pointer);
+                break;
 
-                case MotionEvent.ACTION_UP:
-                    // 最后一个指针抬起，使用getActionIndex()获取被抬起的指针索引
-                    handleTouchUp(e, e.getActionIndex(), pointer);
-                    break;
+            case MotionEvent.ACTION_UP:
+                // 最后一个指针抬起，使用getActionIndex()获取被抬起的指针索引
+                handleTouchUp(e, e.getActionIndex(), pointer);
+                break;
 
-                case MotionEvent.ACTION_POINTER_UP:
-                    // 某个特定指针抬起，使用getActionIndex()获取实际的指针索引
-                    handleTouchUp(e, e.getActionIndex(), pointer);
-                    break;
+            case MotionEvent.ACTION_POINTER_UP:
+                // 某个特定指针抬起，使用getActionIndex()获取实际的指针索引
+                handleTouchUp(e, e.getActionIndex(), pointer);
+                break;
 
-                case MotionEvent.ACTION_CANCEL:
-                    // 触摸被取消
-                    handleTouchCancel(e, pointer);
-                    break;
-            }
-        } else {
-            // 如果指针类型不支持多点触摸，则回退到标准鼠标处理
-            return super.onTouchEvent(e);
+            case MotionEvent.ACTION_CANCEL:
+                // 触摸被取消
+                handleTouchCancel(e, pointer);
+                break;
         }
 
         return true;

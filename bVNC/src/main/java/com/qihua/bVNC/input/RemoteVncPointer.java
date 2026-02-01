@@ -141,22 +141,26 @@ public class RemoteVncPointer extends RemotePointer {
 
     @Override
     public void touchDown(int x, int y, int contactId) {
-
+        // VNC协议不支持原生触摸事件，使用鼠标左键模拟
+        leftButtonDown(x, y, 0);
     }
 
     @Override
     public void touchUpdate(int x, int y, int contactId) {
-
+        // VNC协议不支持原生触摸事件，使用鼠标移动模拟
+        moveMouseButtonDown(x, y, 0);
     }
 
     @Override
     public void touchUp(int x, int y, int contactId) {
-
+        // VNC协议不支持原生触摸事件，使用鼠标释放模拟
+        releaseButton(x, y, 0);
     }
 
     @Override
     public void touchCancel(int x, int y, int contactId) {
-
+        // VNC协议不支持原生触摸事件，使用鼠标释放模拟
+        releaseButton(x, y, 0);
     }
 
     @Override
