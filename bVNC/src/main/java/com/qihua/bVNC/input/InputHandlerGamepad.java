@@ -291,12 +291,16 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
             leftStickPointerId = -1;
             leftStickX = 0;
             leftStickY = 0;
+            // Send zero values to reset the left stick while keeping right stick state
+            sendBothSticksData();
             stopRepeatEvents();
             showLeftStickVisual(0, 0, false);
         } else if (pointerId == rightStickPointerId) {
             rightStickPointerId = -1;
             rightStickX = 0;
             rightStickY = 0;
+            // Send zero values to reset the right stick while keeping left stick state
+            sendBothSticksData();
             stopRepeatEvents();
             showRightStickVisual(0, 0, false);
         }
@@ -305,6 +309,9 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
     private void handlePointerCancel() {
         GeneralUtils.debugLog(debugLogging, TAG, "Pointer cancel");
 
+        // Send zero values to reset both sticks before clearing them
+        sendBothSticksData();
+        
         leftStickPointerId = -1;
         rightStickPointerId = -1;
         leftStickX = 0;
@@ -349,11 +356,14 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
 
         if (isLeft) {
             leftStickX = normalizedX;
-            leftStickY = normalizedY;
+            leftStickY = -normalizedY; // Invert Y-axis to correct direction
         } else {
             rightStickX = normalizedX;
-            rightStickY = normalizedY;
+            rightStickY = -normalizedY; // Invert Y-axis to correct direction
         }
+
+        // Immediately send both analog stick data to ensure consistent state
+        sendBothSticksData();
 
         // Start repeat for continuous input
         lastRepeatTime = System.currentTimeMillis();
@@ -375,21 +385,13 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
         if (leftStickPointerId == -1 && rightStickPointerId == -1) {
             // If no active sticks, just send neutral position occasionally to maintain connection
             if (System.currentTimeMillis() - lastRepeatTime > 1000) { // Send neutral every second if no active input
-                sendAnalogStickKeys(0, 0, true);
-                sendAnalogStickKeys(0, 0, false);
+                sendBothSticksData();
             }
             return;
         }
 
-        // Send left stick data if active
-        if (leftStickPointerId != -1) {
-            sendAnalogStickKeys(leftStickX, leftStickY, true);
-        }
-
-        // Send right stick data if active
-        if (rightStickPointerId != -1) {
-            sendAnalogStickKeys(rightStickX, rightStickY, false);
-        }
+        // Send both stick data to maintain consistent state
+        sendBothSticksData();
     }
 
     private void sendAnalogStickKeys(float x, float y, boolean isLeft) {
@@ -397,10 +399,19 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
         if (canvas.rfbconn instanceof NvCommunicator) {
 
             // Calculate the stick values in the range -32767 to 32767
-            short stickX = isLeft ? (short) (x * 32767) : (short) 0;
-            short stickY = isLeft ? (short) (y * 32767) : (short) 0;
-            short rightStickX = isLeft ? (short) 0 : (short) (x * 32767);
-            short rightStickY = isLeft ? (short) 0 : (short) (y * 32767);
+            short stickX, stickY, rightStickX, rightStickY;
+            
+            if (isLeft) {
+                stickX = (short) (x * 32767);
+                stickY = (short) (y * 32767);
+                rightStickX = (short) (this.rightStickX * 32767); // Current right stick X value
+                rightStickY = (short) (this.rightStickY * 32767); // Current right stick Y value
+            } else {
+                stickX = (short) (this.leftStickX * 32767); // Current left stick X value
+                stickY = (short) (this.leftStickY * 32767); // Current left stick Y value
+                rightStickX = (short) (x * 32767);
+                rightStickY = (short) (y * 32767);
+            }
             
             // Do NOT map stick positions to buttons - let the sticks work as analog sticks
             int buttonFlags = 0; // No button flags based on stick positions
@@ -416,6 +427,24 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
                 stickY,     // left stick Y (-32767 to 32767)
                 rightStickX, // right stick X (-32767 to 32767)
                 rightStickY  // right stick Y (-32767 to 32767)
+            );
+        }
+    }
+    
+    private void sendBothSticksData() {
+        // Check if we have an NvCommunicator connection
+        if (canvas.rfbconn instanceof NvCommunicator) {
+            // Send both sticks' current values
+            MoonBridge.sendMultiControllerInput(
+                (short) 0,  // controller number
+                (short) 1,  // active gamepad mask (first gamepad)
+                0,          // button flags
+                (byte) 0,   // left trigger (0-255 range)
+                (byte) 0,   // right trigger (0-255 range)
+                (short) (leftStickX * 32767),  // left stick X (-32767 to 32767)
+                (short) (leftStickY * 32767),  // left stick Y (-32767 to 32767)
+                (short) (rightStickX * 32767), // right stick X (-32767 to 32767)
+                (short) (rightStickY * 32767)  // right stick Y (-32767 to 32767)
             );
         }
     }
