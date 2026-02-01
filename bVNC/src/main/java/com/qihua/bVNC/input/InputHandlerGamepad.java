@@ -207,7 +207,15 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
                 break;
 
             case MotionEvent.ACTION_MOVE:
-                handlePointerMove(e, pointerID, isLeftSide);
+                // Handle all moving pointers during move events
+                int pointerCount = e.getPointerCount();
+                for (int i = 0; i < pointerCount; i++) {
+                    int movingPointerId = e.getPointerId(i);
+                    float movingX = e.getX(i);
+                    float movingY = e.getY(i);
+                    boolean isMovingLeftSide = movingX < screenMiddleX;
+                    handlePointerMove(e, movingPointerId, isMovingLeftSide);
+                }
                 break;
 
             case MotionEvent.ACTION_UP:
@@ -221,24 +229,25 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
         }
 
         // 在非编辑模式下处理模拟摇杆事件
-        return true;
+        // 对于多点触控，始终返回false以允许系统处理多个触控点
+        return false;
     }
 
     private void handlePointerDown(int pointerId, float x, float y, boolean isLeftSide) {
         GeneralUtils.debugLog(debugLogging, TAG, "Pointer down: " + pointerId + ", leftSide: " + isLeftSide);
-
-        // Check if this pointer is already tracking an analog stick
-        if (leftStickPointerId != -1 && rightStickPointerId != -1) {
-            // Both sticks are already being used, ignore this pointer
-            return;
-        }
 
         // Check if touch is on a gamepad button
         if (gamepadOverlay != null && gamepadOverlay.onButtonTouch(x, y, true)) {
             return;
         }
 
-        // Otherwise, track as analog stick input
+        // Check if this pointer is already tracking an analog stick
+        if (leftStickPointerId == pointerId || rightStickPointerId == pointerId) {
+            // This pointer is already tracking a stick, no need to assign again
+            return;
+        }
+
+        // Assign to appropriate stick if available
         if (isLeftSide && leftStickPointerId == -1) {
             leftStickPointerId = pointerId;
             leftStickCenterX = x;
@@ -254,6 +263,7 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
             rightStickY = 0;
             showRightStickVisual(x, y, true);
         }
+        // If both sticks are in use and this is a new pointer not on a button, ignore it
     }
 
     private void handlePointerMove(MotionEvent e, int pointerId, boolean isLeftSide) {
@@ -331,7 +341,7 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
     private void updateAnalogStick(float x, float y, boolean isLeft) {
         float centerX = isLeft ? leftStickCenterX : rightStickCenterX;
         float centerY = isLeft ? leftStickCenterY : rightStickCenterY;
-        float maxRadius = 100 * displayDensity; // Maximum stick movement radius
+        float maxRadius = 60 * displayDensity; // Further reduced radius for higher sensitivity
 
         float dx = x - centerX;
         float dy = y - centerY;
@@ -348,7 +358,7 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
         float normalizedY = dy / maxRadius;
 
         // Apply deadzone
-        float deadzone = 0.15f;
+        float deadzone = 0.1f; // Reduced deadzone for higher sensitivity
         if (Math.abs(normalizedX) < deadzone && Math.abs(normalizedY) < deadzone) {
             normalizedX = 0;
             normalizedY = 0;
