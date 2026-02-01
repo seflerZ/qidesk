@@ -108,10 +108,6 @@ public class GamepadOverlay extends FrameLayout {
         this.inputHandler = inputHandler;
         init(context);
     }
-
-    public void setInputHandler(InputHandlerGamepad inputHandler) {
-        this.inputHandler = inputHandler;
-    }
     
     public void setConnectionId(String connectionId) {
         this.connectionId = connectionId;
@@ -302,14 +298,6 @@ public class GamepadOverlay extends FrameLayout {
         resizePointer1Id = -1;
         resizePointer2Id = -1;
     }
-    
-    /**
-     * Exit edit mode when button is long pressed in edit mode
-     */
-    public void exitEditModeFromButton() {
-        // 不再支持通过按钮长按退出编辑模式
-        // 只支持点击空白区域退出
-    }
 
     public void showLeftStick(float x, float y, boolean show) {
         int stickSize = leftStickBase.getWidth();
@@ -458,16 +446,6 @@ public class GamepadOverlay extends FrameLayout {
         float viewY = params.topMargin;
         return x >= viewX && x <= viewX + view.getWidth() &&
                y >= viewY && y <= viewY + view.getHeight();
-    }
-
-    /**
-     * Toggle edit mode for repositioning buttons
-     */
-    public void toggleEditMode() {
-        editMode = !editMode;
-        for (GamepadButton button : buttonMap.values()) {
-            button.setEditMode(editMode);
-        }
     }
 
     /**
