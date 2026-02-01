@@ -26,7 +26,6 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
-import android.preference.PreferenceManager;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.view.KeyEvent;
@@ -50,6 +49,7 @@ import java.util.Map;
 public class GamepadOverlay extends FrameLayout {
     private static final String TAG = "GamepadOverlay";
     private static final String PREF_PREFIX = "gamepad_";
+    private String connectionId = "";
 
     private InputHandlerGamepad inputHandler;
 
@@ -112,10 +112,22 @@ public class GamepadOverlay extends FrameLayout {
     public void setInputHandler(InputHandlerGamepad inputHandler) {
         this.inputHandler = inputHandler;
     }
+    
+    public void setConnectionId(String connectionId) {
+        this.connectionId = connectionId;
+        // 重新初始化prefs以使用特定连接的存储
+        if (getContext() != null) {
+            // 使用连接ID作为部分文件名创建独立的偏好设置文件
+            prefs = getContext().getSharedPreferences("gamepad_pos_" + connectionId, Context.MODE_PRIVATE);
+            // 重新加载按钮位置
+            loadButtonPositions();
+        }
+    }
 
     @SuppressLint("ClickableViewAccessibility")
     private void init(Context context) {
-        prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        // 初始化时如果没有连接ID，则使用默认设置
+        prefs = context.getSharedPreferences("gamepad_pos_default", Context.MODE_PRIVATE);
         buttonMap = new HashMap<>();
 
         // Create layout
@@ -233,11 +245,11 @@ public class GamepadOverlay extends FrameLayout {
         int size = (int) (60 * density);
         LayoutParams params = new LayoutParams(size, size);
 
-        // Calculate position based on screen size
+        // Initially set position based on screen size, but will be adjusted after layout
         int screenWidth = getResources().getDisplayMetrics().widthPixels;
         int screenHeight = getResources().getDisplayMetrics().heightPixels;
-        params.leftMargin = (int) (xPercent * screenWidth - size) / 2;
-        params.topMargin = (int) (yPercent * screenHeight - size) / 2;
+        params.leftMargin = (int) (xPercent * screenWidth - size / 2);
+        params.topMargin = (int) (yPercent * screenHeight - size / 2);
 
         button.setLayoutParams(params);
         addView(button);
@@ -258,6 +270,45 @@ public class GamepadOverlay extends FrameLayout {
         });
 
         return button;
+    }
+
+    /**
+     * Enter edit mode for a specific button - called from GamepadButton
+     */
+    public void enterEditModeForButton(GamepadButton button) {
+        editMode = true;
+        
+        // 启用所有按钮的编辑模式视觉反馈
+        for (GamepadButton btn : buttonMap.values()) {
+            btn.setEditMode(true);
+        }
+        
+        // 开始拖拽当前按钮
+        draggingButton = button;
+        resizingButton = button;
+    }
+    
+    /**
+     * Exit edit mode and disable visual feedback for all buttons
+     */
+    private void exitEditMode() {
+        editMode = false;
+        for (GamepadButton button : buttonMap.values()) {
+            button.setEditMode(false);
+        }
+        // Reset edit mode state
+        draggingButton = null;
+        resizingButton = null;
+        resizePointer1Id = -1;
+        resizePointer2Id = -1;
+    }
+    
+    /**
+     * Exit edit mode when button is long pressed in edit mode
+     */
+    public void exitEditModeFromButton() {
+        // 不再支持通过按钮长按退出编辑模式
+        // 只支持点击空白区域退出
     }
 
     public void showLeftStick(float x, float y, boolean show) {
@@ -380,11 +431,33 @@ public class GamepadOverlay extends FrameLayout {
         }
     }
 
+    /**
+     * Check if touch is on a gamepad button without triggering button press
+     * Used by InputHandlerGamepad to determine if event should be handled by button or by gamepad
+     */
+    public boolean onButtonTouchRaw(float x, float y) {
+        for (GamepadButton button : buttonMap.values()) {
+            if (isPointInView(button, x, y)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * Check if overlay is in edit mode
+     */
+    public boolean isEditMode() {
+        return editMode;
+    }
+
     private boolean isPointInView(View view, float x, float y) {
-        int[] location = new int[2];
-        view.getLocationOnScreen(location);
-        return x >= location[0] && x <= location[0] + view.getWidth() &&
-               y >= location[1] && y <= location[1] + view.getHeight();
+        // 获取按钮在父容器（GamepadOverlay）中的布局参数
+        LayoutParams params = (LayoutParams) view.getLayoutParams();
+        float viewX = params.leftMargin;
+        float viewY = params.topMargin;
+        return x >= viewX && x <= viewX + view.getWidth() &&
+               y >= viewY && y <= viewY + view.getHeight();
     }
 
     /**
@@ -401,10 +474,19 @@ public class GamepadOverlay extends FrameLayout {
      * Save button positions and sizes to SharedPreferences
      */
     public void saveButtonPositions() {
+        if (prefs == null) return;
+        
         SharedPreferences.Editor editor = prefs.edit();
 
-        int screenWidth = getResources().getDisplayMetrics().widthPixels;
-        int screenHeight = getResources().getDisplayMetrics().heightPixels;
+        // Use actual view dimensions instead of screen dimensions
+        int viewWidth = getWidth();
+        int viewHeight = getHeight();
+        
+        // If view hasn't been laid out yet, use screen dimensions as fallback
+        if (viewWidth <= 0 || viewHeight <= 0) {
+            viewWidth = getResources().getDisplayMetrics().widthPixels;
+            viewHeight = getResources().getDisplayMetrics().heightPixels;
+        }
 
         for (Map.Entry<String, GamepadButton> entry : buttonMap.entrySet()) {
             String name = entry.getKey();
@@ -412,11 +494,11 @@ public class GamepadOverlay extends FrameLayout {
             LayoutParams params = (LayoutParams) button.getLayoutParams();
 
             // Save position as percentages for different screen sizes
-            float xPercent = (float) (params.leftMargin + button.getWidth()) / 2 / screenWidth;
-            float yPercent = (float) (params.topMargin + button.getHeight()) / 2 / screenHeight;
+            float xPercent = (float) (params.leftMargin + button.getWidth() / 2) / viewWidth;
+            float yPercent = (float) (params.topMargin + button.getHeight() / 2) / viewHeight;
 
             // Save size as percentage of screen width
-            float sizePercent = (float) button.getWidth() / screenWidth;
+            float sizePercent = (float) button.getWidth() / viewWidth;
 
             editor.putFloat(PREF_PREFIX + name + "_x", xPercent);
             editor.putFloat(PREF_PREFIX + name + "_y", yPercent);
@@ -424,15 +506,24 @@ public class GamepadOverlay extends FrameLayout {
         }
 
         editor.apply();
-        GeneralUtils.debugLog(true, TAG, "Button positions and sizes saved");
+        GeneralUtils.debugLog(true, TAG, "Button positions and sizes saved for connection: " + connectionId);
     }
 
     /**
      * Load button positions and sizes from SharedPreferences
      */
     private void loadButtonPositions() {
-        int screenWidth = getResources().getDisplayMetrics().widthPixels;
-        int screenHeight = getResources().getDisplayMetrics().heightPixels;
+        if (prefs == null) return;
+        
+        // Use actual view dimensions instead of screen dimensions
+        int viewWidth = getWidth();
+        int viewHeight = getHeight();
+        
+        // If view hasn't been laid out yet, use screen dimensions as fallback
+        if (viewWidth <= 0 || viewHeight <= 0) {
+            viewWidth = getResources().getDisplayMetrics().widthPixels;
+            viewHeight = getResources().getDisplayMetrics().heightPixels;
+        }
 
         for (Map.Entry<String, GamepadButton> entry : buttonMap.entrySet()) {
             String name = entry.getKey();
@@ -444,16 +535,16 @@ public class GamepadOverlay extends FrameLayout {
 
             // Load size if available
             if (sizePercent > 0) {
-                int newSize = (int) (sizePercent * screenWidth);
+                int newSize = (int) (sizePercent * viewWidth);
                 button.setButtonSize(newSize);
             }
 
             if (xPercent >= 0 && yPercent >= 0) {
                 LayoutParams params = (LayoutParams) button.getLayoutParams();
-                params.leftMargin = (int) (xPercent * screenWidth - button.getWidth()) / 2;
-                params.topMargin = (int) (yPercent * screenHeight - button.getHeight()) / 2;
+                params.leftMargin = (int) (xPercent * viewWidth - button.getWidth() / 2);
+                params.topMargin = (int) (yPercent * viewHeight - button.getHeight() / 2);
                 button.setLayoutParams(params);
-                GeneralUtils.debugLog(true, TAG, "Loaded " + name + " position: " + xPercent + ", " + yPercent);
+                GeneralUtils.debugLog(true, TAG, "Loaded " + name + " position for connection " + connectionId + ": " + xPercent + ", " + yPercent);
             }
         }
     }
@@ -473,6 +564,8 @@ public class GamepadOverlay extends FrameLayout {
             case MotionEvent.ACTION_DOWN:
                 // First pointer down - check if touching a button
                 resizePointer1Id = pointerId;
+                
+                // 检查是否触摸到按钮，优先处理新触摸的按钮
                 for (GamepadButton button : buttonMap.values()) {
                     if (isPointInView(button, x, y)) {
                         draggingButton = button;
@@ -483,7 +576,11 @@ public class GamepadOverlay extends FrameLayout {
                         return true;
                     }
                 }
-                break;
+                
+                // 如果点击空白区域，退出编辑模式
+                exitEditMode();
+                // 返回true表示事件已被处理，防止事件继续传播到InputHandlerGamepad
+                return true;
 
             case MotionEvent.ACTION_POINTER_DOWN:
                 // Second pointer down - switch to resize mode
@@ -566,6 +663,12 @@ public class GamepadOverlay extends FrameLayout {
                     resizingButton = null;
                     resizePointer1Id = -1;
                     resizePointer2Id = -1;
+                    
+                    // 退出编辑模式
+                    editMode = false;
+                    for (GamepadButton button : buttonMap.values()) {
+                        button.setEditMode(false);
+                    }
                     return true;
                 }
                 break;
@@ -575,11 +678,29 @@ public class GamepadOverlay extends FrameLayout {
     }
 
     @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        // Reload button positions when view is attached to window
+        post(new Runnable() {
+            @Override
+            public void run() {
+                loadButtonPositions();
+            }
+        });
+    }
+
+    @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
         // Reload button positions when screen size changes
         if (w != oldw || h != oldh) {
-            loadButtonPositions();
+            // Delay the reload to ensure the view is fully laid out
+            post(new Runnable() {
+                @Override
+                public void run() {
+                    loadButtonPositions();
+                }
+            });
         }
     }
 }

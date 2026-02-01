@@ -164,34 +164,94 @@ public class GamepadButton extends View {
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (editMode) {
-            // In edit mode, let the parent handle touch
+            // 在编辑模式下，让父视图处理所有触摸事件
             return false;
         }
 
+        // 非编辑模式下的正常触摸处理
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
-                simulatePress();
+                // 在按下时，只改变视觉状态，不立即触发按钮事件
+                isPressed = true;
+                backgroundPaint.setColor(COLOR_PRESSED);
+                invalidate();
+                
+                // 启动长按检测，延迟触发按钮事件
+                postDelayed(longPressRunnable, 600); // 600ms 作为长按时间
+                
                 return true;
 
             case MotionEvent.ACTION_UP:
+                // 如果在抬起前没有触发长按，则执行按钮事件
+                removeCallbacks(longPressRunnable);
+                
+                // 只有在没有触发长按的情况下才执行按钮事件
+                if (!longPressTriggered) {
+                    if (listener != null) {
+                        listener.onButtonDown(keyCode);
+                        listener.onButtonUp(keyCode);
+                    }
+                } else {
+                    // 重置长按标记
+                    longPressTriggered = false;
+                }
+                
+                // 重置按钮状态
+                isPressed = false;
+                backgroundPaint.setColor(editMode ? COLOR_EDIT : COLOR_NORMAL);
+                invalidate();
+                
+                return true;
+
             case MotionEvent.ACTION_CANCEL:
-                simulateRelease();
+                removeCallbacks(longPressRunnable);
+                isPressed = false;
+                backgroundPaint.setColor(editMode ? COLOR_EDIT : COLOR_NORMAL);
+                invalidate();
+                longPressTriggered = false;
                 return true;
 
             case MotionEvent.ACTION_MOVE:
-                // Check if finger is still within button bounds
-                if (isPressed) {
-                    float x = event.getX();
-                    float y = event.getY();
-                    if (x < 0 || x > getWidth() || y < 0 || y > getHeight()) {
-                        simulateRelease();
-                    }
+                // 检查手指是否仍在按钮范围内
+                float x = event.getX();
+                float y = event.getY();
+                boolean withinBounds = x >= 0 && x <= getWidth() && y >= 0 && y <= getHeight();
+                
+                if (isPressed && !withinBounds) {
+                    // 手指移出按钮范围，取消按钮按下状态和长按检测
+                    removeCallbacks(longPressRunnable);
+                    isPressed = false;
+                    backgroundPaint.setColor(editMode ? COLOR_EDIT : COLOR_NORMAL);
+                    invalidate();
+                    longPressTriggered = false;
+                } else if (!isPressed && withinBounds) {
+                    // 手指移回按钮范围
+                    isPressed = true;
+                    backgroundPaint.setColor(COLOR_PRESSED);
+                    invalidate();
+                    // 重新启动长按检测
+                    postDelayed(longPressRunnable, 600);
                 }
                 return true;
         }
 
-        return false;
+        return super.onTouchEvent(event);
     }
+    
+    private boolean longPressTriggered = false;
+    
+    private Runnable longPressRunnable = new Runnable() {
+        @Override
+        public void run() {
+            // 标记长按已触发
+            longPressTriggered = true;
+            
+            // 长按事件发生，触发编辑模式
+            if (getParent() instanceof GamepadOverlay) {
+                ((GamepadOverlay) getParent()).enterEditModeForButton(GamepadButton.this);
+            }
+        }
+    };
 
     @Override
     protected void onDraw(Canvas canvas) {

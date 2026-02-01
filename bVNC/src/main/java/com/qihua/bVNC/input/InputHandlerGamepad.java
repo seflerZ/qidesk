@@ -84,6 +84,12 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
 
         // Initialize gamepad overlay
         gamepadOverlay = new GamepadOverlay(activity, this);
+        
+        // Set the connection ID for button position storage
+        if (canvas != null && canvas.connection != null) {
+            gamepadOverlay.setConnectionId(canvas.connection.getId());
+        }
+        
         activity.runOnUiThread(() -> {
             View touchpadView = activity.findViewById(R.id.touchpad);
             if (touchpadView != null && touchpadView.getParent() != null) {
@@ -164,6 +170,20 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
         float touchY = e.getY(index);
         boolean isLeftSide = touchX < screenMiddleX;
 
+        // 实时检查是否处于编辑模式（在处理事件期间编辑模式可能被退出）
+        boolean isOnButton = gamepadOverlay != null && gamepadOverlay.onButtonTouchRaw(touchX, touchY);
+        boolean isEditing = gamepadOverlay != null && gamepadOverlay.isEditMode();
+
+        // 如果处于编辑模式，完全跳过游戏手柄的处理逻辑
+        if (isEditing) {
+            return false; // 不处理任何事件，让 GamepadOverlay 处理
+        }
+
+        // 在非编辑模式下，如果触摸在按钮上，不处理这些事件，让按钮自己处理
+        if (isOnButton) {
+            return false; // 让按钮自己处理触摸事件，包括长按检测
+        }
+
         switch (action) {
             case MotionEvent.ACTION_DOWN:
             case MotionEvent.ACTION_POINTER_DOWN:
@@ -184,6 +204,7 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
                 break;
         }
 
+        // 在非编辑模式下处理模拟摇杆事件
         return true;
     }
 
