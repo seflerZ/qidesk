@@ -19,6 +19,11 @@ public class RemoteNvStreamPointer extends RemotePointer {
     private final static int MOUSE_BUTTON_LEFT = 0x1000;
     private final static int MOUSE_BUTTON_RIGHT = 0x2000;
 
+    public final static int CONTACT_FLAG_DOWN = 0x0001;
+    public final static int CONTACT_FLAG_UPDATE = 0x0003;
+    public final static int CONTACT_FLAG_UP = 0x0002;
+    public final static int CONTACT_FLAG_CANCELED = CONTACT_FLAG_UP;
+
     private static final int MOUSE_BUTTON_MIDDLE = 0x4000;
     private static final int MOUSE_BUTTON_SCROLL_UP = PTRFLAGS_WHEEL | 0x0058;
     private static final int MOUSE_BUTTON_SCROLL_DOWN = PTRFLAGS_WHEEL | PTRFLAGS_WHEEL_NEGATIVE | 0x00a8;
@@ -28,6 +33,23 @@ public class RemoteNvStreamPointer extends RemotePointer {
     public RemoteNvStreamPointer(RfbConnectable nvcomm, RemoteCanvas canvas, Handler handler,
                             boolean debugLogging) {
         super(nvcomm, canvas, handler, debugLogging);
+    }
+    
+    // 添加触摸事件方法
+    public void touchDown(int x, int y, int contactId) {
+        protocomm.writeTouchEvent(x, y, CONTACT_FLAG_DOWN, contactId);
+    }
+
+    public void touchUpdate(int x, int y, int contactId) {
+        protocomm.writeTouchEvent(x, y, CONTACT_FLAG_UPDATE, contactId);
+    }
+
+    public void touchUp(int x, int y, int contactId) {
+        protocomm.writeTouchEvent(x, y, CONTACT_FLAG_UP, contactId);
+    }
+
+    public void touchCancel(int x, int y, int contactId) {
+        protocomm.writeTouchEvent(x, y, CONTACT_FLAG_CANCELED, contactId);
     }
 
     private void sendButtonDownOrMoveButtonDown(int x, int y, int metaState) {

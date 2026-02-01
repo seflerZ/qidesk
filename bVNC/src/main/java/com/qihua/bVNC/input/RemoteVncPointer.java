@@ -140,6 +140,26 @@ public class RemoteVncPointer extends RemotePointer {
     }
 
     @Override
+    public void touchDown(int x, int y, int contactId) {
+
+    }
+
+    @Override
+    public void touchUpdate(int x, int y, int contactId) {
+
+    }
+
+    @Override
+    public void touchUp(int x, int y, int contactId) {
+
+    }
+
+    @Override
+    public void touchCancel(int x, int y, int contactId) {
+
+    }
+
+    @Override
     public void releaseButton(int x, int y, int metaState) {
         pointerMask = 0;
         prevPointerMask = 0;

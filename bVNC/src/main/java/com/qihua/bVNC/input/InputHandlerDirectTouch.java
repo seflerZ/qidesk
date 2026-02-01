@@ -78,46 +78,49 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
             fpsCounter.countInput();
         }
 
-        // 确保pointer是RemoteRdpPointer类型，因为只有它有触摸方法
-        if (!(pointer instanceof RemoteRdpPointer)) {
-            // 如果不是RDP指针，则回退到标准鼠标处理
+        // 检查指针是否支持触摸事件（RDP或NVStream）
+        if (pointer instanceof RemoteRdpPointer || pointer instanceof RemoteNvStreamPointer) {
+            // 处理多点触摸事件
+            switch (action) {
+                case MotionEvent.ACTION_DOWN:
+                    // 第一个触摸点（总是index 0）
+                    handleTouchDown(e, 0, pointer);
+                    break;
+
+                case MotionEvent.ACTION_POINTER_DOWN:
+                    // 额外的触摸点，使用getActionIndex()获取实际的指针索引
+                    handleTouchDown(e, e.getActionIndex(), pointer);
+                    break;
+
+                case MotionEvent.ACTION_MOVE:
+                    // 处理所有移动的触摸点
+                    handleTouchMove(e, pointer);
+                    break;
+
+                case MotionEvent.ACTION_UP:
+                    // 最后一个指针抬起，使用getActionIndex()获取被抬起的指针索引
+                    handleTouchUp(e, e.getActionIndex(), pointer);
+                    break;
+
+                case MotionEvent.ACTION_POINTER_UP:
+                    // 某个特定指针抬起，使用getActionIndex()获取实际的指针索引
+                    handleTouchUp(e, e.getActionIndex(), pointer);
+                    break;
+
+                case MotionEvent.ACTION_CANCEL:
+                    // 触摸被取消
+                    handleTouchCancel(e, pointer);
+                    break;
+            }
+        } else {
+            // 如果指针类型不支持多点触摸，则回退到标准鼠标处理
             return super.onTouchEvent(e);
-        }
-
-        RemoteRdpPointer rdpPointer = (RemoteRdpPointer) pointer;
-
-        // 处理多点触摸事件
-        switch (action) {
-            case MotionEvent.ACTION_DOWN:
-            case MotionEvent.ACTION_POINTER_DOWN:
-                // 第一个触摸点或额外的触摸点
-                handleTouchDown(e, e.getActionIndex(), rdpPointer);
-                break;
-
-            case MotionEvent.ACTION_MOVE:
-                // 处理所有移动的触摸点
-                handleTouchMove(e, rdpPointer);
-                break;
-
-            case MotionEvent.ACTION_UP:
-                // ACTION_UP 通常表示最后一个指针抬起
-                handleTouchUp(e, 0, rdpPointer);
-                break;
-            case MotionEvent.ACTION_POINTER_UP:
-                // 某个特定指针抬起
-                handleTouchUp(e, e.getActionIndex(), rdpPointer);
-                break;
-
-            case MotionEvent.ACTION_CANCEL:
-                // 触摸被取消
-                handleTouchCancel(e, rdpPointer);
-                break;
         }
 
         return true;
     }
 
-    private void handleTouchDown(MotionEvent e, int pointerIndex, RemoteRdpPointer rdpPointer) {
+    private void handleTouchDown(MotionEvent e, int pointerIndex, RemotePointer pointer) {
         int pointerId = e.getPointerId(pointerIndex);
         int x = (int) (canvas.getAbsX() + e.getX(pointerIndex) / canvas.getZoomFactor());
         int y = (int) (canvas.getAbsY() + (e.getY(pointerIndex) - 1.f * canvas.getTop()) / canvas.getZoomFactor());
@@ -125,15 +128,17 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
         // 分配或获取接触ID
         int contactId = allocateContactId(pointerId);
         
-        GeneralUtils.debugLog(debugLogging, TAG, "Touch Down: x=" + x + ", y=" + y + ", contactId=" + contactId);
+        GeneralUtils.debugLog(debugLogging, TAG, "Touch Down - pointerIndex: " + pointerIndex + ", pointerId: " + pointerId + ", contactId: " + contactId + ", contactIdMap size after allocation: " + contactIdMap.size());
         
-        // 发送触摸按下事件
-        rdpPointer.touchDown(x, y, contactId);
+        // 发送触摸按下事件 - 使用反射来调用适当的触摸方法
+        pointer.touchDown(x, y, contactId);
     }
 
-    private void handleTouchMove(MotionEvent e, RemoteRdpPointer rdpPointer) {
+    private void handleTouchMove(MotionEvent e, RemotePointer pointer) {
         int pointerCount = e.getPointerCount();
 
+        GeneralUtils.debugLog(debugLogging, TAG, "Touch Move - pointerCount: " + pointerCount + ", contactIdMap size: " + contactIdMap.size());
+        
         for (int i = 0; i < pointerCount; i++) {
             int pointerId = e.getPointerId(i);
             
@@ -146,40 +151,37 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
                 GeneralUtils.debugLog(debugLogging, TAG, "Touch Move: x=" + x + ", y=" + y + ", contactId=" + contactId);
                 
                 // 发送触摸更新事件
-                rdpPointer.touchUpdate(x, y, contactId);
+                pointer.touchUpdate(x, y, contactId);
+            } else {
+                GeneralUtils.debugLog(debugLogging, TAG, "Touch Move: Skipping pointerId " + pointerId + ", not in contactIdMap");
             }
         }
     }
 
-    private void handleTouchUp(MotionEvent e, int pointerIndex, RemoteRdpPointer rdpPointer) {
-        // 根据事件类型确定实际的指针索引
-        int actualPointerIndex;
-        if (e.getActionMasked() == MotionEvent.ACTION_POINTER_UP) {
-            // ACTION_POINTER_UP 事件，使用 actionIndex
-            actualPointerIndex = e.getActionIndex();
-        } else {
-            // ACTION_UP 事件，使用传入的pointerIndex
-            actualPointerIndex = pointerIndex;
-        }
+    private void handleTouchUp(MotionEvent e, int pointerIndex, RemotePointer pointer) {
+        // 获取实际的指针ID
+        int pointerId = e.getPointerId(pointerIndex);
         
-        int pointerId = e.getPointerId(actualPointerIndex);
+        GeneralUtils.debugLog(debugLogging, TAG, "Touch Up - pointerIndex: " + pointerIndex + ", pointerId: " + pointerId + ", contactIdMap size: " + contactIdMap.size());
         
         if (contactIdMap.containsKey(pointerId)) {
             int contactId = contactIdMap.get(pointerId);
-            int x = (int) (canvas.getAbsX() + e.getX(actualPointerIndex) / canvas.getZoomFactor());
-            int y = (int) (canvas.getAbsY() + (e.getY(actualPointerIndex) - 1.f * canvas.getTop()) / canvas.getZoomFactor());
+            int x = (int) (canvas.getAbsX() + e.getX(pointerIndex) / canvas.getZoomFactor());
+            int y = (int) (canvas.getAbsY() + (e.getY(pointerIndex) - 1.f * canvas.getTop()) / canvas.getZoomFactor());
 
             GeneralUtils.debugLog(debugLogging, TAG, "Touch Up: x=" + x + ", y=" + y + ", contactId=" + contactId);
             
             // 发送触摸抬起事件
-            rdpPointer.touchUp(x, y, contactId);
+            pointer.touchUp(x, y, contactId);
             
             // 释放接触ID
             releaseContactId(pointerId);
+        } else {
+            GeneralUtils.debugLog(debugLogging, TAG, "Touch Up: pointerId " + pointerId + " not found in contactIdMap. Available IDs: " + contactIdMap.keySet());
         }
     }
 
-    private void handleTouchCancel(MotionEvent e, RemoteRdpPointer rdpPointer) {
+    private void handleTouchCancel(MotionEvent e, RemotePointer pointer) {
         // 取消所有活动的触摸点
         for (Map.Entry<Integer, Integer> entry : contactIdMap.entrySet()) {
             int pointerId = entry.getKey();
@@ -200,7 +202,7 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
             GeneralUtils.debugLog(debugLogging, TAG, "Touch Cancel: x=" + x + ", y=" + y + ", contactId=" + contactId);
             
             // 发送触摸取消事件
-            rdpPointer.touchCancel(x, y, contactId);
+            pointer.touchCancel(x, y, contactId);
         }
         
         // 清空接触ID映射

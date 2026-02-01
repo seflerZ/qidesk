@@ -429,6 +429,26 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
 
     }
 
+    @Override
+    public void writeTouchEvent(int x, int y, int flags, int contactId) {
+        // 使用MoonBridge发送触摸事件到NVStream服务器
+        // 将坐标转换为浮点数格式，范围从0.0到1.0
+        float normalizedX = (float)x / (float)framebufferWidth();
+        float normalizedY = (float)y / (float)framebufferHeight();
+
+        // 调用底层库发送触摸事件
+        MoonBridge.sendTouchEvent(
+                (byte) flags,          // event type (down/up/move)
+                contactId,          // pointer identifier
+                normalizedX,        // normalized x coordinate
+                normalizedY,        // normalized y coordinate
+                1.0f,               // pressure
+                1.0f,               // contact area major
+                1.0f,               // contact area minor
+                (short) 0            // rotation
+        );
+    }
+
     public void setPrefConfig(PreferenceConfiguration prefConfig) {
         this.prefConfig = prefConfig;
     }

@@ -167,6 +167,15 @@ public abstract class RemotePointer {
 
     abstract public void moveMouseButtonUp(int x, int y, int metaState);
 
+    abstract public void touchDown(int x, int y, int contactId);
+
+    abstract public void touchUpdate(int x, int y, int contactId);
+
+    abstract public void touchCancel(int x, int y, int contactId);
+
+    abstract public void touchUp(int x, int y, int contactId);
+
+
     public boolean isRelativeEvents() {
         return relativeEvents;
     }
