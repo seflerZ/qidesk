@@ -180,8 +180,8 @@ public class GamepadOverlay extends FrameLayout {
         float knobSize = 50 * getResources().getDisplayMetrics().density;
 
         // Left stick
-        leftStickBase = createCircleView(Color.parseColor("#40FFFFFF"), stickSize);
-        leftStickKnob = createCircleView(Color.parseColor("#80FFFFFF"), knobSize);
+        leftStickBase = createCircleView(Color.parseColor("#40FFFF2C"), stickSize); //淡黄色背景
+        leftStickKnob = createCircleView(Color.parseColor("#80FFFF2C"), knobSize); //淡黄色前景
         addView(leftStickBase);
         addView(leftStickKnob);
 
@@ -189,8 +189,8 @@ public class GamepadOverlay extends FrameLayout {
         leftStickKnob.setVisibility(GONE);
 
         // Right stick
-        rightStickBase = createCircleView(Color.parseColor("#40FFFFFF"), stickSize);
-        rightStickKnob = createCircleView(Color.parseColor("#80FFFFFF"), knobSize);
+        rightStickBase = createCircleView(Color.parseColor("#4087CEFA"), stickSize); //淡蓝色背景
+        rightStickKnob = createCircleView(Color.parseColor("#8087CEFA"), knobSize); //淡蓝色前景
         addView(rightStickBase);
         addView(rightStickKnob);
 
