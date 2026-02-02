@@ -94,6 +94,9 @@ public class GamepadOverlay extends FrameLayout {
     private int resizePointer1Id = -1;
     private int resizePointer2Id = -1;
 
+    // Map to track active touches
+    private Map<Integer, GamepadButton> activeTouches = new HashMap<>();
+
     public GamepadOverlay(Context context) {
         super(context);
         init(context);
@@ -710,5 +713,114 @@ public class GamepadOverlay extends FrameLayout {
                 }
             });
         }
+    }
+    
+    /**
+     * Handles touch events in normal mode for button presses
+     */
+    private boolean handleNormalModeTouch(MotionEvent event) {
+        final int action = event.getActionMasked();
+        final int index = event.getActionIndex();
+        final int pointerId = event.getPointerId(index);
+        float x = event.getX(index);
+        float y = event.getY(index);
+
+        switch (action) {
+            case MotionEvent.ACTION_DOWN:
+            case MotionEvent.ACTION_POINTER_DOWN:
+                // Check if the touch is on a button
+                for (GamepadButton button : buttonMap.values()) {
+                    if (isPointInView(button, x, y)) {
+                        // Record this touch as active on this button
+                        activeTouches.put(pointerId, button);
+                        button.simulatePress();
+                        // Notify input handler
+                        if (inputHandler != null) {
+                            inputHandler.sendGamepadButton(button.getKeyCode(), false);
+                        }
+                        return true; // Event handled
+                    }
+                }
+                break;
+
+            case MotionEvent.ACTION_MOVE:
+                // Handle all moving pointers
+                int pointerCount = event.getPointerCount();
+                for (int i = 0; i < pointerCount; i++) {
+                    int movingPointerId = event.getPointerId(i);
+                    float movingX = event.getX(i);
+                    float movingY = event.getY(i);
+                    
+                    // Check if this pointer was previously on a button
+                    GamepadButton prevButton = activeTouches.get(movingPointerId);
+                    if (prevButton != null) {
+                        boolean isStillOnButton = isPointInView(prevButton, movingX, movingY);
+                        
+                        if (!isStillOnButton) {
+                            // Moved off the button, release it
+                            prevButton.simulateRelease();
+                            // Notify input handler of release
+                            if (inputHandler != null) {
+                                inputHandler.sendGamepadButton(prevButton.getKeyCode(), true);
+                            }
+                            activeTouches.remove(movingPointerId);
+                        }
+                    } else {
+                        // Check if this moving pointer is now on a button
+                        for (GamepadButton button : buttonMap.values()) {
+                            if (isPointInView(button, movingX, movingY) && !activeTouches.containsValue(button)) {
+                                activeTouches.put(movingPointerId, button);
+                                button.simulatePress();
+                                // Notify input handler
+                                if (inputHandler != null) {
+                                    inputHandler.sendGamepadButton(button.getKeyCode(), false);
+                                }
+                                break; // Found a button for this pointer
+                            }
+                        }
+                    }
+                }
+                break;
+
+            case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_POINTER_UP:
+                // Release the button associated with this pointer
+                GamepadButton releasedButton = activeTouches.get(pointerId);
+                if (releasedButton != null) {
+                    releasedButton.simulateRelease();
+                    // Notify input handler of release
+                    if (inputHandler != null) {
+                        inputHandler.sendGamepadButton(releasedButton.getKeyCode(), true);
+                    }
+                    activeTouches.remove(pointerId);
+                }
+                return true; // Event handled
+
+            case MotionEvent.ACTION_CANCEL:
+                // Cancel all active touches
+                for (Map.Entry<Integer, GamepadButton> entry : activeTouches.entrySet()) {
+                    GamepadButton button = entry.getValue();
+                    button.simulateRelease();
+                    // Notify input handler of release
+                    if (inputHandler != null) {
+                        inputHandler.sendGamepadButton(button.getKeyCode(), true);
+                    }
+                }
+                activeTouches.clear();
+                return true; // Event handled
+        }
+
+        return false; // Event not handled
+    }
+    
+    /**
+     * Dispatch touch event to handle button presses
+     */
+    public boolean dispatchTouchEvent(MotionEvent event) {
+        // Only handle touch events in normal mode, not in edit mode
+        if (!editMode) {
+            return handleNormalModeTouch(event);
+        }
+        return false;
     }
 }

@@ -109,6 +109,10 @@ public class GamepadButton extends View {
     public int getKeyCode() {
         return keyCode;
     }
+    
+    public boolean isCurrentlyPressed() {
+        return isPressed;
+    }
 
     /**
      * Set the button size
@@ -168,86 +172,9 @@ public class GamepadButton extends View {
             return false;
         }
 
-        // 非编辑模式下的正常触摸处理
-        switch (event.getActionMasked()) {
-            case MotionEvent.ACTION_DOWN:
-                // 在按下时，改变视觉状态并立即触发按钮按下事件
-                isPressed = true;
-                backgroundPaint.setColor(COLOR_PRESSED);
-                invalidate();
-                
-                // 立即触发按钮按下事件
-                if (listener != null) {
-                    listener.onButtonDown(keyCode);
-                }
-                
-                // 检查是否是select键长按进入编辑模式
-                if (keyCode == android.view.KeyEvent.KEYCODE_BUTTON_SELECT) {
-                    // 对于select键，启动长按检测以进入编辑模式
-                    postDelayed(longPressRunnable, 600); // 600ms 作为长按时间
-                }
-                
-                return true;
-
-            case MotionEvent.ACTION_UP:
-                // 移除长按回调（如果有的话）
-                removeCallbacks(longPressRunnable);
-                
-                // 触发按钮释放事件
-                if (listener != null) {
-                    listener.onButtonUp(keyCode);
-                }
-                
-                // 重置按钮状态
-                isPressed = false;
-                backgroundPaint.setColor(editMode ? COLOR_EDIT : COLOR_NORMAL);
-                invalidate();
-                
-                return true;
-
-            case MotionEvent.ACTION_CANCEL:
-                removeCallbacks(longPressRunnable);
-                isPressed = false;
-                backgroundPaint.setColor(editMode ? COLOR_EDIT : COLOR_NORMAL);
-                invalidate();
-                return true;
-
-            case MotionEvent.ACTION_MOVE:
-                // 检查手指是否仍在按钮范围内
-                float x = event.getX();
-                float y = event.getY();
-                boolean withinBounds = x >= 0 && x <= getWidth() && y >= 0 && y <= getHeight();
-                
-                if (isPressed && !withinBounds) {
-                    // 手指移出按钮范围，取消按钮按下状态和发送释放事件
-                    removeCallbacks(longPressRunnable);
-                    
-                    if (listener != null) {
-                        listener.onButtonUp(keyCode);
-                    }
-                    
-                    isPressed = false;
-                    backgroundPaint.setColor(editMode ? COLOR_EDIT : COLOR_NORMAL);
-                    invalidate();
-                } else if (!isPressed && withinBounds) {
-                    // 手指移回按钮范围
-                    isPressed = true;
-                    backgroundPaint.setColor(COLOR_PRESSED);
-                    invalidate();
-                    
-                    if (listener != null) {
-                        listener.onButtonDown(keyCode);
-                    }
-                    
-                    // 重新启动长按检测（如果是select键）
-                    if (keyCode == android.view.KeyEvent.KEYCODE_BUTTON_SELECT) {
-                        postDelayed(longPressRunnable, 600);
-                    }
-                }
-                return true;
-        }
-
-        return super.onTouchEvent(event);
+        // 在正常模式下，让父视图处理触摸事件
+        // 这样可以确保多个按钮可以同时按下
+        return false;
     }
     
     private Runnable longPressRunnable = new Runnable() {

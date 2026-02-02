@@ -68,6 +68,9 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
     // Last repeat time
     private long lastRepeatTime = 0;
     private static final long REPEAT_INTERVAL_MS = 50;
+    
+    // Track pressed buttons for multi-button support
+    private int currentButtonFlags = 0;
 
     public InputHandlerGamepad(RemoteCanvasActivity activity, RemoteCanvas canvas,
                               RemotePointer pointer, boolean debugLogging) {
@@ -194,15 +197,21 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
             return false; // 不处理任何事件，让 GamepadOverlay 处理
         }
 
-        // 在非编辑模式下，检查是否有任何按钮被触摸
-        // 重要：这里我们不阻止按钮处理自己的触摸事件，而是让它们并行工作
-        boolean isOnAnyButton = gamepadOverlay != null && gamepadOverlay.onButtonTouchRaw(touchX, touchY);
+        // 让 GamepadOverlay 先处理按钮触摸事件
+        // 这样可以确保多按钮同时按下的事件得到正确处理
+        boolean handledByOverlay = false;
+        if (gamepadOverlay != null) {
+            handledByOverlay = gamepadOverlay.dispatchTouchEvent(e);
+        }
+        
+        // 检查当前触摸点是否在按钮上
+        boolean isOnCurrentButton = gamepadOverlay != null && gamepadOverlay.onButtonTouchRaw(touchX, touchY);
 
         switch (action) {
             case MotionEvent.ACTION_DOWN:
             case MotionEvent.ACTION_POINTER_DOWN:
                 // 只有当触摸不在任何按钮上时才处理为摇杆操作
-                if (!isOnAnyButton) {
+                if (!isOnCurrentButton) {
                     handlePointerDown(pointerID, touchX, touchY, isLeftSide);
                 }
                 break;
@@ -217,7 +226,8 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
                     boolean isMovingLeftSide = movingX < screenMiddleX;
                     
                     // 如果这个移动的触摸点不在任何按钮上，才处理为摇杆移动
-                    if (!isOnAnyButton || !gamepadOverlay.onButtonTouchRaw(movingX, movingY)) {
+                    boolean isOnButtonAtPosition = gamepadOverlay != null && gamepadOverlay.onButtonTouchRaw(movingX, movingY);
+                    if (!isOnButtonAtPosition) {
                         handlePointerMove(e, movingPointerId, isMovingLeftSide);
                     }
                 }
@@ -226,7 +236,7 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_POINTER_UP:
                 // 只有之前被识别为摇杆操作的触摸点才在这里处理释放
-                if (!isOnAnyButton) {
+                if (!isOnCurrentButton) {
                     handlePointerUp(pointerID);
                 }
                 break;
@@ -236,9 +246,9 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
                 break;
         }
 
-        // 重要：返回false以允许其他组件（如按钮）也处理触摸事件
-        // 这样可以实现摇杆和按钮的同时操作
-        return false;
+        // 如果事件没有被overlay处理且不是在按钮上，说明这是一个摇杆操作
+        // 重要：返回handledByOverlay以正确反映事件是否被处理
+        return handledByOverlay;
     }
 
     private void handlePointerDown(int pointerId, float x, float y, boolean isLeftSide) {
@@ -536,7 +546,7 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
                         MoonBridge.sendMultiControllerInput(
                             (short) 0,  // controller number
                             (short) 1,  // active gamepad mask (first gamepad)
-                            0,  // button flags (released)
+                            currentButtonFlags,  // preserve current button flags
                             releaseLeftTrigger,   // left trigger
                             releaseRightTrigger,   // right trigger
                             (short) (leftStickX * 32767),  // left stick X (maintain current position)
@@ -551,11 +561,20 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
                 int buttonFlag = mapKeyCodeToGamepadButton(keyCode);
                 
                 if (buttonFlag != 0) {
-                    // Send the controller input through MoonBridge
+                    // Update the current button flags based on whether this is a press or release
+                    if (!autoRelease) {
+                        // Button press - add to current flags
+                        currentButtonFlags |= buttonFlag;
+                    } else {
+                        // Button release - remove from current flags
+                        currentButtonFlags &= ~buttonFlag;
+                    }
+                    
+                    // Send the controller input through MoonBridge with all currently pressed buttons
                     MoonBridge.sendMultiControllerInput(
                         (short) 0,  // controller number
                         (short) 1,  // active gamepad mask (first gamepad)
-                        buttonFlag,  // button flags
+                        currentButtonFlags,  // current button flags (all currently pressed buttons)
                         (byte) 0,   // left trigger (0-255 range)
                         (byte) 0,   // right trigger (0-255 range)
                         (short) (leftStickX * 32767),  // left stick X (maintain current position)
@@ -565,14 +584,17 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
                     );
                     
                     // Send release event after a short delay to simulate button press/release
-                    if (autoRelease) {
+                    if (autoRelease && !isTrigger) { // Only auto-release for non-trigger buttons
                         Handler handler = new Handler();
                         
                         handler.postDelayed(() -> {
+                            // When auto-releasing, remove the button from current flags
+                            currentButtonFlags &= ~buttonFlag;
+                            
                             MoonBridge.sendMultiControllerInput(
                                 (short) 0,  // controller number
                                 (short) 1,  // active gamepad mask (first gamepad)
-                                0,  // button flags (released)
+                                currentButtonFlags,  // current button flags (with released button removed)
                                 (byte) 0,   // left trigger
                                 (byte) 0,   // right trigger
                                 (short) (leftStickX * 32767),  // left stick X (maintain current position)
@@ -679,6 +701,9 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
             if (gamepadOverlay.getParent() != null) {
                 return; // Already added
             }
+            
+            // Reset button flags when showing overlay again
+            currentButtonFlags = 0;
             
             // Notify Moonlight that a gamepad has arrived again
             if (canvas.rfbconn instanceof NvCommunicator) {
