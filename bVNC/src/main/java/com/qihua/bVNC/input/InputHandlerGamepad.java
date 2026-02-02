@@ -180,9 +180,7 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
         }
 
         // Update screen dimensions if needed
-        if (screenWidth == 0 || screenHeight == 0) {
-            setScreenDimensions((int) e.getX(0), (int) e.getY(0));
-        }
+        setScreenDimensions(canvas.getWidth(), canvas.getHeight());
 
         // Determine which side of the screen the touch is on
         float touchX = e.getX(index);
@@ -229,7 +227,7 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
                     
                     // If this pointer is controlling a stick, use the original side determination
                     // Otherwise, use the current position to determine the side
-                    boolean isMovingPointerLeftSide = isControllingStick ? 
+                    boolean isMovingPointerLeftSide = isControllingStick ?
                         (movingPointerId == leftStickPointerId) : (movingX < screenMiddleX);
                     
                     // If this moving pointer is not on a button, process as stick movement
