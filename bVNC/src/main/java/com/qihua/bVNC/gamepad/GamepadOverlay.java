@@ -26,6 +26,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
+import android.os.Handler;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.view.KeyEvent;
@@ -96,6 +97,11 @@ public class GamepadOverlay extends FrameLayout {
 
     // Map to track active touches
     private Map<Integer, GamepadButton> activeTouches = new HashMap<>();
+    
+    // Long press detection
+    private static final int LONG_PRESS_TIMEOUT = 1000; // 1 second
+    private Map<Integer, Handler> longPressHandlers = new HashMap<>();
+    private Map<Integer, Runnable> longPressRunnables = new HashMap<>();
 
     public GamepadOverlay(Context context) {
         super(context);
@@ -738,6 +744,10 @@ public class GamepadOverlay extends FrameLayout {
                         if (inputHandler != null) {
                             inputHandler.sendGamepadButton(button.getKeyCode(), false);
                         }
+                        // Only start long press detection for select button
+                        if (button.getKeyCode() == KeyEvent.KEYCODE_BUTTON_SELECT) {
+                            startLongPressDetection(pointerId, button);
+                        }
                         return true; // Event handled
                     }
                 }
@@ -794,6 +804,8 @@ public class GamepadOverlay extends FrameLayout {
                     }
                     activeTouches.remove(pointerId);
                 }
+                // Remove long press detection for this pointer
+                removeLongPressDetection(pointerId);
                 return true; // Event handled
 
             case MotionEvent.ACTION_CANCEL:
@@ -807,10 +819,63 @@ public class GamepadOverlay extends FrameLayout {
                     }
                 }
                 activeTouches.clear();
+                // Clear all long press detections
+                clearAllLongPressDetections();
                 return true; // Event handled
         }
 
         return false; // Event not handled
+    }
+    
+    /**
+     * Start long press detection for a button
+     */
+    private void startLongPressDetection(int pointerId, GamepadButton button) {
+        // Cancel any existing long press detection for this pointer
+        removeLongPressDetection(pointerId);
+        
+        Handler handler = new Handler();
+        Runnable runnable = () -> {
+            // Enter edit mode when long press completes
+            if (activeTouches.containsKey(pointerId)) { // Only if finger is still down
+                enterEditModeForButton(button);
+            }
+        };
+        
+        longPressHandlers.put(pointerId, handler);
+        longPressRunnables.put(pointerId, runnable);
+        
+        handler.postDelayed(runnable, LONG_PRESS_TIMEOUT);
+    }
+    
+    /**
+     * Remove long press detection for a pointer
+     */
+    private void removeLongPressDetection(int pointerId) {
+        Handler handler = longPressHandlers.get(pointerId);
+        Runnable runnable = longPressRunnables.get(pointerId);
+        
+        if (handler != null && runnable != null) {
+            handler.removeCallbacks(runnable);
+        }
+        
+        longPressHandlers.remove(pointerId);
+        longPressRunnables.remove(pointerId);
+    }
+    
+    /**
+     * Clear all long press detections
+     */
+    private void clearAllLongPressDetections() {
+        for (Map.Entry<Integer, Handler> entry : longPressHandlers.entrySet()) {
+            Handler handler = entry.getValue();
+            Runnable runnable = longPressRunnables.get(entry.getKey());
+            if (handler != null && runnable != null) {
+                handler.removeCallbacks(runnable);
+            }
+        }
+        longPressHandlers.clear();
+        longPressRunnables.clear();
     }
     
     /**
@@ -822,5 +887,17 @@ public class GamepadOverlay extends FrameLayout {
             return handleNormalModeTouch(event);
         }
         return false;
+    }
+    
+    public void toggleEditMode() {
+        if (editMode) {
+            exitEditMode();
+        } else {
+            // Find the select button and enter edit mode
+            GamepadButton selectButton = buttonMap.get("SELECT");
+            if (selectButton != null) {
+                enterEditModeForButton(selectButton);
+            }
+        }
     }
 }
