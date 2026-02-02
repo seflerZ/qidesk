@@ -271,13 +271,17 @@ public class GamepadOverlay extends FrameLayout {
             @Override
             public void onButtonDown(int keyCode) {
                 if (inputHandler != null && !editMode) {
-                    inputHandler.sendGamepadButton(keyCode);
+                    // 发送按钮按下事件，不自动释放（用于长按）
+                    inputHandler.sendGamepadButton(keyCode, false);
                 }
             }
 
             @Override
             public void onButtonUp(int keyCode) {
-                // Optional: handle button release
+                if (inputHandler != null && !editMode) {
+                    // 发送按钮释放事件，不自动重新按下
+                    inputHandler.sendGamepadButton(keyCode, true);
+                }
             }
         });
 

@@ -187,7 +187,6 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
         boolean isLeftSide = touchX < screenMiddleX;
 
         // 实时检查是否处于编辑模式（在处理事件期间编辑模式可能被退出）
-        boolean isOnButton = gamepadOverlay != null && gamepadOverlay.onButtonTouchRaw(touchX, touchY);
         boolean isEditing = gamepadOverlay != null && gamepadOverlay.isEditMode();
 
         // 如果处于编辑模式，完全跳过游戏手柄的处理逻辑
@@ -195,15 +194,17 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
             return false; // 不处理任何事件，让 GamepadOverlay 处理
         }
 
-        // 在非编辑模式下，如果触摸在按钮上，不处理这些事件，让按钮自己处理
-        if (isOnButton) {
-            return false; // 让按钮自己处理触摸事件，包括长按检测
-        }
+        // 在非编辑模式下，检查是否有任何按钮被触摸
+        // 重要：这里我们不阻止按钮处理自己的触摸事件，而是让它们并行工作
+        boolean isOnAnyButton = gamepadOverlay != null && gamepadOverlay.onButtonTouchRaw(touchX, touchY);
 
         switch (action) {
             case MotionEvent.ACTION_DOWN:
             case MotionEvent.ACTION_POINTER_DOWN:
-                handlePointerDown(pointerID, touchX, touchY, isLeftSide);
+                // 只有当触摸不在任何按钮上时才处理为摇杆操作
+                if (!isOnAnyButton) {
+                    handlePointerDown(pointerID, touchX, touchY, isLeftSide);
+                }
                 break;
 
             case MotionEvent.ACTION_MOVE:
@@ -214,13 +215,20 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
                     float movingX = e.getX(i);
                     float movingY = e.getY(i);
                     boolean isMovingLeftSide = movingX < screenMiddleX;
-                    handlePointerMove(e, movingPointerId, isMovingLeftSide);
+                    
+                    // 如果这个移动的触摸点不在任何按钮上，才处理为摇杆移动
+                    if (!isOnAnyButton || !gamepadOverlay.onButtonTouchRaw(movingX, movingY)) {
+                        handlePointerMove(e, movingPointerId, isMovingLeftSide);
+                    }
                 }
                 break;
 
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_POINTER_UP:
-                handlePointerUp(pointerID);
+                // 只有之前被识别为摇杆操作的触摸点才在这里处理释放
+                if (!isOnAnyButton) {
+                    handlePointerUp(pointerID);
+                }
                 break;
 
             case MotionEvent.ACTION_CANCEL:
@@ -228,18 +236,13 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
                 break;
         }
 
-        // 在非编辑模式下处理模拟摇杆事件
-        // 对于多点触控，始终返回false以允许系统处理多个触控点
+        // 重要：返回false以允许其他组件（如按钮）也处理触摸事件
+        // 这样可以实现摇杆和按钮的同时操作
         return false;
     }
 
     private void handlePointerDown(int pointerId, float x, float y, boolean isLeftSide) {
         GeneralUtils.debugLog(debugLogging, TAG, "Pointer down: " + pointerId + ", leftSide: " + isLeftSide);
-
-        // Check if touch is on a gamepad button
-        if (gamepadOverlay != null && gamepadOverlay.onButtonTouch(x, y, true)) {
-            return;
-        }
 
         // Check if this pointer is already tracking an analog stick
         if (leftStickPointerId == pointerId || rightStickPointerId == pointerId) {
@@ -275,11 +278,6 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
         float x = e.getX(index);
         float y = e.getY(index);
 
-        // Check if this is a button touch
-        if (gamepadOverlay != null && gamepadOverlay.onButtonTouchMove(x, y)) {
-            return;
-        }
-
         // Handle analog stick movement
         if (pointerId == leftStickPointerId) {
             updateAnalogStick(x, y, true);
@@ -290,11 +288,6 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
 
     private void handlePointerUp(int pointerId) {
         GeneralUtils.debugLog(debugLogging, TAG, "Pointer up: " + pointerId);
-
-        // Check button release
-        if (gamepadOverlay != null) {
-            gamepadOverlay.onButtonTouchRelease();
-        }
 
         // Handle analog stick release
         if (pointerId == leftStickPointerId) {
@@ -332,10 +325,6 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
 
         showLeftStickVisual(0, 0, false);
         showRightStickVisual(0, 0, false);
-
-        if (gamepadOverlay != null) {
-            gamepadOverlay.onButtonTouchRelease();
-        }
     }
 
     private void updateAnalogStick(float x, float y, boolean isLeft) {
@@ -492,7 +481,14 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
      * Send a gamepad button press as keyboard event
      */
     public void sendGamepadButton(int keyCode) {
-        GeneralUtils.debugLog(debugLogging, TAG, "Sending gamepad button: " + keyCode);
+        sendGamepadButton(keyCode, true); // 默认自动发送释放事件，用于短按
+    }
+    
+    /**
+     * Send a gamepad button press with option to auto-release
+     */
+    public void sendGamepadButton(int keyCode, boolean autoRelease) {
+        GeneralUtils.debugLog(debugLogging, TAG, "Sending gamepad button: " + keyCode + ", autoRelease: " + autoRelease);
         
         // Check if we have an NvCommunicator connection
         if (canvas.rfbconn instanceof NvCommunicator) {
@@ -527,27 +523,29 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
                 );
                 
                 // Send release event after a short delay to simulate trigger press/release
-                Handler handler = new Handler();
-                final byte finalLeftTriggerValue = leftTriggerValue;
-                final byte finalRightTriggerValue = rightTriggerValue;
-                final int finalKeyCode = keyCode;
-                
-                handler.postDelayed(() -> {
-                    byte releaseLeftTrigger = (finalKeyCode == KeyEvent.KEYCODE_BUTTON_L2) ? (byte) 0x00 : finalLeftTriggerValue;
-                    byte releaseRightTrigger = (finalKeyCode == KeyEvent.KEYCODE_BUTTON_R2) ? (byte) 0x00 : finalRightTriggerValue;
+                if (autoRelease) {
+                    Handler handler = new Handler();
+                    final byte finalLeftTriggerValue = leftTriggerValue;
+                    final byte finalRightTriggerValue = rightTriggerValue;
+                    final int finalKeyCode = keyCode;
                     
-                    MoonBridge.sendMultiControllerInput(
-                        (short) 0,  // controller number
-                        (short) 1,  // active gamepad mask (first gamepad)
-                        0,  // button flags (released)
-                        releaseLeftTrigger,   // left trigger
-                        releaseRightTrigger,   // right trigger
-                        (short) (leftStickX * 32767),  // left stick X (maintain current position)
-                        (short) (leftStickY * 32767),  // left stick Y (maintain current position)
-                        (short) (rightStickX * 32767),  // right stick X (maintain current position)
-                        (short) (rightStickY * 32767)   // right stick Y (maintain current position)
-                    );
-                }, 50); // 50ms delay
+                    handler.postDelayed(() -> {
+                        byte releaseLeftTrigger = (finalKeyCode == KeyEvent.KEYCODE_BUTTON_L2) ? (byte) 0x00 : finalLeftTriggerValue;
+                        byte releaseRightTrigger = (finalKeyCode == KeyEvent.KEYCODE_BUTTON_R2) ? (byte) 0x00 : finalRightTriggerValue;
+                        
+                        MoonBridge.sendMultiControllerInput(
+                            (short) 0,  // controller number
+                            (short) 1,  // active gamepad mask (first gamepad)
+                            0,  // button flags (released)
+                            releaseLeftTrigger,   // left trigger
+                            releaseRightTrigger,   // right trigger
+                            (short) (leftStickX * 32767),  // left stick X (maintain current position)
+                            (short) (leftStickY * 32767),  // left stick Y (maintain current position)
+                            (short) (rightStickX * 32767),  // right stick X (maintain current position)
+                            (short) (rightStickY * 32767)   // right stick Y (maintain current position)
+                        );
+                    }, 50); // 50ms delay
+                }
             } else {
                 // Handle regular buttons
                 int buttonFlag = mapKeyCodeToGamepadButton(keyCode);
@@ -567,29 +565,32 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
                     );
                     
                     // Send release event after a short delay to simulate button press/release
-                    Handler handler = new Handler();
-                    
-                    handler.postDelayed(() -> {
-                        MoonBridge.sendMultiControllerInput(
-                            (short) 0,  // controller number
-                            (short) 1,  // active gamepad mask (first gamepad)
-                            0,  // button flags (released)
-                            (byte) 0,   // left trigger
-                            (byte) 0,   // right trigger
-                            (short) (leftStickX * 32767),  // left stick X (maintain current position)
-                            (short) (leftStickY * 32767),  // left stick Y (maintain current position)
-                            (short) (rightStickX * 32767),  // right stick X (maintain current position)
-                            (short) (rightStickY * 32767)   // right stick Y (maintain current position)
-                        );
-                    }, 50); // 50ms delay
+                    if (autoRelease) {
+                        Handler handler = new Handler();
+                        
+                        handler.postDelayed(() -> {
+                            MoonBridge.sendMultiControllerInput(
+                                (short) 0,  // controller number
+                                (short) 1,  // active gamepad mask (first gamepad)
+                                0,  // button flags (released)
+                                (byte) 0,   // left trigger
+                                (byte) 0,   // right trigger
+                                (short) (leftStickX * 32767),  // left stick X (maintain current position)
+                                (short) (leftStickY * 32767),  // left stick Y (maintain current position)
+                                (short) (rightStickX * 32767),  // right stick X (maintain current position)
+                                (short) (rightStickY * 32767)   // right stick Y (maintain current position)
+                            );
+                        }, 50); // 50ms delay
+                    }
                 } else {
                     // Fallback to keyboard if not a gamepad button
                     RemoteKeyboard keyboard = canvas.getKeyboard();
                     int metaState = keyboard.getMetaState();
 
                     keyboard.keyEvent(keyCode, new KeyEvent(KeyEvent.ACTION_DOWN, keyCode));
-                    SystemClock.sleep(20);
-                    keyboard.keyEvent(keyCode, new KeyEvent(KeyEvent.ACTION_UP, keyCode));
+                    if (autoRelease) {
+                        keyboard.keyEvent(keyCode, new KeyEvent(KeyEvent.ACTION_UP, keyCode));
+                    }
                 }
             }
         }

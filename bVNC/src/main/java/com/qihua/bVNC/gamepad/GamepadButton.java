@@ -171,29 +171,31 @@ public class GamepadButton extends View {
         // 非编辑模式下的正常触摸处理
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
-                // 在按下时，只改变视觉状态，不立即触发按钮事件
+                // 在按下时，改变视觉状态并立即触发按钮按下事件
                 isPressed = true;
                 backgroundPaint.setColor(COLOR_PRESSED);
                 invalidate();
                 
-                // 启动长按检测，延迟触发按钮事件
-                postDelayed(longPressRunnable, 600); // 600ms 作为长按时间
+                // 立即触发按钮按下事件
+                if (listener != null) {
+                    listener.onButtonDown(keyCode);
+                }
+                
+                // 检查是否是select键长按进入编辑模式
+                if (keyCode == android.view.KeyEvent.KEYCODE_BUTTON_SELECT) {
+                    // 对于select键，启动长按检测以进入编辑模式
+                    postDelayed(longPressRunnable, 600); // 600ms 作为长按时间
+                }
                 
                 return true;
 
             case MotionEvent.ACTION_UP:
-                // 如果在抬起前没有触发长按，则执行按钮事件
+                // 移除长按回调（如果有的话）
                 removeCallbacks(longPressRunnable);
                 
-                // 只有在没有触发长按的情况下才执行按钮事件
-                if (!longPressTriggered) {
-                    if (listener != null) {
-                        listener.onButtonDown(keyCode);
-                        listener.onButtonUp(keyCode);
-                    }
-                } else {
-                    // 重置长按标记
-                    longPressTriggered = false;
+                // 触发按钮释放事件
+                if (listener != null) {
+                    listener.onButtonUp(keyCode);
                 }
                 
                 // 重置按钮状态
@@ -208,7 +210,6 @@ public class GamepadButton extends View {
                 isPressed = false;
                 backgroundPaint.setColor(editMode ? COLOR_EDIT : COLOR_NORMAL);
                 invalidate();
-                longPressTriggered = false;
                 return true;
 
             case MotionEvent.ACTION_MOVE:
@@ -218,19 +219,30 @@ public class GamepadButton extends View {
                 boolean withinBounds = x >= 0 && x <= getWidth() && y >= 0 && y <= getHeight();
                 
                 if (isPressed && !withinBounds) {
-                    // 手指移出按钮范围，取消按钮按下状态和长按检测
+                    // 手指移出按钮范围，取消按钮按下状态和发送释放事件
                     removeCallbacks(longPressRunnable);
+                    
+                    if (listener != null) {
+                        listener.onButtonUp(keyCode);
+                    }
+                    
                     isPressed = false;
                     backgroundPaint.setColor(editMode ? COLOR_EDIT : COLOR_NORMAL);
                     invalidate();
-                    longPressTriggered = false;
                 } else if (!isPressed && withinBounds) {
                     // 手指移回按钮范围
                     isPressed = true;
                     backgroundPaint.setColor(COLOR_PRESSED);
                     invalidate();
-                    // 重新启动长按检测
-                    postDelayed(longPressRunnable, 600);
+                    
+                    if (listener != null) {
+                        listener.onButtonDown(keyCode);
+                    }
+                    
+                    // 重新启动长按检测（如果是select键）
+                    if (keyCode == android.view.KeyEvent.KEYCODE_BUTTON_SELECT) {
+                        postDelayed(longPressRunnable, 600);
+                    }
                 }
                 return true;
         }
@@ -238,15 +250,10 @@ public class GamepadButton extends View {
         return super.onTouchEvent(event);
     }
     
-    private boolean longPressTriggered = false;
-    
     private Runnable longPressRunnable = new Runnable() {
         @Override
         public void run() {
-            // 标记长按已触发
-            longPressTriggered = true;
-            
-            // 长按事件发生，触发编辑模式
+            // 长按select键，进入编辑模式
             if (getParent() instanceof GamepadOverlay) {
                 ((GamepadOverlay) getParent()).enterEditModeForButton(GamepadButton.this);
             }
