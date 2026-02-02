@@ -740,7 +740,7 @@ public class GamepadOverlay extends FrameLayout {
                         // Record this touch as active on this button
                         activeTouches.put(pointerId, button);
                         button.simulatePress();
-                        // Notify input handler
+                        // Notify input handler - send button DOWN event (do not auto-release)
                         if (inputHandler != null) {
                             inputHandler.sendGamepadButton(button.getKeyCode(), false);
                         }
@@ -781,7 +781,7 @@ public class GamepadOverlay extends FrameLayout {
                             if (isPointInView(button, movingX, movingY) && !activeTouches.containsValue(button)) {
                                 activeTouches.put(movingPointerId, button);
                                 button.simulatePress();
-                                // Notify input handler
+                                // Notify input handler - send button DOWN event (do not auto-release)
                                 if (inputHandler != null) {
                                     inputHandler.sendGamepadButton(button.getKeyCode(), false);
                                 }
@@ -798,7 +798,7 @@ public class GamepadOverlay extends FrameLayout {
                 GamepadButton releasedButton = activeTouches.get(pointerId);
                 if (releasedButton != null) {
                     releasedButton.simulateRelease();
-                    // Notify input handler of release
+                    // Notify input handler of release - send button UP event
                     if (inputHandler != null) {
                         inputHandler.sendGamepadButton(releasedButton.getKeyCode(), true);
                     }

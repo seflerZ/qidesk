@@ -223,20 +223,28 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
                     int movingPointerId = e.getPointerId(i);
                     float movingX = e.getX(i);
                     float movingY = e.getY(i);
-                    boolean isMovingLeftSide = movingX < screenMiddleX;
                     
-                    // 如果这个移动的触摸点不在任何按钮上，才处理为摇杆移动
+                    // Check if this pointer is currently controlling a stick
+                    boolean isControllingStick = (movingPointerId == leftStickPointerId) || (movingPointerId == rightStickPointerId);
+                    
+                    // If this pointer is controlling a stick, use the original side determination
+                    // Otherwise, use the current position to determine the side
+                    boolean isMovingPointerLeftSide = isControllingStick ? 
+                        (movingPointerId == leftStickPointerId) : (movingX < screenMiddleX);
+                    
+                    // If this moving pointer is not on a button, process as stick movement
                     boolean isOnButtonAtPosition = gamepadOverlay != null && gamepadOverlay.onButtonTouchRaw(movingX, movingY);
                     if (!isOnButtonAtPosition) {
-                        handlePointerMove(e, movingPointerId, isMovingLeftSide);
+                        handlePointerMove(e, movingPointerId, isMovingPointerLeftSide);
                     }
                 }
                 break;
 
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_POINTER_UP:
-                // 只有之前被识别为摇杆操作的触摸点才在这里处理释放
-                if (!isOnCurrentButton) {
+                // 释放对应的摇杆，不管抬起时是否在按钮上
+                // 检查该指针是否正在控制任一摇杆
+                if (pointerID == leftStickPointerId || pointerID == rightStickPointerId) {
                     handlePointerUp(pointerID);
                 }
                 break;
@@ -260,21 +268,26 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
             return;
         }
 
-        // Assign to appropriate stick if available
-        if (isLeftSide && leftStickPointerId == -1) {
-            leftStickPointerId = pointerId;
-            leftStickCenterX = x;
-            leftStickCenterY = y;
-            leftStickX = 0;
-            leftStickY = 0;
-            showLeftStickVisual(x, y, true);
-        } else if (!isLeftSide && rightStickPointerId == -1) {
-            rightStickPointerId = pointerId;
-            rightStickCenterX = x;
-            rightStickCenterY = y;
-            rightStickX = 0;
-            rightStickY = 0;
-            showRightStickVisual(x, y, true);
+        // Check if the touch is on a button first - if so, don't assign to analog stick
+        boolean isOnButton = gamepadOverlay != null && gamepadOverlay.onButtonTouchRaw(x, y);
+        
+        // Only assign to appropriate stick if not on a button
+        if (!isOnButton) {
+            if (isLeftSide && leftStickPointerId == -1) {
+                leftStickPointerId = pointerId;
+                leftStickCenterX = x;
+                leftStickCenterY = y;
+                leftStickX = 0;
+                leftStickY = 0;
+                showLeftStickVisual(x, y, true);
+            } else if (!isLeftSide && rightStickPointerId == -1) {
+                rightStickPointerId = pointerId;
+                rightStickCenterX = x;
+                rightStickCenterY = y;
+                rightStickX = 0;
+                rightStickY = 0;
+                showRightStickVisual(x, y, true);
+            }
         }
         // If both sticks are in use and this is a new pointer not on a button, ignore it
     }
@@ -288,11 +301,44 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
         float x = e.getX(index);
         float y = e.getY(index);
 
-        // Handle analog stick movement
+        // Check if this pointer that was controlling a stick has moved onto a button
+        boolean isOnButton = gamepadOverlay != null && gamepadOverlay.onButtonTouchRaw(x, y);
+        
+        // Handle analog stick movement only if not on button
         if (pointerId == leftStickPointerId) {
-            updateAnalogStick(x, y, true);
+            if (isOnButton) {
+                // If this stick control moved onto a button, release the stick
+                leftStickPointerId = -1;
+                leftStickX = 0;
+                leftStickY = 0;
+                sendBothSticksData();
+                stopRepeatEvents();
+                showLeftStickVisual(0, 0, false);
+                
+                // Let the button handle the touch event
+                if (gamepadOverlay != null) {
+                    gamepadOverlay.onButtonTouch(x, y, true); // Simulate button press
+                }
+            } else {
+                updateAnalogStick(x, y, true);
+            }
         } else if (pointerId == rightStickPointerId) {
-            updateAnalogStick(x, y, false);
+            if (isOnButton) {
+                // If this stick control moved onto a button, release the stick
+                rightStickPointerId = -1;
+                rightStickX = 0;
+                rightStickY = 0;
+                sendBothSticksData();
+                stopRepeatEvents();
+                showRightStickVisual(0, 0, false);
+                
+                // Let the button handle the touch event
+                if (gamepadOverlay != null) {
+                    gamepadOverlay.onButtonTouch(x, y, true); // Simulate button press
+                }
+            } else {
+                updateAnalogStick(x, y, false);
+            }
         }
     }
 
@@ -443,11 +489,11 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
     private void sendBothSticksData() {
         // Check if we have an NvCommunicator connection
         if (canvas.rfbconn instanceof NvCommunicator) {
-            // Send both sticks' current values
+            // Send both sticks' current values and current button states
             MoonBridge.sendMultiControllerInput(
                 (short) 0,  // controller number
                 (short) 1,  // active gamepad mask (first gamepad)
-                0,          // button flags
+                currentButtonFlags,          // current button flags
                 (byte) 0,   // left trigger (0-255 range)
                 (byte) 0,   // right trigger (0-255 range)
                 (short) (leftStickX * 32767),  // left stick X (-32767 to 32767)
@@ -491,7 +537,7 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
      * Send a gamepad button press as keyboard event
      */
     public void sendGamepadButton(int keyCode) {
-        sendGamepadButton(keyCode, true); // 默认自动发送释放事件，用于短按
+        sendGamepadButton(keyCode, false); // 不再自动发送释放事件，由实际触摸事件控制
     }
     
     /**
@@ -554,7 +600,7 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
                             (short) (rightStickX * 32767),  // right stick X (maintain current position)
                             (short) (rightStickY * 32767)   // right stick Y (maintain current position)
                         );
-                    }, 50); // 50ms delay
+                    }, 30); // Reduced delay to 30ms for faster response
                 }
             } else {
                 // Handle regular buttons
@@ -583,27 +629,8 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
                         (short) (rightStickY * 32767)   // right stick Y (maintain current position)
                     );
                     
-                    // Send release event after a short delay to simulate button press/release
-                    if (autoRelease && !isTrigger) { // Only auto-release for non-trigger buttons
-                        Handler handler = new Handler();
-                        
-                        handler.postDelayed(() -> {
-                            // When auto-releasing, remove the button from current flags
-                            currentButtonFlags &= ~buttonFlag;
-                            
-                            MoonBridge.sendMultiControllerInput(
-                                (short) 0,  // controller number
-                                (short) 1,  // active gamepad mask (first gamepad)
-                                currentButtonFlags,  // current button flags (with released button removed)
-                                (byte) 0,   // left trigger
-                                (byte) 0,   // right trigger
-                                (short) (leftStickX * 32767),  // left stick X (maintain current position)
-                                (short) (leftStickY * 32767),  // left stick Y (maintain current position)
-                                (short) (rightStickX * 32767),  // right stick X (maintain current position)
-                                (short) (rightStickY * 32767)   // right stick Y (maintain current position)
-                            );
-                        }, 50); // 50ms delay
-                    }
+                    // Regular buttons no longer auto-release - their state is controlled by touch events
+                    // Only triggers (L2/R2) should have auto-release functionality if they were handled as buttons
                 } else {
                     // Fallback to keyboard if not a gamepad button
                     RemoteKeyboard keyboard = canvas.getKeyboard();
