@@ -167,25 +167,11 @@ public class GamepadButton extends View {
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if (editMode) {
-            // 在编辑模式下，让父视图处理所有触摸事件
-            return false;
-        }
-
+        // 在编辑模式下，让父视图处理所有触摸事件
         // 在正常模式下，让父视图处理触摸事件
         // 这样可以确保多个按钮可以同时按下
         return false;
     }
-    
-    private Runnable longPressRunnable = new Runnable() {
-        @Override
-        public void run() {
-            // 长按select键，进入编辑模式
-            if (getParent() instanceof GamepadOverlay) {
-                ((GamepadOverlay) getParent()).enterEditModeForButton(GamepadButton.this);
-            }
-        }
-    };
 
     @Override
     protected void onDraw(Canvas canvas) {

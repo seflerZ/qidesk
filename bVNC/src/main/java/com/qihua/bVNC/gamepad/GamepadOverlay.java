@@ -162,17 +162,6 @@ public class GamepadOverlay extends FrameLayout {
 
         // Create gamepad buttons
         createGamepadButtons();
-
-        // Set touch listener for edit mode
-        setOnTouchListener(new OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                if (editMode) {
-                    return handleEditModeTouch(event);
-                }
-                return false;
-            }
-        });
     }
 
     private void createAnalogSticks() {
@@ -836,10 +825,7 @@ public class GamepadOverlay extends FrameLayout {
         
         Handler handler = new Handler();
         Runnable runnable = () -> {
-            // Enter edit mode when long press completes
-            if (activeTouches.containsKey(pointerId)) { // Only if finger is still down
-                enterEditModeForButton(button);
-            }
+            enterEditModeForButton(button);
         };
         
         longPressHandlers.put(pointerId, handler);
@@ -885,8 +871,9 @@ public class GamepadOverlay extends FrameLayout {
         // Only handle touch events in normal mode, not in edit mode
         if (!editMode) {
             return handleNormalModeTouch(event);
+        } else {
+            return handleEditModeTouch(event);
         }
-        return false;
     }
     
     public void toggleEditMode() {
