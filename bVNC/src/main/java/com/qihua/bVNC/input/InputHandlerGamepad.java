@@ -141,7 +141,7 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
 
     @Override
     public String getDescription() {
-        return canvas.getResources().getString(R.string.input_method_gamepad);
+        return canvas.getResources().getString(R.string.input_method_gamepad_description);
     }
 
     @Override

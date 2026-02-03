@@ -424,27 +424,6 @@ public class GamepadOverlay extends FrameLayout {
     }
 
     /**
-     * Handle button movement for drag effects
-     */
-    public boolean onButtonTouchMove(float x, float y) {
-        for (GamepadButton button : buttonMap.values()) {
-            if (button.isPressed() && !isPointInView(button, x, y)) {
-                button.simulateRelease();
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Release all buttons
-     */
-    public void onButtonTouchRelease() {
-        for (GamepadButton button : buttonMap.values()) {
-            button.simulateRelease();
-        }
-    }
-
-    /**
      * Check if touch is on a gamepad button without triggering button press
      * Used by InputHandlerGamepad to determine if event should be handled by button or by gamepad
      */

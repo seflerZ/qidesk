@@ -280,6 +280,8 @@
     <string name="input_mode_fit_to_screen">无平移：轨迹球鼠标</string>
     <string name="input_mode_panning">桌面平移模式</string>
     <string name="input_method_mouse">鼠标指针控制</string>
+    <string name="input_method_gamepad">手柄模拟</string>
+    <string name="input_method_gamepad_description">手柄模拟：直接触屏幕左右摇杆控制。触发按钮发送对应按键。长按 “☰” 进入编辑状态移动按钮。</string>
 
     <string name="input_method_direct_swipe_pan">直接、滑动平移</string>
     <string name="input_method_direct_drag_pan">直接、按住并平移</string>
