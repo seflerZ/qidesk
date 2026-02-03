@@ -2426,4 +2426,16 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             }
         }
     }
+
+    public boolean isNvStream() {
+        return isNvStream;
+    }
+
+    public boolean isVnc() {
+        return isVnc;
+    }
+
+    public boolean isRdp() {
+        return isRdp;
+    }
 }

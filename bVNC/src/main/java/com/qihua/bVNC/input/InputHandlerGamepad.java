@@ -27,13 +27,14 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 
-import com.limelight.nvstream.input.ControllerPacket;
-import com.limelight.nvstream.jni.MoonBridge;
 import com.qihua.bVNC.FpsCounter;
 import com.qihua.bVNC.RemoteCanvas;
 import com.qihua.bVNC.RemoteCanvasActivity;
+import com.qihua.bVNC.RfbProto;
 import com.qihua.bVNC.gamepad.GamepadOverlay;
 import com.undatech.opaque.NvCommunicator;
+import com.undatech.opaque.RdpCommunicator;
+import com.undatech.opaque.RfbConnectable;
 import com.undatech.opaque.util.GeneralUtils;
 import com.qihua.bVNC.R;
 
@@ -71,6 +72,9 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
     
     // Track pressed buttons for multi-button support
     private int currentButtonFlags = 0;
+    
+    // RemoteGamepad instance for handling gamepad commands (completely abstracted)
+    private RemoteGamepad remoteGamepad;
 
     public InputHandlerGamepad(RemoteCanvasActivity activity, RemoteCanvas canvas,
                               RemotePointer pointer, boolean debugLogging) {
@@ -97,17 +101,8 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
             gamepadOverlay.setConnectionId(canvas.connection.getId());
         }
         
-        // Notify Moonlight that a gamepad has arrived
-        if (canvas.rfbconn instanceof NvCommunicator) {
-            // Send controller arrival event - this tells Moonlight that a gamepad is connected
-            MoonBridge.sendControllerArrivalEvent(
-                (byte) 0,  // controller number
-                (short) 1, // active gamepad mask
-                MoonBridge.LI_CTYPE_XBOX, // controller type (using Xbox as standard)
-                0xFFFFFFFF, // supported button flags (all buttons supported)
-                (short) (MoonBridge.LI_CCAP_ANALOG_TRIGGERS | MoonBridge.LI_CCAP_RUMBLE) // capabilities
-            );
-        }
+        // Initialize RemoteGamepad through factory method (no protocol checking here)
+        initializeRemoteGamepad();
         
         activity.runOnUiThread(() -> {
             View touchpadView = activity.findViewById(R.id.touchpad);
@@ -122,44 +117,49 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
         });
     }
 
+    /**
+     * Initialize the RemoteGamepad instance through factory method
+     * Completely abstracted from protocol details
+     */
+    private void initializeRemoteGamepad() {
+        // Protocol detection happens ONLY here in the factory
+        if (canvas.isNvStream()) {
+            remoteGamepad = new NvStreamRemoteGamepad(touchpad.rfbconn, touchpad, touchpad.getHandler(), debugLogging);
+        } else if (canvas.isRdp()) {
+            remoteGamepad = new RdpRemoteGamepad(touchpad.rfbconn, touchpad, touchpad.getHandler(), debugLogging);
+        } else if (canvas.isVnc()) {
+            remoteGamepad = new VncRemoteGamepad(touchpad.rfbconn, touchpad, touchpad.getHandler(), debugLogging);
+        } else {
+            // Throw exception for unsupported connection types
+            throw new IllegalArgumentException("Unsupported connection type for gamepad");
+        }
+
+        // Initialize the gamepad
+        remoteGamepad.initialize();
+    }
+
     public void setScreenDimensions(int width, int height) {
         this.screenWidth = width;
         this.screenHeight = height;
         this.screenMiddleX = width / 2;
     }
 
-    /*
-     * (non-Javadoc)
-     * @see com.qihua.bVNC.input.InputHandler#getDescription()
-     */
     @Override
     public String getDescription() {
         return canvas.getResources().getString(R.string.input_method_gamepad);
     }
 
-    /*
-     * (non-Javadoc)
-     * @see com.qihua.bVNC.input.InputHandler#getId()
-     */
     @Override
     public String getId() {
         return ID;
     }
 
-    /*
-     * (non-Javadoc)
-     * @see com.qihua.bVNC.input.InputHandlerGeneric#getX(android.view.MotionEvent)
-     */
     @Override
     protected int getX(MotionEvent e) {
         // For gamepad, we do not use mouse coordinates
         return pointer.getX();
     }
 
-    /*
-     * (non-Javadoc)
-     * @see com.qihua.bVNC.input.InputHandlerGeneric#getY(android.view.MotionEvent)
-     */
     @Override
     protected int getY(MotionEvent e) {
         // For gamepad, we don't use mouse coordinates
@@ -287,7 +287,6 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
                 showRightStickVisual(x, y, true);
             }
         }
-        // If both sticks are in use and this is a new pointer not on a button, ignore it
     }
 
     private void handlePointerMove(MotionEvent e, int pointerId, boolean isLeftSide) {
@@ -348,7 +347,6 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
             leftStickPointerId = -1;
             leftStickX = 0;
             leftStickY = 0;
-            // Send zero values to reset the left stick while keeping right stick state
             sendBothSticksData();
             stopRepeatEvents();
             showLeftStickVisual(0, 0, false);
@@ -356,7 +354,6 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
             rightStickPointerId = -1;
             rightStickX = 0;
             rightStickY = 0;
-            // Send zero values to reset the right stick while keeping left stick state
             sendBothSticksData();
             stopRepeatEvents();
             showRightStickVisual(0, 0, false);
@@ -384,7 +381,7 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
     private void updateAnalogStick(float x, float y, boolean isLeft) {
         float centerX = isLeft ? leftStickCenterX : rightStickCenterX;
         float centerY = isLeft ? leftStickCenterY : rightStickCenterY;
-        float maxRadius = 40 * displayDensity; // Radius reduced to 40 for shorter movement distance
+        float maxRadius = 40 * displayDensity;
 
         float dx = x - centerX;
         float dy = y - centerY;
@@ -401,7 +398,7 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
         float normalizedY = dy / maxRadius;
 
         // Apply deadzone
-        float deadzone = 0.1f; // Reduced deadzone for higher sensitivity
+        float deadzone = 0.1f;
         if (Math.abs(normalizedX) < deadzone && Math.abs(normalizedY) < deadzone) {
             normalizedX = 0;
             normalizedY = 0;
@@ -409,10 +406,10 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
 
         if (isLeft) {
             leftStickX = normalizedX;
-            leftStickY = -normalizedY; // Invert Y-axis to correct direction
+            leftStickY = -normalizedY;
         } else {
             rightStickX = normalizedX;
-            rightStickY = -normalizedY; // Invert Y-axis to correct direction
+            rightStickY = -normalizedY;
         }
 
         // Immediately send both analog stick data to ensure consistent state
@@ -437,7 +434,7 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
     private void sendAnalogStickEvents() {
         if (leftStickPointerId == -1 && rightStickPointerId == -1) {
             // If no active sticks, just send neutral position occasionally to maintain connection
-            if (System.currentTimeMillis() - lastRepeatTime > 1000) { // Send neutral every second if no active input
+            if (System.currentTimeMillis() - lastRepeatTime > 1000) {
                 sendBothSticksData();
             }
             return;
@@ -447,58 +444,10 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
         sendBothSticksData();
     }
 
-    private void sendAnalogStickKeys(float x, float y, boolean isLeft) {
-        // Check if we have an NvCommunicator connection
-        if (canvas.rfbconn instanceof NvCommunicator) {
-
-            // Calculate the stick values in the range -32767 to 32767
-            short stickX, stickY, rightStickX, rightStickY;
-            
-            if (isLeft) {
-                stickX = (short) (x * 32767);
-                stickY = (short) (y * 32767);
-                rightStickX = (short) (this.rightStickX * 32767); // Current right stick X value
-                rightStickY = (short) (this.rightStickY * 32767); // Current right stick Y value
-            } else {
-                stickX = (short) (this.leftStickX * 32767); // Current left stick X value
-                stickY = (short) (this.leftStickY * 32767); // Current left stick Y value
-                rightStickX = (short) (x * 32767);
-                rightStickY = (short) (y * 32767);
-            }
-            
-            // Do NOT map stick positions to buttons - let the sticks work as analog sticks
-            int buttonFlags = 0; // No button flags based on stick positions
-            
-            // Send the controller input through MoonBridge
-            MoonBridge.sendMultiControllerInput(
-                (short) 0,  // controller number
-                (short) 1,  // active gamepad mask (first gamepad)
-                buttonFlags,
-                (byte) 0,   // left trigger (0-255 range)
-                (byte) 0,   // right trigger (0-255 range)
-                stickX,     // left stick X (-32767 to 32767)
-                stickY,     // left stick Y (-32767 to 32767)
-                rightStickX, // right stick X (-32767 to 32767)
-                rightStickY  // right stick Y (-32767 to 32767)
-            );
-        }
-    }
-    
     private void sendBothSticksData() {
-        // Check if we have an NvCommunicator connection
-        if (canvas.rfbconn instanceof NvCommunicator) {
-            // Send both sticks' current values and current button states
-            MoonBridge.sendMultiControllerInput(
-                (short) 0,  // controller number
-                (short) 1,  // active gamepad mask (first gamepad)
-                currentButtonFlags,          // current button flags
-                (byte) 0,   // left trigger (0-255 range)
-                (byte) 0,   // right trigger (0-255 range)
-                (short) (leftStickX * 32767),  // left stick X (-32767 to 32767)
-                (short) (leftStickY * 32767),  // left stick Y (-32767 to 32767)
-                (short) (rightStickX * 32767), // right stick X (-32767 to 32767)
-                (short) (rightStickY * 32767)  // right stick Y (-32767 to 32767)
-            );
+        // Use RemoteGamepad abstraction - completely protocol-independent
+        if (remoteGamepad != null) {
+            remoteGamepad.sendAnalogSticks(leftStickX, leftStickY, rightStickX, rightStickY);
         }
     }
 
@@ -532,159 +481,38 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
     }
 
     /**
-     * Send a gamepad button press as keyboard event
+     * Send a gamepad button press through abstracted interface
      */
     public void sendGamepadButton(int keyCode) {
-        sendGamepadButton(keyCode, false); // 不再自动发送释放事件，由实际触摸事件控制
+        sendGamepadButton(keyCode, false);
     }
     
     /**
-     * Send a gamepad button press with option to auto-release
+     * Send a gamepad button press with option to auto-release through abstracted interface
      */
     public void sendGamepadButton(int keyCode, boolean autoRelease) {
         GeneralUtils.debugLog(debugLogging, TAG, "Sending gamepad button: " + keyCode + ", autoRelease: " + autoRelease);
         
-        // Check if we have an NvCommunicator connection
-        if (canvas.rfbconn instanceof NvCommunicator) {
-            // Handle triggers differently - they are analog values, not digital buttons
-            byte leftTriggerValue = 0;
-            byte rightTriggerValue = 0;
-            
-            // Check if this is a trigger press
-            boolean isTrigger = false;
-            
-            if (keyCode == KeyEvent.KEYCODE_BUTTON_L2) {
-                leftTriggerValue = (byte) 0xFF; // Full press
-                isTrigger = true;
-            } else if (keyCode == KeyEvent.KEYCODE_BUTTON_R2) {
-                rightTriggerValue = (byte) 0xFF; // Full press
-                isTrigger = true;
-            }
-            
-            if (isTrigger) {
-                // For triggers, send with appropriate trigger values but no button flags
-                // We still need to maintain the current stick positions
-                MoonBridge.sendMultiControllerInput(
-                    (short) 0,  // controller number
-                    (short) 1,  // active gamepad mask (first gamepad)
-                    0,  // button flags (no digital buttons pressed for triggers)
-                    leftTriggerValue,   // left trigger (0-255 range)
-                    rightTriggerValue,   // right trigger (0-255 range)
-                    (short) (leftStickX * 32767),  // left stick X (maintain current position)
-                    (short) (leftStickY * 32767),  // left stick Y (maintain current position)
-                    (short) (rightStickX * 32767),  // right stick X (maintain current position)
-                    (short) (rightStickY * 32767)   // right stick Y (maintain current position)
-                );
-                
-                // Send release event after a short delay to simulate trigger press/release
-                if (autoRelease) {
-                    Handler handler = new Handler();
-                    final byte finalLeftTriggerValue = leftTriggerValue;
-                    final byte finalRightTriggerValue = rightTriggerValue;
-                    final int finalKeyCode = keyCode;
-                    
-                    handler.postDelayed(() -> {
-                        byte releaseLeftTrigger = (finalKeyCode == KeyEvent.KEYCODE_BUTTON_L2) ? (byte) 0x00 : finalLeftTriggerValue;
-                        byte releaseRightTrigger = (finalKeyCode == KeyEvent.KEYCODE_BUTTON_R2) ? (byte) 0x00 : finalRightTriggerValue;
-                        
-                        MoonBridge.sendMultiControllerInput(
-                            (short) 0,  // controller number
-                            (short) 1,  // active gamepad mask (first gamepad)
-                            currentButtonFlags,  // preserve current button flags
-                            releaseLeftTrigger,   // left trigger
-                            releaseRightTrigger,   // right trigger
-                            (short) (leftStickX * 32767),  // left stick X (maintain current position)
-                            (short) (leftStickY * 32767),  // left stick Y (maintain current position)
-                            (short) (rightStickX * 32767),  // right stick X (maintain current position)
-                            (short) (rightStickY * 32767)   // right stick Y (maintain current position)
-                        );
-                    }, 30); // Reduced delay to 30ms for faster response
-                }
+        // Use RemoteGamepad abstraction - completely protocol-independent
+        if (remoteGamepad != null) {
+            if (!autoRelease) {
+                // Button press
+                remoteGamepad.sendButtonDown(keyCode);
             } else {
-                // Handle regular buttons
-                int buttonFlag = mapKeyCodeToGamepadButton(keyCode);
-                
-                if (buttonFlag != 0) {
-                    // Update the current button flags based on whether this is a press or release
-                    if (!autoRelease) {
-                        // Button press - add to current flags
-                        currentButtonFlags |= buttonFlag;
-                    } else {
-                        // Button release - remove from current flags
-                        currentButtonFlags &= ~buttonFlag;
-                    }
-                    
-                    // Send the controller input through MoonBridge with all currently pressed buttons
-                    MoonBridge.sendMultiControllerInput(
-                        (short) 0,  // controller number
-                        (short) 1,  // active gamepad mask (first gamepad)
-                        currentButtonFlags,  // current button flags (all currently pressed buttons)
-                        (byte) 0,   // left trigger (0-255 range)
-                        (byte) 0,   // right trigger (0-255 range)
-                        (short) (leftStickX * 32767),  // left stick X (maintain current position)
-                        (short) (leftStickY * 32767),  // left stick Y (maintain current position)
-                        (short) (rightStickX * 32767),  // right stick X (maintain current position)
-                        (short) (rightStickY * 32767)   // right stick Y (maintain current position)
-                    );
-                    
-                    // Regular buttons no longer auto-release - their state is controlled by touch events
-                    // Only triggers (L2/R2) should have auto-release functionality if they were handled as buttons
-                } else {
-                    // Fallback to keyboard if not a gamepad button
-                    RemoteKeyboard keyboard = canvas.getKeyboard();
-                    int metaState = keyboard.getMetaState();
-
-                    keyboard.keyEvent(keyCode, new KeyEvent(KeyEvent.ACTION_DOWN, keyCode));
-                    if (autoRelease) {
-                        keyboard.keyEvent(keyCode, new KeyEvent(KeyEvent.ACTION_UP, keyCode));
-                    }
-                }
+                // Button release
+                remoteGamepad.sendButtonUp(keyCode);
             }
-        }
-    }
-    
-    /**
-     * Maps Android key codes to gamepad button flags
-     */
-    private int mapKeyCodeToGamepadButton(int keyCode) {
-        switch (keyCode) {
-            // Standard gamepad buttons - according to typical Android mapping
-            case KeyEvent.KEYCODE_BUTTON_A:  // Physical A button on gamepad (typically bottom button)
-                return ControllerPacket.A_FLAG; // A button (A_FLAG) - Bottom action button
-            case KeyEvent.KEYCODE_BUTTON_B:  // Physical B button on gamepad (typically right button) 
-                return ControllerPacket.B_FLAG; // B button (B_FLAG) - Right action button
-            case KeyEvent.KEYCODE_BUTTON_X:  // Physical X button on gamepad (typically left button)
-                return ControllerPacket.X_FLAG; // X button (X_FLAG) - Left action button
-            case KeyEvent.KEYCODE_BUTTON_Y:  // Physical Y button on gamepad (typically top button)
-                return ControllerPacket.Y_FLAG; // Y button (Y_FLAG) - Top action button
-            case KeyEvent.KEYCODE_BUTTON_L1:
-                return ControllerPacket.LB_FLAG; // Left bumper (LB_FLAG)
-            case KeyEvent.KEYCODE_BUTTON_R1:
-                return ControllerPacket.RB_FLAG; // Right bumper (RB_FLAG)
-            // Note: L2 and R2 are handled separately as triggers, not as button flags
-            case KeyEvent.KEYCODE_BUTTON_START:
-                return ControllerPacket.PLAY_FLAG; // Start button (PLAY_FLAG)
-            case KeyEvent.KEYCODE_BUTTON_SELECT:
-                return ControllerPacket.BACK_FLAG; // Select/Back button (BACK_FLAG)
-            case KeyEvent.KEYCODE_DPAD_UP:
-                return ControllerPacket.UP_FLAG; // D-pad up (UP_FLAG)
-            case KeyEvent.KEYCODE_DPAD_DOWN:
-                return ControllerPacket.DOWN_FLAG; // D-pad down (DOWN_FLAG)
-            case KeyEvent.KEYCODE_DPAD_LEFT:
-                return ControllerPacket.LEFT_FLAG; // D-pad left (LEFT_FLAG)
-            case KeyEvent.KEYCODE_DPAD_RIGHT:
-                return ControllerPacket.RIGHT_FLAG; // D-pad right (RIGHT_FLAG)
-            case KeyEvent.KEYCODE_BUTTON_THUMBL:
-                return ControllerPacket.LS_CLK_FLAG; // Left stick button (LS_CLK_FLAG)
-            case KeyEvent.KEYCODE_BUTTON_THUMBR:
-                return ControllerPacket.RS_CLK_FLAG; // Right stick button (RS_CLK_FLAG)
-            default:
-                return 0; // Not a gamepad button
         }
     }
     
     @Override
     public void cleanup() {
+        // Clean up RemoteGamepad resources through abstracted interface
+        if (remoteGamepad != null) {
+            remoteGamepad.cleanup();
+            remoteGamepad = null;
+        }
+        
         // 移除游戏手柄覆盖层
         // Remove the gamepad overlay
         if (gamepadOverlay != null && gamepadOverlay.getParent() != null) {
@@ -703,18 +531,6 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
         rightStickY = 0;
         leftStickPointerId = -1;
         rightStickPointerId = -1;
-        
-        // Notify Moonlight that the gamepad has disconnected
-        if (canvas.rfbconn instanceof NvCommunicator) {
-            // Send controller removal event - this tells Moonlight that a gamepad is disconnected
-            MoonBridge.sendControllerArrivalEvent(
-                (byte) 0,  // controller number
-                (short) 0, // active gamepad mask (no gamepads connected)
-                MoonBridge.LI_CTYPE_XBOX, // controller type
-                0, // supported button flags (no buttons supported)
-                (short) 0 // capabilities (none)
-            );
-        }
     }
     
     /**
@@ -730,17 +546,8 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
             // Reset button flags when showing overlay again
             currentButtonFlags = 0;
             
-            // Notify Moonlight that a gamepad has arrived again
-            if (canvas.rfbconn instanceof NvCommunicator) {
-                // Send controller arrival event - this tells Moonlight that a gamepad is connected
-                MoonBridge.sendControllerArrivalEvent(
-                    (byte) 0,  // controller number
-                    (short) 1, // active gamepad mask
-                    MoonBridge.LI_CTYPE_XBOX, // controller type (using Xbox as standard)
-                    0xFFFFFFFF, // supported button flags (all buttons supported)
-                    (short) (MoonBridge.LI_CCAP_ANALOG_TRIGGERS | MoonBridge.LI_CCAP_RUMBLE) // capabilities
-                );
-            }
+            // Re-initialize RemoteGamepad through factory method
+            initializeRemoteGamepad();
             
             activity.runOnUiThread(() -> {
                 View touchpadView = activity.findViewById(R.id.touchpad);
