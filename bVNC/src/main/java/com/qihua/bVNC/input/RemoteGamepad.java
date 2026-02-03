@@ -27,9 +27,9 @@ public abstract class RemoteGamepad {
     protected byte leftTriggerValue = 0;
     protected byte rightTriggerValue = 0;
     
-    public RemoteGamepad(RfbConnectable protocomm, RemoteCanvas canvas, Handler handler,
+    public RemoteGamepad(RemoteCanvas canvas, Handler handler,
                          boolean debugLogging) {
-        this.protocomm = protocomm;
+        this.protocomm = canvas.rfbconn;
         this.canvas = canvas;
         this.context = canvas.getContext();
         this.handler = handler;

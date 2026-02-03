@@ -16,9 +16,9 @@ import com.undatech.opaque.util.GeneralUtils;
 public class NvStreamRemoteGamepad extends RemoteGamepad {
     private static final String TAG = "NvStreamRemoteGamepad";
     
-    public NvStreamRemoteGamepad(RfbConnectable protocomm, RemoteCanvas canvas, Handler handler,
+    public NvStreamRemoteGamepad(RemoteCanvas canvas, Handler handler,
                                  boolean debugLogging) {
-        super(protocomm, canvas, handler, debugLogging);
+        super(canvas, handler, debugLogging);
     }
     
     @Override

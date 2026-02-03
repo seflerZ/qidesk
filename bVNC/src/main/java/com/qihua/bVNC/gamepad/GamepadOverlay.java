@@ -51,6 +51,12 @@ public class GamepadOverlay extends FrameLayout {
     private static final String TAG = "GamepadOverlay";
     private static final String PREF_PREFIX = "gamepad_";
     private static final int GRID_ALIGNMENT_DP = 10;
+    
+    // 摇杆尺寸常量
+    private static final int LEFT_STICK_SIZE_DP = 100;
+    private static final int RIGHT_STICK_SIZE_DP = 100;
+    private static final int STICK_KNOB_SIZE_DP = 40;
+    
     private String connectionId = "";
 
     private InputHandlerGamepad inputHandler;
@@ -165,11 +171,12 @@ public class GamepadOverlay extends FrameLayout {
     }
 
     private void createAnalogSticks() {
-        float stickSize = 120 * getResources().getDisplayMetrics().density;
-        float knobSize = 50 * getResources().getDisplayMetrics().density;
+        float leftStickSize = LEFT_STICK_SIZE_DP * getResources().getDisplayMetrics().density;
+        float rightStickSize = RIGHT_STICK_SIZE_DP * getResources().getDisplayMetrics().density;
+        float knobSize = STICK_KNOB_SIZE_DP * getResources().getDisplayMetrics().density;
 
         // Left stick
-        leftStickBase = createCircleView(Color.parseColor("#40FFFF2C"), stickSize); //淡黄色背景
+        leftStickBase = createCircleView(Color.parseColor("#40FFFF2C"), leftStickSize); //淡黄色背景
         leftStickKnob = createCircleView(Color.parseColor("#80FFFF2C"), knobSize); //淡黄色前景
         addView(leftStickBase);
         addView(leftStickKnob);
@@ -178,7 +185,7 @@ public class GamepadOverlay extends FrameLayout {
         leftStickKnob.setVisibility(GONE);
 
         // Right stick
-        rightStickBase = createCircleView(Color.parseColor("#4087CEFA"), stickSize); //淡蓝色背景
+        rightStickBase = createCircleView(Color.parseColor("#4087CEFA"), rightStickSize); //淡蓝色背景
         rightStickKnob = createCircleView(Color.parseColor("#8087CEFA"), knobSize); //淡蓝色前景
         addView(rightStickBase);
         addView(rightStickKnob);
@@ -258,8 +265,8 @@ public class GamepadOverlay extends FrameLayout {
         // Initially set position based on screen size, but will be adjusted after layout
         int screenWidth = getResources().getDisplayMetrics().widthPixels;
         int screenHeight = getResources().getDisplayMetrics().heightPixels;
-        params.leftMargin = (int) (xPercent * screenWidth - size / 2);
-        params.topMargin = (int) (yPercent * screenHeight - size / 2);
+        params.leftMargin = (int) (xPercent * screenWidth - (float) size / 2);
+        params.topMargin = (int) (yPercent * screenHeight - (float) size / 2);
 
         button.setLayoutParams(params);
         addView(button);
@@ -320,11 +327,11 @@ public class GamepadOverlay extends FrameLayout {
     public void showLeftStick(float x, float y, boolean show) {
         int stickSize = leftStickBase.getWidth();
         if (stickSize == 0) {
-            stickSize = (int) (120 * getResources().getDisplayMetrics().density);
+            stickSize = (int) (LEFT_STICK_SIZE_DP * getResources().getDisplayMetrics().density);
         }
         int knobSize = leftStickKnob.getWidth();
         if (knobSize == 0) {
-            knobSize = (int) (50 * getResources().getDisplayMetrics().density);
+            knobSize = (int) (STICK_KNOB_SIZE_DP * getResources().getDisplayMetrics().density);
         }
 
         if (show) {
@@ -349,11 +356,11 @@ public class GamepadOverlay extends FrameLayout {
     public void showRightStick(float x, float y, boolean show) {
         int stickSize = rightStickBase.getWidth();
         if (stickSize == 0) {
-            stickSize = (int) (120 * getResources().getDisplayMetrics().density);
+            stickSize = (int) (RIGHT_STICK_SIZE_DP * getResources().getDisplayMetrics().density);
         }
         int knobSize = rightStickKnob.getWidth();
         if (knobSize == 0) {
-            knobSize = (int) (50 * getResources().getDisplayMetrics().density);
+            knobSize = (int) (STICK_KNOB_SIZE_DP * getResources().getDisplayMetrics().density);
         }
 
         if (show) {
@@ -378,7 +385,7 @@ public class GamepadOverlay extends FrameLayout {
     public void updateLeftStickPosition(float x, float y) {
         int knobSize = leftStickKnob.getWidth();
         if (knobSize == 0) {
-            knobSize = (int) (50 * getResources().getDisplayMetrics().density);
+            knobSize = (int) (STICK_KNOB_SIZE_DP * getResources().getDisplayMetrics().density);
         }
 
         LayoutParams params = (LayoutParams) leftStickKnob.getLayoutParams();
@@ -390,7 +397,7 @@ public class GamepadOverlay extends FrameLayout {
     public void updateRightStickPosition(float x, float y) {
         int knobSize = rightStickKnob.getWidth();
         if (knobSize == 0) {
-            knobSize = (int) (50 * getResources().getDisplayMetrics().density);
+            knobSize = (int) (STICK_KNOB_SIZE_DP * getResources().getDisplayMetrics().density);
         }
 
         LayoutParams params = (LayoutParams) rightStickKnob.getLayoutParams();

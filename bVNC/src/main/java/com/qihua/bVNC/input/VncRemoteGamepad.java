@@ -3,7 +3,6 @@ package com.qihua.bVNC.input;
 import android.os.Handler;
 
 import com.qihua.bVNC.RemoteCanvas;
-import com.undatech.opaque.RfbConnectable;
 import com.undatech.opaque.util.GeneralUtils;
 
 /**
@@ -13,9 +12,9 @@ import com.undatech.opaque.util.GeneralUtils;
 public class VncRemoteGamepad extends RemoteGamepad {
     private static final String TAG = "VncRemoteGamepad";
     
-    public VncRemoteGamepad(RfbConnectable protocomm, RemoteCanvas canvas, Handler handler,
-                           boolean debugLogging) {
-        super(protocomm, canvas, handler, debugLogging);
+    public VncRemoteGamepad(RemoteCanvas canvas, Handler handler,
+                            boolean debugLogging) {
+        super(canvas, handler, debugLogging);
     }
     
     @Override

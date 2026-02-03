@@ -42,6 +42,10 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
     public static final String ID = "GAMEPAD_MODE";
     static final String TAG = "InputHandlerGamepad";
 
+    // 摇杆灵敏度控制常量
+    private static final float STICK_MAX_RADIUS_DP = 30.0f;  // 摇杆最大半径，数值越小灵敏度越高
+    private static final float STICK_DEADZONE = 0.05f;        // 摇杆死区，数值越小越灵敏
+
     // Analog stick states
     private float leftStickX = 0;
     private float leftStickY = 0;
@@ -53,10 +57,6 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
     private float leftStickCenterY = 0;
     private float rightStickCenterX = 0;
     private float rightStickCenterY = 0;
-
-    // Screen dimensions for dividing left/right zones
-    private int screenWidth = 0;
-    private int screenHeight = 0;
     private int screenMiddleX = 0;
 
     // Gamepad overlay reference
@@ -69,10 +69,7 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
     // Last repeat time
     private long lastRepeatTime = 0;
     private static final long REPEAT_INTERVAL_MS = 50;
-    
-    // Track pressed buttons for multi-button support
-    private int currentButtonFlags = 0;
-    
+
     // RemoteGamepad instance for handling gamepad commands (completely abstracted)
     private RemoteGamepad remoteGamepad;
 
@@ -124,11 +121,11 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
     private void initializeRemoteGamepad() {
         // Protocol detection happens ONLY here in the factory
         if (canvas.isNvStream()) {
-            remoteGamepad = new NvStreamRemoteGamepad(touchpad.rfbconn, touchpad, touchpad.getHandler(), debugLogging);
+            remoteGamepad = new NvStreamRemoteGamepad(touchpad, touchpad.getHandler(), debugLogging);
         } else if (canvas.isRdp()) {
-            remoteGamepad = new RdpRemoteGamepad(touchpad.rfbconn, touchpad, touchpad.getHandler(), debugLogging);
+            remoteGamepad = new RdpRemoteGamepad(touchpad, touchpad.getHandler(), debugLogging);
         } else if (canvas.isVnc()) {
-            remoteGamepad = new VncRemoteGamepad(touchpad.rfbconn, touchpad, touchpad.getHandler(), debugLogging);
+            remoteGamepad = new VncRemoteGamepad(touchpad, touchpad.getHandler(), debugLogging);
         } else {
             // Throw exception for unsupported connection types
             throw new IllegalArgumentException("Unsupported connection type for gamepad");
@@ -139,8 +136,6 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
     }
 
     public void setScreenDimensions(int width, int height) {
-        this.screenWidth = width;
-        this.screenHeight = height;
         this.screenMiddleX = width / 2;
     }
 
@@ -381,7 +376,7 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
     private void updateAnalogStick(float x, float y, boolean isLeft) {
         float centerX = isLeft ? leftStickCenterX : rightStickCenterX;
         float centerY = isLeft ? leftStickCenterY : rightStickCenterY;
-        float maxRadius = 40 * displayDensity;
+        float maxRadius = STICK_MAX_RADIUS_DP * displayDensity;
 
         float dx = x - centerX;
         float dy = y - centerY;
@@ -398,8 +393,7 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
         float normalizedY = dy / maxRadius;
 
         // Apply deadzone
-        float deadzone = 0.1f;
-        if (Math.abs(normalizedX) < deadzone && Math.abs(normalizedY) < deadzone) {
+        if (Math.abs(normalizedX) < STICK_DEADZONE && Math.abs(normalizedY) < STICK_DEADZONE) {
             normalizedX = 0;
             normalizedY = 0;
         }
@@ -542,10 +536,7 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
             if (gamepadOverlay.getParent() != null) {
                 return; // Already added
             }
-            
-            // Reset button flags when showing overlay again
-            currentButtonFlags = 0;
-            
+
             // Re-initialize RemoteGamepad through factory method
             initializeRemoteGamepad();
             
