@@ -82,6 +82,8 @@ public class GamepadOverlay extends FrameLayout {
     private GamepadButton buttonL2;
     private GamepadButton buttonR1;
     private GamepadButton buttonR2;
+    private GamepadButton leftStickClick;   // 左摇杆点击按钮
+    private GamepadButton rightStickClick;  // 右摇杆点击按钮
 
     // SharedPreferences for saving button positions
     private SharedPreferences prefs;
@@ -237,6 +239,10 @@ public class GamepadOverlay extends FrameLayout {
         buttonR1 = createButton("R1", KeyEvent.KEYCODE_BUTTON_R1, 0.85f, 0.05f, density);
         buttonR2 = createButton("R2", KeyEvent.KEYCODE_BUTTON_R2, 0.85f, 0.12f, density);
 
+        // 摇杆点击按钮（放置在摇杆位置附近）
+        leftStickClick = createButton("●", KeyEvent.KEYCODE_BUTTON_THUMBL, 0.25f, 0.55f, density);   // 左摇杆点击
+        rightStickClick = createButton("●", KeyEvent.KEYCODE_BUTTON_THUMBR, 0.75f, 0.55f, density);  // 右摇杆点击
+
         // Add all buttons to map
         buttonMap.put("A", buttonA);
         buttonMap.put("B", buttonB);
@@ -252,6 +258,8 @@ public class GamepadOverlay extends FrameLayout {
         buttonMap.put("L2", buttonL2);
         buttonMap.put("R1", buttonR1);
         buttonMap.put("R2", buttonR2);
+        buttonMap.put("LEFT_STICK_CLICK", leftStickClick);
+        buttonMap.put("RIGHT_STICK_CLICK", rightStickClick);
 
         // Load saved positions
         loadButtonPositions();
