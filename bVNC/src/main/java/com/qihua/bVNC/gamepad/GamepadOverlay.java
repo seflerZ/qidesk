@@ -38,6 +38,7 @@ import android.widget.ImageView;
 
 import com.qihua.bVNC.input.InputHandlerGamepad;
 import com.qihua.bVNC.R;
+import com.qihua.bVNC.util.ScreenDimensionUtils;
 import com.undatech.opaque.util.GeneralUtils;
 
 import java.util.HashMap;
@@ -58,6 +59,7 @@ public class GamepadOverlay extends FrameLayout {
     private static final int STICK_KNOB_SIZE_DP = 40;
     
     private String connectionId = "";
+    private String screenDimensionId = "";  // 屏幕尺寸标识符
 
     private InputHandlerGamepad inputHandler;
 
@@ -129,10 +131,13 @@ public class GamepadOverlay extends FrameLayout {
     
     public void setConnectionId(String connectionId) {
         this.connectionId = connectionId;
-        // 重新初始化prefs以使用特定连接的存储
+        // 生成屏幕尺寸标识符
         if (getContext() != null) {
-            // 使用连接ID作为部分文件名创建独立的偏好设置文件
-            prefs = getContext().getSharedPreferences("gamepad_pos_" + connectionId, Context.MODE_PRIVATE);
+            this.screenDimensionId = ScreenDimensionUtils.getSimplifiedScreenIdentifier(getContext());
+            // 重新初始化prefs以使用特定连接和屏幕尺寸的存储
+            String prefFileName = "gamepad_pos_" + connectionId + "_" + screenDimensionId;
+            prefs = getContext().getSharedPreferences(prefFileName, Context.MODE_PRIVATE);
+            GeneralUtils.debugLog(true, TAG, "Using preference file: " + prefFileName);
             // 重新加载按钮位置
             loadButtonPositions();
         }
@@ -156,7 +161,10 @@ public class GamepadOverlay extends FrameLayout {
     @SuppressLint("ClickableViewAccessibility")
     private void init(Context context) {
         // 初始化时如果没有连接ID，则使用默认设置
-        prefs = context.getSharedPreferences("gamepad_pos_default", Context.MODE_PRIVATE);
+        this.screenDimensionId = ScreenDimensionUtils.getSimplifiedScreenIdentifier(context);
+        String prefFileName = "gamepad_pos_default_" + screenDimensionId;
+        prefs = context.getSharedPreferences(prefFileName, Context.MODE_PRIVATE);
+        GeneralUtils.debugLog(true, TAG, "Initialized with preference file: " + prefFileName);
         buttonMap = new HashMap<>();
 
         // Create layout
@@ -218,14 +226,14 @@ public class GamepadOverlay extends FrameLayout {
 
         // Default button positions (percentages of screen width/height)
         // A, B, X, Y buttons on the right side (XBOX-style layout)
-        buttonA = createButton("A", KeyEvent.KEYCODE_BUTTON_A, 0.85f, 0.70f, density);  // Confirm/OK
+        buttonA = createButton("Y", KeyEvent.KEYCODE_BUTTON_Y, 0.85f, 0.70f, density);  // Confirm/OK
         buttonB = createButton("B", KeyEvent.KEYCODE_BUTTON_B, 0.90f, 0.80f, density); // Back/Cancel
         buttonX = createButton("X", KeyEvent.KEYCODE_BUTTON_X, 0.80f, 0.80f, density);      // Extra function
-        buttonY = createButton("Y", KeyEvent.KEYCODE_BUTTON_Y, 0.85f, 0.90f, density);      // Yet another function
+        buttonY = createButton("A", KeyEvent.KEYCODE_BUTTON_X, 0.85f, 0.90f, density);      // Yet another function
 
-        // Start and Select in the center
-        buttonStart = createButton(">", KeyEvent.KEYCODE_BUTTON_START, 0.70f, 0.85f, density);  // Menu/Hamburger icon
-        buttonSelect = createButton("☰", KeyEvent.KEYCODE_BUTTON_SELECT, 0.60f, 0.85f, density);  // Vertical ellipsis
+        // Start and Select in the center (horizontally centered, vertically positioned)
+        buttonStart = createButton(">", KeyEvent.KEYCODE_BUTTON_START, 0.55f, 0.85f, density);  // Menu/Hamburger icon
+        buttonSelect = createButton("☰", KeyEvent.KEYCODE_BUTTON_SELECT, 0.45f, 0.85f, density);  // Vertical ellipsis
 
         // D-pad on the left side
         dpadUp = createButton("▲", KeyEvent.KEYCODE_DPAD_UP, 0.15f, 0.70f, density);
@@ -235,9 +243,9 @@ public class GamepadOverlay extends FrameLayout {
 
         // Shoulder buttons
         buttonL1 = createButton("L1", KeyEvent.KEYCODE_BUTTON_L1, 0.15f, 0.05f, density);
-        buttonL2 = createButton("L2", KeyEvent.KEYCODE_BUTTON_L2, 0.15f, 0.12f, density);
+        buttonL2 = createButton("L2", KeyEvent.KEYCODE_BUTTON_L2, 0.25f, 0.05f, density);
         buttonR1 = createButton("R1", KeyEvent.KEYCODE_BUTTON_R1, 0.85f, 0.05f, density);
-        buttonR2 = createButton("R2", KeyEvent.KEYCODE_BUTTON_R2, 0.85f, 0.12f, density);
+        buttonR2 = createButton("R2", KeyEvent.KEYCODE_BUTTON_R2, 0.95f, 0.05f, density);
 
         // 摇杆点击按钮（放置在摇杆位置附近）
         leftStickClick = createButton("●", KeyEvent.KEYCODE_BUTTON_THUMBL, 0.25f, 0.55f, density);   // 左摇杆点击
@@ -694,6 +702,20 @@ public class GamepadOverlay extends FrameLayout {
         super.onSizeChanged(w, h, oldw, oldh);
         // Reload button positions when screen size changes
         if (w != oldw || h != oldh) {
+            // Generate new screen dimension identifier
+            String newScreenDimensionId = ScreenDimensionUtils.getSimplifiedScreenIdentifier(getContext());
+            
+            // Only reload if screen dimension actually changed
+            if (!newScreenDimensionId.equals(this.screenDimensionId)) {
+                GeneralUtils.debugLog(true, TAG, "Screen dimension changed from " + this.screenDimensionId + " to " + newScreenDimensionId);
+                this.screenDimensionId = newScreenDimensionId;
+                
+                // Update preference file
+                String prefFileName = "gamepad_pos_" + connectionId + "_" + screenDimensionId;
+                prefs = getContext().getSharedPreferences(prefFileName, Context.MODE_PRIVATE);
+                GeneralUtils.debugLog(true, TAG, "Switched to preference file: " + prefFileName);
+            }
+            
             // Delay the reload to ensure the view is fully laid out
             post(new Runnable() {
                 @Override
