@@ -53,7 +53,7 @@ public class GamepadButton extends View {
     private static final int COLOR_NORMAL = Color.parseColor("#60000000");
     private static final int COLOR_PRESSED = Color.parseColor("#A0FFFFFF");
     private static final int COLOR_EDIT = Color.parseColor("#A0FFA500");
-    private static final int COLOR_BORDER = Color.parseColor("#FFFFFFFF");
+    private static final int COLOR_BORDER = Color.parseColor("#80FFFFFF");
 
     public interface OnButtonClickListener {
         void onButtonDown(int keyCode);
