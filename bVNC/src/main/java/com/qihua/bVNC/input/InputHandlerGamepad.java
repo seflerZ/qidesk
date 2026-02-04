@@ -21,22 +21,16 @@ package com.qihua.bVNC.input;
 
 import android.os.Build;
 import android.os.Handler;
-import android.os.SystemClock;
-import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 
 import com.qihua.bVNC.FpsCounter;
+import com.qihua.bVNC.R;
 import com.qihua.bVNC.RemoteCanvas;
 import com.qihua.bVNC.RemoteCanvasActivity;
-import com.qihua.bVNC.RfbProto;
 import com.qihua.bVNC.gamepad.GamepadOverlay;
-import com.undatech.opaque.NvCommunicator;
-import com.undatech.opaque.RdpCommunicator;
-import com.undatech.opaque.RfbConnectable;
 import com.undatech.opaque.util.GeneralUtils;
-import com.qihua.bVNC.R;
 
 public class InputHandlerGamepad extends InputHandlerGeneric {
     public static final String ID = "GAMEPAD_MODE";
@@ -73,6 +67,9 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
     // RemoteGamepad instance for handling gamepad commands (completely abstracted)
     private RemoteGamepad remoteGamepad;
 
+    // 标记是否已经初始化了overlay
+    private boolean overlayInitialized = false;
+
     public InputHandlerGamepad(RemoteCanvasActivity activity, RemoteCanvas canvas,
                               RemotePointer pointer, boolean debugLogging) {
         super(activity, canvas, canvas, pointer, debugLogging);
@@ -90,6 +87,19 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
             }
         };
 
+        // 注意：不再在构造函数中立即创建overlay，而是在需要时延迟创建
+        // Initialize RemoteGamepad through factory method (no protocol checking here)
+        initializeRemoteGamepad();
+    }
+
+    /**
+     * 延迟初始化游戏手柄overlay，只在真正需要时创建
+     */
+    private void initializeOverlayIfNeeded() {
+        if (overlayInitialized) {
+            return; // 已经初始化过了
+        }
+
         // Initialize gamepad overlay
         gamepadOverlay = new GamepadOverlay(activity, this);
         
@@ -97,9 +107,6 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
         if (canvas.connection != null) {
             gamepadOverlay.setConnectionId(canvas.connection.getId());
         }
-        
-        // Initialize RemoteGamepad through factory method (no protocol checking here)
-        initializeRemoteGamepad();
         
         activity.runOnUiThread(() -> {
             View touchpadView = activity.findViewById(R.id.touchpad);
@@ -111,7 +118,14 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
                 android.view.ViewGroup rootView = (ViewGroup) activity.findViewById(android.R.id.content);
                 rootView.addView(gamepadOverlay);
             }
+            
+            // 显示overlay
+            if (gamepadOverlay != null) {
+                gamepadOverlay.setVisibility(View.VISIBLE);
+            }
         });
+        
+        overlayInitialized = true;
     }
 
     /**
@@ -173,6 +187,9 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
         if (fpsCounter != null) {
             fpsCounter.countInput();
         }
+
+        // 确保overlay已初始化
+        initializeOverlayIfNeeded();
 
         // Update screen dimensions if needed
         setScreenDimensions(canvas.getWidth(), canvas.getHeight());
@@ -499,6 +516,23 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
         }
     }
     
+    /**
+     * Re-add the gamepad overlay to the view hierarchy when switching back to gamepad mode
+     */
+    public void showOverlay() {
+        // 强制重新初始化overlay
+        if (gamepadOverlay != null && gamepadOverlay.getParent() != null) {
+            ((ViewGroup) gamepadOverlay.getParent()).removeView(gamepadOverlay);
+        }
+        overlayInitialized = false;
+        
+        // 重新初始化RemoteGamepad
+        initializeRemoteGamepad();
+        
+        // 初始化并显示overlay
+        initializeOverlayIfNeeded();
+    }
+
     @Override
     public void cleanup() {
         // Clean up RemoteGamepad resources through abstracted interface
@@ -513,6 +547,9 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
             ((ViewGroup) gamepadOverlay.getParent()).removeView(gamepadOverlay);
         }
         
+        // 重置状态
+        overlayInitialized = false;
+        
         // 停止重复按键事件
         // Stop repeating key events
         stopRepeatEvents();
@@ -525,32 +562,5 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
         rightStickY = 0;
         leftStickPointerId = -1;
         rightStickPointerId = -1;
-    }
-    
-    /**
-     * Re-add the gamepad overlay to the view hierarchy when switching back to gamepad mode
-     */
-    public void showOverlay() {
-        if (gamepadOverlay != null) {
-            // First check if it's already added
-            if (gamepadOverlay.getParent() != null) {
-                return; // Already added
-            }
-
-            // Re-initialize RemoteGamepad through factory method
-            initializeRemoteGamepad();
-            
-            activity.runOnUiThread(() -> {
-                View touchpadView = activity.findViewById(R.id.touchpad);
-                if (touchpadView != null && touchpadView.getParent() != null) {
-                    ((android.widget.FrameLayout) touchpadView.getParent())
-                            .addView(gamepadOverlay);
-                } else {
-                    // Fallback: add to the root view if touchpad parent is not available
-                    android.view.ViewGroup rootView = activity.findViewById(android.R.id.content);
-                    rootView.addView(gamepadOverlay);
-                }
-            });
-        }
     }
 }
