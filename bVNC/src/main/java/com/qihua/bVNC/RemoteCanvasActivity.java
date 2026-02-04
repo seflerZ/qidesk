@@ -1120,6 +1120,12 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     void setModes() {
         Log.d(TAG, "setModes");
         inputHandler = getInputHandlerByName(connection.getInputMode());
+        
+        // 如果是游戏手柄模式，主动显示overlay
+        if (inputHandler instanceof InputHandlerGamepad) {
+            ((InputHandlerGamepad) inputHandler).showOverlay();
+        }
+        
         AbstractScaling.getByScaleType(connection.getScaleMode()).setScaleTypeForActivity(this);
         initializeOnScreenKeys();
         try {

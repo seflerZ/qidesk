@@ -229,7 +229,7 @@ public class GamepadOverlay extends FrameLayout {
         buttonA = createButton("Y", KeyEvent.KEYCODE_BUTTON_Y, 0.85f, 0.70f, density);  // Confirm/OK
         buttonB = createButton("B", KeyEvent.KEYCODE_BUTTON_B, 0.90f, 0.80f, density); // Back/Cancel
         buttonX = createButton("X", KeyEvent.KEYCODE_BUTTON_X, 0.80f, 0.80f, density);      // Extra function
-        buttonY = createButton("A", KeyEvent.KEYCODE_BUTTON_X, 0.85f, 0.90f, density);      // Yet another function
+        buttonY = createButton("A", KeyEvent.KEYCODE_BUTTON_A, 0.85f, 0.90f, density);      // Yet another function
 
         // Start and Select in the center (horizontally centered, vertically positioned)
         buttonStart = createButton(">", KeyEvent.KEYCODE_BUTTON_START, 0.55f, 0.85f, density);  // Menu/Hamburger icon

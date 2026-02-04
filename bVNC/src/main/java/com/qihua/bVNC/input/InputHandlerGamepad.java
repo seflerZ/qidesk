@@ -127,6 +127,25 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
         
         overlayInitialized = true;
     }
+    
+    /**
+     * 主动显示游戏手柄overlay（用于模式切换时立即显示）
+     */
+    public void showOverlay() {
+        initializeOverlayIfNeeded();
+        
+        // 确保overlay可见
+        if (gamepadOverlay != null) {
+            activity.runOnUiThread(() -> {
+                gamepadOverlay.setVisibility(View.VISIBLE);
+            });
+        }
+        
+        // 重新初始化RemoteGamepad（如果需要）
+        if (remoteGamepad == null) {
+            initializeRemoteGamepad();
+        }
+    }
 
     /**
      * Initialize the RemoteGamepad instance through factory method
@@ -514,23 +533,6 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
                 remoteGamepad.sendButtonUp(keyCode);
             }
         }
-    }
-    
-    /**
-     * Re-add the gamepad overlay to the view hierarchy when switching back to gamepad mode
-     */
-    public void showOverlay() {
-        // 强制重新初始化overlay
-        if (gamepadOverlay != null && gamepadOverlay.getParent() != null) {
-            ((ViewGroup) gamepadOverlay.getParent()).removeView(gamepadOverlay);
-        }
-        overlayInitialized = false;
-        
-        // 重新初始化RemoteGamepad
-        initializeRemoteGamepad();
-        
-        // 初始化并显示overlay
-        initializeOverlayIfNeeded();
     }
 
     @Override
