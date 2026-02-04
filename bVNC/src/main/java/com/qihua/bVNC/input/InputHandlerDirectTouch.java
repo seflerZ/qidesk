@@ -116,7 +116,7 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
 
     private void handleTouchDown(MotionEvent e, int pointerIndex, RemotePointer pointer) {
         int pointerId = e.getPointerId(pointerIndex);
-        int x = (int) (canvas.getAbsX() + e.getX(pointerIndex) / canvas.getZoomFactor());
+        int x = (int) (canvas.getAbsX() - canvas.getBlackBorderWidth() + e.getX(pointerIndex) / canvas.getZoomFactor());
         int y = (int) (canvas.getAbsY() + (e.getY(pointerIndex) - 1.f * canvas.getTop()) / canvas.getZoomFactor());
 
         // 分配或获取接触ID
@@ -139,7 +139,7 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
             // 只处理已知的触摸点
             if (contactIdMap.containsKey(pointerId)) {
                 int contactId = contactIdMap.get(pointerId);
-                int x = (int) (canvas.getAbsX() + e.getX(i) / canvas.getZoomFactor());
+                int x = (int) (canvas.getAbsX() - canvas.getBlackBorderWidth() + e.getX(i) / canvas.getZoomFactor());
                 int y = (int) (canvas.getAbsY() + (e.getY(i) - 1.f * canvas.getTop()) / canvas.getZoomFactor());
 
                 GeneralUtils.debugLog(debugLogging, TAG, "Touch Move: x=" + x + ", y=" + y + ", contactId=" + contactId);
@@ -160,7 +160,7 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
         
         if (contactIdMap.containsKey(pointerId)) {
             int contactId = contactIdMap.get(pointerId);
-            int x = (int) (canvas.getAbsX() + e.getX(pointerIndex) / canvas.getZoomFactor());
+            int x = (int) (canvas.getAbsX() - canvas.getBlackBorderWidth() + e.getX(pointerIndex) / canvas.getZoomFactor());
             int y = (int) (canvas.getAbsY() + (e.getY(pointerIndex) - 1.f * canvas.getTop()) / canvas.getZoomFactor());
 
             GeneralUtils.debugLog(debugLogging, TAG, "Touch Up: x=" + x + ", y=" + y + ", contactId=" + contactId);

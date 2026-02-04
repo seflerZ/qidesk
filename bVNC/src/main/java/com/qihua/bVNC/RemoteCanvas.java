@@ -46,7 +46,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
 import android.os.SystemClock;
-import android.provider.Settings;
 import android.text.ClipboardManager;
 import android.text.InputType;
 import android.util.AttributeSet;
@@ -1680,10 +1679,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         int ih = getImageHeight();
 
         // bWidth = black border width
-        int bWidth = (int) ((getWidth() - iw * getMinimumScale()) / 2);
-        if (bWidth <= 0) {
-            bWidth = 0;
-        }
+        int bWidth = getBlackBorderWidth();
 
         // This is definitely 0 because we have the image top aligned
         int bHeight = 0;
@@ -2192,6 +2188,15 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
     public int getCenteredXOffset() {
         return (int) (rfbconn.framebufferWidth() * getMinimumScale() - getWidth()) / 2;
+    }
+
+    public int getBlackBorderWidth() {
+        int bWidth = (int) ((getWidth() - getImageWidth() * getMinimumScale()) / 2);
+        if (bWidth <= 0) {
+            bWidth = 0;
+        }
+
+        return bWidth;
     }
 
     public int getCenteredYOffset() {
