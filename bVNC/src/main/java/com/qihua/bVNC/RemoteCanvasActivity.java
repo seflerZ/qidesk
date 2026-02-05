@@ -1243,6 +1243,12 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         try {
             setExtraKeysVisibility(View.GONE, false);
 
+            // Handle gamepad overlay screen size change
+            if (inputHandler instanceof InputHandlerGamepad) {
+                InputHandlerGamepad gamepadHandler = (InputHandlerGamepad) inputHandler;
+                gamepadHandler.handleScreenSizeChange();
+            }
+
             // Correct a few times just in case. There is no visual effect.
             handler.postDelayed(this::correctAfterRotation, 300);
         } catch (NullPointerException e) {
@@ -1791,11 +1797,12 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             float zoomRatio;
 
             boolean isDirectTouchMode = inputHandler != null && inputHandler.getId().equals(InputHandlerDirectTouch.ID);
+            boolean gamepadMode = inputHandler != null && inputHandler.getId().equals(InputHandlerGamepad.ID);
 
             float diff = (float) canvas.getWidth() / canvas.getHeight() - (float) canvas.getImageWidth() / canvas.getImageHeight();
 
             // in direct touch mode, we should fill the screen with longer side so that all the screen can be covered
-            if (isDirectTouchMode) {
+            if (isDirectTouchMode || gamepadMode) {
                 if (diff < 0) {
                     zoomRatio = (float) (canvas.getWidth() - keyboardHeight) / (canvas.getImageWidth());
                 } else {

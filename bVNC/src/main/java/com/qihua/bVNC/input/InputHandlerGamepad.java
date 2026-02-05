@@ -132,12 +132,14 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
      * 主动显示游戏手柄overlay（用于模式切换时立即显示）
      */
     public void showOverlay() {
+        android.util.Log.d(TAG, "showOverlay called, overlayInitialized: " + overlayInitialized);
         initializeOverlayIfNeeded();
         
         // 确保overlay可见
         if (gamepadOverlay != null) {
             activity.runOnUiThread(() -> {
                 gamepadOverlay.setVisibility(View.VISIBLE);
+                android.util.Log.d(TAG, "Ensured gamepad overlay visibility after showOverlay");
             });
         }
         
@@ -533,6 +535,28 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
                 remoteGamepad.sendButtonUp(keyCode);
             }
         }
+    }
+
+    /**
+     * Handle screen size change (e.g., rotation)
+     * Recreate overlay with new screen dimensions
+     */
+    public void handleScreenSizeChange() {
+        android.util.Log.d(TAG, "handleScreenSizeChange called");
+        if (gamepadOverlay != null) {
+            // Remove existing overlay
+            ViewGroup parent = (ViewGroup) gamepadOverlay.getParent();
+            if (parent != null) {
+                parent.removeView(gamepadOverlay);
+            }
+            gamepadOverlay = null;
+        }
+        
+        // Force re-initialization by resetting the flag
+        overlayInitialized = false;
+        
+        // Recreate overlay with new screen dimensions
+        showOverlay();
     }
 
     @Override
