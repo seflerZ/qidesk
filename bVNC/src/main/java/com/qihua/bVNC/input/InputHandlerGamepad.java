@@ -103,10 +103,10 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
         // Initialize gamepad overlay
         gamepadOverlay = new GamepadOverlay(activity, this);
         
-        // Set the connection ID for button position storage
-        if (canvas.connection != null) {
-            gamepadOverlay.setConnectionId(canvas.connection.getId());
-        }
+        // Set the screen dimension ID for button position storage
+        // Using shared configuration across all connections
+        String screenDimensionId = com.qihua.bVNC.util.ScreenDimensionUtils.getSimplifiedScreenIdentifier(activity);
+        gamepadOverlay.setScreenDimensionId(screenDimensionId);
         
         activity.runOnUiThread(() -> {
             View touchpadView = activity.findViewById(R.id.touchpad);

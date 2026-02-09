@@ -58,7 +58,6 @@ public class GamepadOverlay extends FrameLayout {
     private static final int RIGHT_STICK_SIZE_DP = 100;
     private static final int STICK_KNOB_SIZE_DP = 40;
     
-    private String connectionId = "";
     private String screenDimensionId = "";  // 屏幕尺寸标识符
 
     private InputHandlerGamepad inputHandler;
@@ -129,18 +128,14 @@ public class GamepadOverlay extends FrameLayout {
         init(context);
     }
     
-    public void setConnectionId(String connectionId) {
-        this.connectionId = connectionId;
-        // 生成屏幕尺寸标识符
-        if (getContext() != null) {
-            this.screenDimensionId = ScreenDimensionUtils.getSimplifiedScreenIdentifier(getContext());
-            // 重新初始化prefs以使用特定连接和屏幕尺寸的存储
-            String prefFileName = "gamepad_pos_" + connectionId + "_" + screenDimensionId;
-            prefs = getContext().getSharedPreferences(prefFileName, Context.MODE_PRIVATE);
-            GeneralUtils.debugLog(true, TAG, "Using preference file: " + prefFileName);
-            // 重新加载按钮位置
-            loadButtonPositions();
-        }
+    public void setScreenDimensionId(String screenDimensionId) {
+        this.screenDimensionId = screenDimensionId;
+        // 重新初始化prefs以使用特定屏幕尺寸的存储
+        String prefFileName = "gamepad_pos_" + screenDimensionId;
+        prefs = getContext().getSharedPreferences(prefFileName, Context.MODE_PRIVATE);
+        GeneralUtils.debugLog(true, TAG, "Using preference file: " + prefFileName);
+        // 重新加载按钮位置
+        loadButtonPositions();
     }
     
     /**
@@ -160,9 +155,9 @@ public class GamepadOverlay extends FrameLayout {
 
     @SuppressLint("ClickableViewAccessibility")
     private void init(Context context) {
-        // 初始化时如果没有连接ID，则使用默认设置
+        // 初始化时使用屏幕尺寸标识符
         this.screenDimensionId = ScreenDimensionUtils.getSimplifiedScreenIdentifier(context);
-        String prefFileName = "gamepad_pos_default_" + screenDimensionId;
+        String prefFileName = "gamepad_pos_" + screenDimensionId;
         prefs = context.getSharedPreferences(prefFileName, Context.MODE_PRIVATE);
         GeneralUtils.debugLog(true, TAG, "Initialized with preference file: " + prefFileName);
         buttonMap = new HashMap<>();
@@ -242,10 +237,10 @@ public class GamepadOverlay extends FrameLayout {
         dpadRight = createButton("▶", KeyEvent.KEYCODE_DPAD_RIGHT, 0.20f, 0.80f, density);
 
         // Shoulder buttons
-        buttonL1 = createButton("L1", KeyEvent.KEYCODE_BUTTON_L1, 0.15f, 0.05f, density);
-        buttonL2 = createButton("L2", KeyEvent.KEYCODE_BUTTON_L2, 0.25f, 0.05f, density);
-        buttonR1 = createButton("R1", KeyEvent.KEYCODE_BUTTON_R1, 0.85f, 0.05f, density);
-        buttonR2 = createButton("R2", KeyEvent.KEYCODE_BUTTON_R2, 0.95f, 0.05f, density);
+        buttonL1 = createButton("L1", KeyEvent.KEYCODE_BUTTON_L1, 0.05f, 0.1f, density);
+        buttonL2 = createButton("L2", KeyEvent.KEYCODE_BUTTON_L2, 0.15f, 0.1f, density);
+        buttonR1 = createButton("R1", KeyEvent.KEYCODE_BUTTON_R1, 0.85f, 0.1f, density);
+        buttonR2 = createButton("R2", KeyEvent.KEYCODE_BUTTON_R2, 0.95f, 0.1f, density);
 
         // 摇杆点击按钮（放置在摇杆位置附近）
         leftStickClick = createButton("●", KeyEvent.KEYCODE_BUTTON_THUMBL, 0.25f, 0.55f, density);   // 左摇杆点击
@@ -504,7 +499,7 @@ public class GamepadOverlay extends FrameLayout {
         }
 
         editor.apply();
-        GeneralUtils.debugLog(true, TAG, "Button positions and sizes saved for connection: " + connectionId);
+        GeneralUtils.debugLog(true, TAG, "Button positions and sizes saved for screen dimension: " + screenDimensionId);
     }
 
     /**
@@ -542,7 +537,7 @@ public class GamepadOverlay extends FrameLayout {
                 params.leftMargin = (int) (xPercent * viewWidth - button.getWidth() / 2);
                 params.topMargin = (int) (yPercent * viewHeight - button.getHeight() / 2);
                 button.setLayoutParams(params);
-                GeneralUtils.debugLog(true, TAG, "Loaded " + name + " position for connection " + connectionId + ": " + xPercent + ", " + yPercent);
+                GeneralUtils.debugLog(true, TAG, "Loaded " + name + " position for screen dimension " + screenDimensionId + ": " + xPercent + ", " + yPercent);
             }
         }
     }
@@ -711,7 +706,7 @@ public class GamepadOverlay extends FrameLayout {
                 this.screenDimensionId = newScreenDimensionId;
                 
                 // Update preference file
-                String prefFileName = "gamepad_pos_" + connectionId + "_" + screenDimensionId;
+                String prefFileName = "gamepad_pos_" + screenDimensionId;
                 prefs = getContext().getSharedPreferences(prefFileName, Context.MODE_PRIVATE);
                 GeneralUtils.debugLog(true, TAG, "Switched to preference file: " + prefFileName);
             }
