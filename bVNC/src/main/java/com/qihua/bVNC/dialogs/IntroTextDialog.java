@@ -97,15 +97,12 @@ public class IntroTextDialog extends Dialog {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        String pkgName = Utils.pName(this.getContext());
-
         // do not use original's donate text
         donate = false;
 
         setContentView(R.layout.intro_dialog);
         getWindow().setLayout(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
 
-        Context context = this.getContext();
         String title = getContext().getResources().getString(R.string.intro_title);
 
         StringBuilder sb = new StringBuilder(title);
