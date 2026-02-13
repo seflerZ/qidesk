@@ -18,13 +18,27 @@ QiDesk is a feature-rich remote desktop client supporting multiple protocols. It
 <img src="https://github.com/user-attachments/assets/033553ac-9be0-4e92-908c-702765e260a0" width="30%">
 
 ### Intuitive & Optimized UI
-<img src="https://github.com/user-attachments/assets/66de57db-208b-474d-9bd7-e54362d0f014" width="30%">
-<img src="https://github.com/user-attachments/assets/1ba4ef4c-8d61-403e-9539-bd99798cd187" width="30%">
-<img src="https://github.com/user-attachments/assets/be2cc93a-6a07-4fa8-ac15-fed6c5358543" width="30%">
-<img src="https://github.com/user-attachments/assets/58e6984b-5eb3-4a61-ac4f-85399aa135b7" width="30%">
+![unnamed (4)](https://github.com/user-attachments/assets/e1f3c93c-0388-4896-942e-4b8ca1808165)
+![unnamed (3)](https://github.com/user-attachments/assets/d1f149fc-5a3b-4e8b-a0c2-4960499ca592)
+![unnamed (2)](https://github.com/user-attachments/assets/5b9f6f99-da82-46f4-af8d-cfcfae57113d)
+![unnamed (1)](https://github.com/user-attachments/assets/43e16542-7203-4bf0-a580-c46a0c452f9a)
+![unnamed](https://github.com/user-attachments/assets/e47e1fbd-67ab-4c64-be1f-4df964647061)
+
+# Support QiDesk
+
+If you find QiDesk useful and want to support its continued development, you can purchase the **Donation Version** on Google Play.
+Your support helps fund ongoing improvements, new features, and maintenance.
+
+Purchasing the Donation Version unlocks these exclusive premium features:
+- **RDP MediaCodec Hardware Acceleration** for smoother remote desktop performance
+- **Early access to updates**: Get new features and fixes first (GitHub version lags by 2+ weeks)
+- **Direct touch mapping input** for more natural and precise control
+
+Get it on Google Play:
+[https://play.google.com/store/apps/details?id=com.qihua.rmt](https://play.google.com/store/apps/details?id=com.qihua.rmt)
 
 # Credits
-This project is a fork of [aRDP](https://github.com/iiordanov/remote-desktop-clients) by iiordanov. We sincerely thank the original author for the foundational work.
+This project origins from [aRDP](https://github.com/iiordanov/remote-desktop-clients) by iiordanov. We sincerely thank the original author for the foundational work.
 
 ### Key Dependencies
 - [FreeRDP](https://github.com/FreeRDP/FreeRDP): RDP protocol implementation
