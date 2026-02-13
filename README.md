@@ -32,7 +32,7 @@ Your support helps fund ongoing improvements, new features, and maintenance.
 Purchasing the Donation Version unlocks these exclusive premium features:
 - **RDP MediaCodec Hardware Acceleration** for smoother remote desktop performance
 - **Early access to updates**: Get new features and fixes first (GitHub version lags by 2+ weeks)
-- **Direct touch mapping input** for more natural and precise control
+- **Quick Edge Actions**: Use screen edges to invoke gestures, scrolling, and keyboards faster
 
 Get it on Google Play:
 [https://play.google.com/store/apps/details?id=com.qihua.rmt](https://play.google.com/store/apps/details?id=com.qihua.rmt)
