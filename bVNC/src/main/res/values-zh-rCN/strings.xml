@@ -522,8 +522,7 @@ bVNC对应的功能如下：
     </string-array>
     <string name="rdp_intro_text">
         &lt;h1&gt; 隐私政策 &lt;/h1&gt;&lt;strong &gt; 使用 QiDesk 应用前，您必须阅读并同意本隐私政策。&lt;/strong&gt;
-&lt;p&gt; 本隐私政策适用于由 NervNeuron（以下简称 “服务提供者”）开发的、用于移动设备的 QiDesk 应用（以下简称 “本应用”），本应用为商业服务。本服务按 “现状” 提供，仅供使用。&lt;/p&gt;&lt;br&gt;&lt;strong &gt; 信息收集与使用 &lt;/strong&gt;&lt;p &gt; 本应用不收集任何类型的数据。所有数据（如密码、连接配置等）均存储在您自己的设备上。&lt;/p&gt;&lt;p &gt; 本应用不会收集您移动设备的精确位置信息。&lt;/p&gt;&lt;br&gt;&lt;strong &gt; 儿童使用说明 &lt;/strong&gt;&lt;p &gt; 服务提供者不会利用本应用故意向 13 岁以下儿童索取数据或进行营销活动。&lt;/p&gt;&lt;!----&gt;&lt;div&gt;&lt;br&gt;&lt;p &gt; 服务提供者不会故意收集儿童的个人身份信息。服务提供者鼓励所有儿童切勿通过本应用及 / 或相关服务提交任何个人身份信息，并鼓励家长和法定监护人监督其子女的互联网使用情况，通过指导子女在未经许可的情况下切勿通过本应用及 / 或相关服务提供个人身份信息，协助执行本政策。如果您有理由相信有儿童通过本应用及 / 或相关服务向服务提供者提供了个人身份信息，请通过邮箱联系服务提供者（sefler.zy@gmail.com），以便服务提供者采取必要措施。您还必须年满 16 周岁，才能同意在您所在国家 / 地区对您的个人身份信息进行处理（在部分国家 / 地区，我们可能允许您的父母或监护人代表您同意）。&lt;/p&gt;&lt;/div&gt;&lt;br&gt;&lt;strong &gt; 安全性说明 &lt;/strong&gt;&lt;p &gt; 所有数据均以高加密方式本地存储在您的设备上。您将对数据安全存储承担全部责任。&lt;/p&gt;&lt;br&gt;&lt;strong &gt; 政策变更 &lt;/strong&gt;&lt;p &gt; 本隐私政策可能因任何原因随时更新。服务提供者将通过本页面发布新的隐私政策，通知您任何变更。建议您定期查阅本隐私政策，了解所有变更内容，继续使用本应用即视为您同意所有变更。&lt;/p&gt;&lt;br&gt;&lt;p &gt; 本隐私政策自 2025-04-26 起生效。&lt;/p&gt;&lt;br&gt;&lt;strong &gt; 您的同意 &lt;/strong&gt;&lt;p &gt; 使用本应用，即表示您同意我们按本隐私政策（包括我们不时修订的版本）处理您的相关信息。&lt;/p&gt;&lt;br&gt;&lt;strong &gt; 联系我们 &lt;/strong&gt;&lt;p &gt; 如果您在使用本应用时对隐私问题有任何疑问，或对我们的做法有任何疑问，请通过邮箱联系服务提供者：sefler.zy@gmail.com。&lt;/p&gt;
-    </string>
+&lt;p&gt; 本隐私政策适用于由 sefler.zy@gmail.com（以下简称 “服务提供者”）开发的、用于移动设备的 QiDesk 应用（以下简称 “本应用”）</string>
     <string name="rdp_intro_title">奇花远程：全能好用的远程桌面客户端</string>
     <string name="rdp_connection_screen_help_text" tools:ignore="TypographyOther">"
 新建或编辑连接时连接设定画面会显示出来。在此可以设置新的RDP连接设定或选择现有的连接。顶部有保存连接的按钮，下面可设定连接。
