@@ -17,6 +17,11 @@ android {
         }
     }
 
+    lintOptions {
+        // Disable Lint
+        disable 'Instantiatable'
+    }
+
     buildFeatures {
         buildConfig true
     }

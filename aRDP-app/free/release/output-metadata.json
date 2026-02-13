@@ -4,17 +4,18 @@
     "type": "APK",
     "kind": "Directory"
   },
-  "applicationId": "com.qihua.rmt",
+  "applicationId": "com.qihua.rmt.free",
   "variantName": "freeRelease",
   "elements": [
     {
       "type": "SINGLE",
       "filters": [],
       "attributes": [],
-      "versionCode": 2660,
-      "versionName": "v1.7.15",
-      "outputFile": "qihua-release.apk"
+      "versionCode": 3810,
+      "versionName": "v2.5.1",
+      "outputFile": "aRDP-app-free-release.apk"
     }
   ],
-  "elementType": "File"
+  "elementType": "File",
+  "minSdkVersionForDexing": 26
 }

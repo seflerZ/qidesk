@@ -2,6 +2,7 @@ package com.qihua.bVNC.input;
 
 import android.os.Handler;
 
+import com.qihua.bVNC.R;
 import com.qihua.bVNC.RemoteCanvas;
 import com.undatech.opaque.util.GeneralUtils;
 
@@ -21,7 +22,7 @@ public class RdpRemoteGamepad extends RemoteGamepad {
     public void initialize() {
         GeneralUtils.debugLog(debugLogging, TAG, "Initializing RDP gamepad");
         // RDP协议的游戏手柄初始化逻辑
-        showUnsupportedToast("RDP连接暂不支持手柄功能");
+        showUnsupportedToast(context.getString(R.string.rdp_gamepad_not_supported));
     }
     
     @Override
@@ -33,7 +34,7 @@ public class RdpRemoteGamepad extends RemoteGamepad {
     @Override
     public void sendButtonDown(int keyCode) {
         GeneralUtils.debugLog(debugLogging, TAG, "RDP gamepad button down: " + keyCode);
-        showUnsupportedToast("RDP连接暂不支持手柄功能");
+        showUnsupportedToast(context.getString(R.string.rdp_gamepad_not_supported));
     }
     
     @Override
