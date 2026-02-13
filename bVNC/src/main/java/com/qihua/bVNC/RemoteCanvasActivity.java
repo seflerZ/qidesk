@@ -228,6 +228,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     private int keyboardHeight;
     // 记录当前连接已显示过的输入模式提示，避免重复显示
     private Set<String> displayedInputModeTips = new HashSet<>();
+    private static final String PREFS_INPUT_TIPS = "input_mode_tips";
 
     /**
      * Enables sticky immersive mode if supported.
@@ -1684,18 +1685,21 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     }
 
     public void showPanningState(boolean showLonger) {
-        if (inputHandler == null) return;
-        
+        if (inputHandler == null || connection == null) return;
+
         String inputModeId = inputHandler.getId();
-        
-        // 检查此输入模式的提示是否已经显示过
-        if (displayedInputModeTips.contains(inputModeId)) {
+        String connectionId = connection.getId();
+        String prefKey = PREFS_INPUT_TIPS + "_" + connectionId + "_" + inputModeId;
+
+        // 检查此连接的此输入模式提示是否已经显示过
+        SharedPreferences prefs = getSharedPreferences(PREFS_INPUT_TIPS, MODE_PRIVATE);
+        if (prefs.getBoolean(prefKey, false)) {
             return; // 已经显示过，不再重复显示
         }
-        
-        // 记录此输入模式提示已显示
-        displayedInputModeTips.add(inputModeId);
-        
+
+        // 记录此连接的此输入模式提示已显示
+        prefs.edit().putBoolean(prefKey, true).apply();
+
         // 显示提示
         if (showLonger) {
             Toast t = Toast.makeText(this, inputHandler.getDescription(), Toast.LENGTH_LONG);
