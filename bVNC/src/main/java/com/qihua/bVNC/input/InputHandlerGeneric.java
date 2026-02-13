@@ -473,13 +473,13 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             return true;
         }
 
-        if (detectUpRange(e.getX(), e.getY()) || detectDownRange(e.getX(), e.getY())) {
+        if (detectImmersiveUp(e.getX(), e.getY()) || detectImmersiveDown(e.getX(), e.getY())) {
             activity.toggleKeyboard();
             return true;
         }
 
         String longPressAction = Utils.querySharedPreferenceString(activity.getApplicationContext(), Constants.touchpadLongPressAction, "left");
-        if (detectLeftRange(e.getX(), e.getY()) || detectRightRange(e.getX(), e.getY())) {
+        if (detectImmersiveLeft(e.getX(), e.getY()) || detectImmersiveRight(e.getX(), e.getY())) {
             if (longPressAction.equals("gesture")) {
                 activity.toggleKeyboard();
             } else {
@@ -651,28 +651,44 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         return y <= immersiveYDistance || touchpad.getHeight() - y <= immersiveYDistance;
     }
 
-    private boolean detectLeftRange(float x, float y) {
+    private boolean detectImmersiveLeft(float x, float y) {
+        if (!immersiveSwipeEnabled || canvas.isOutDisplay()) {
+            return false;
+        }
+
         float bottomXDistance = getImmersiveXDistance();
         float bottomYDistance = touchpad.getHeight() / 2f;
 
         return x <= bottomXDistance;
     }
 
-    private boolean detectRightRange(float x, float y) {
+    private boolean detectImmersiveRight(float x, float y) {
+        if (!immersiveSwipeEnabled || canvas.isOutDisplay()) {
+            return false;
+        }
+
         float bottomXDistance = getImmersiveXDistance();
         float bottomYDistance = touchpad.getHeight() / 2f;
 
         return x >= touchpad.getWidth() - bottomXDistance;
     }
 
-    private boolean detectUpRange(float x, float y) {
+    private boolean detectImmersiveUp(float x, float y) {
+        if (!immersiveSwipeEnabled || canvas.isOutDisplay()) {
+            return false;
+        }
+
         float bottomXDistance = getImmersiveXDistance();
         float bottomYDistance = getImmersiveYDistance();
 
         return y <= bottomYDistance;
     }
 
-    private boolean detectDownRange(float x, float y) {
+    private boolean detectImmersiveDown(float x, float y) {
+        if (!immersiveSwipeEnabled || canvas.isOutDisplay()) {
+            return false;
+        }
+
         float bottomXDistance = getImmersiveXDistance();
         float bottomYDistance = getImmersiveYDistance();
 
