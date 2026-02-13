@@ -1,7 +1,7 @@
 # QiDesk 奇花远程
 <img src="https://github.com/user-attachments/assets/b801786b-ff35-4a8c-91dd-127def5345e4" width="128">
 
-🌼 **All-in-One High-Performance Remote Desktop Client. Your workstation in your pocket.**  🌼
+🌼 **All-in-One High-Performance Remote Desktop Client. Fully opensource.**  🌼
 
 QiDesk is a feature-rich remote desktop client supporting multiple protocols. It is a customized fork of the aRDP project (by iiordanov) with extensive optimizations, new features and bug fixes.
 
