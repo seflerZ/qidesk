@@ -30,8 +30,7 @@ If you find QiDesk useful and want to support its continued development, you can
 Your support helps fund ongoing improvements, new features, and maintenance.
 
 Purchasing the Donation Version unlocks these exclusive premium features:
-- **RDP MediaCodec Hardware Acceleration** for smoother remote desktop performance
-- **Early access to updates**: Get new features and fixes first (GitHub version lags by 2+ weeks)
+- **Early access to updates**: Get new features and fixes first (GitHub 2+ release behind)
 - **Quick Edge Actions**: Use screen edges to invoke gestures, scrolling, and keyboards faster
 
 Get it on Google Play:
