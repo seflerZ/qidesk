@@ -6,12 +6,12 @@
 QiDesk is a feature-rich remote desktop client supporting multiple protocols. It is a customized fork of the aRDP project (by iiordanov) with extensive optimizations, new features and bug fixes.
 
 # Core Features
-- ✅ **High Performance**: Native 60fps rendering for smooth remote control experience
-- ✅ **Multi-Protocol Support**: Integrated RDP\VNC\NVStream clients (more protocols coming soon)
-- ✅ **Large-Screen Optimization**: Tailored for tablets, foldable phones and external displays
-- ✅ **Full Peripheral Support**: External monitor, mouse and keyboard compatibility (turn your mobile device into a fully functional PC instantly)
+- ✅ **High Performance**: Native 60fps rendering for a smooth remote control experience
+- ✅ **Multi-Protocol Support**: Integrated RDP, VNC, and NVStream clients (more protocols coming soon)
+- ✅ **Large-Screen Optimization**: Tailored for tablets, foldable phones, and external displays
+- ✅ **Full Peripheral Support**: Compatible with external monitors, mice, and keyboards (turn your mobile device into a fully functional PC instantly)
 - ✅ **Intuitive Gestures**: Custom finger gesture controls for seamless operation
-- ✅ **Polished Interactions**: Pointer momentum, UI refinements and critical bug fixes
+- ✅ **Rich Interactions**: Pointer momentum, touchpad simulation, direct touch mapping, and gamepad simulation
 
 # Screenshots
 ### Transform Your Mobile Device into a Desktop PC
