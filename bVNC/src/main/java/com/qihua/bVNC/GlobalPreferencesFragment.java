@@ -4,10 +4,9 @@ import android.os.Bundle;
 
 import androidx.preference.EditTextPreference;
 import androidx.preference.PreferenceFragmentCompat;
+import androidx.preference.SwitchPreference;
 
-import com.alibaba.fastjson2.util.StringUtils;
 import com.qihua.bVNC.extrakeys.ExtraKeysConstants;
-import com.qihua.bVNC.R;
 
 public class GlobalPreferencesFragment extends PreferenceFragmentCompat {
     @Override
@@ -32,6 +31,12 @@ public class GlobalPreferencesFragment extends PreferenceFragmentCompat {
         EditTextPreference verticalExtraKeysPref = findPreference(Constants.verticalExtraKeysPref);
         if (verticalExtraKeysPref != null && "".equals(verticalExtraKeysPref.getText())) {
             verticalExtraKeysPref.setText(ExtraKeysConstants.DEFAULT_VER_IVALUE_EXTRA_KEYS);
+        }
+
+        // Disable edge wheel preference in free version
+        SwitchPreference edgeWheelPref = findPreference(Constants.touchpadEdgeWheel);
+        if (edgeWheelPref != null) {
+            edgeWheelPref.setEnabled(BuildConfig.EDGE_ENABLED);
         }
     }
 }

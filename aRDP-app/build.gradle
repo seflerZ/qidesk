@@ -17,6 +17,10 @@ android {
         }
     }
 
+    buildFeatures {
+        buildConfig true
+    }
+
     namespace "com.qihua.rmt"
 
     buildTypes {
@@ -36,22 +40,14 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 
-    lintOptions {
-        disable "Instantiatable"
-    }
-
-    flavorDimensions += "version"
+    flavorDimensions += "channel"
     productFlavors {
-        create("pro") {
-            applicationIdSuffix ".pro"
-        }
-
-        create("free") {
+        gplay {
             applicationIdSuffix ""
         }
 
-        create("play") {
-            applicationIdSuffix ".play"
+        free {
+            applicationIdSuffix ".free"
         }
     }
 }

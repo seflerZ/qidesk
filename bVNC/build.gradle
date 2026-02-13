@@ -6,10 +6,16 @@ android {
 
     namespace 'com.undatech.remoteClientUi'
 
+    flavorDimensions "channel"
+
     defaultConfig {
         targetSdkVersion targetApi
         minSdkVersion project.getProperties().get("SDK_VERSION")
         vectorDrawables.useSupportLibrary = true
+    }
+
+    buildFeatures {
+        buildConfig true
     }
 
     namespace 'com.qihua.bVNC'
@@ -18,6 +24,18 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+        }
+    }
+
+    productFlavors {
+        gplay {
+            dimension "channel"
+            buildConfigField "boolean", "EDGE_ENABLED", "true"
+        }
+
+        free {
+            dimension "channel"
+            buildConfigField "boolean", "EDGE_ENABLED", "false"
         }
     }
 

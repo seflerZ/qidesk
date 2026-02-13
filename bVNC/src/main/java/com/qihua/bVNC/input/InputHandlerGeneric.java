@@ -21,7 +21,6 @@
 package com.qihua.bVNC.input;
 
 import android.gesture.GestureOverlayView;
-import android.os.Build;
 import android.os.SystemClock;
 import android.view.InputDevice;
 import android.view.KeyEvent;
@@ -39,6 +38,7 @@ import com.qihua.bVNC.RemoteCanvasActivity;
 import com.qihua.bVNC.Utils;
 import com.undatech.opaque.util.GeneralUtils;
 import com.qihua.bVNC.R;
+import com.qihua.bVNC.BuildConfig;
 
 import java.util.LinkedList;
 import java.util.Queue;
@@ -176,7 +176,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         touchpadFeedback = Utils.querySharedPreferenceBoolean(canvas.getContext(), Constants.touchpadFeedback);
 
         immersiveSwipeEnabled = Utils.querySharedPreferenceBoolean(activity.getApplicationContext()
-                , Constants.touchpadEdgeWheel, true);
+                , Constants.touchpadEdgeWheel, true) && BuildConfig.EDGE_ENABLED;
 
 //        baseSwipeDist = baseSwipeDist / displayDensity;
 //        startSwipeDist = startSwipeDist / displayDensity;
