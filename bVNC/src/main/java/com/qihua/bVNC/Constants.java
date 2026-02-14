@@ -199,6 +199,7 @@ public class Constants {
     public static final String themeModeType = "themeModeType";
     public static final String touchpadFeedback = "touchpadFeedback";
     public static final String touchpadEdgeWheel = "touchpadEdgeWheel";
+    public static final String dragHelpEnabled = "dragHelpEnabled";
     public static final String softwareKeyboardType = "softwareKeyboardType";
     public static final String ACTION_USB_PERMISSION = "com.qihua.aSPICE.USB_PERMISSION";
     public static final int usbDeviceTimeout = 5000;

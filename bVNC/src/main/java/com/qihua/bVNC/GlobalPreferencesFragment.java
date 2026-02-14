@@ -3,6 +3,8 @@ package com.qihua.bVNC;
 import android.os.Bundle;
 
 import androidx.preference.EditTextPreference;
+import androidx.preference.Preference;
+import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.SwitchPreference;
 import androidx.preference.SwitchPreferenceCompat;
@@ -29,10 +31,10 @@ public class GlobalPreferencesFragment extends PreferenceFragmentCompat {
             verticalExtraKeysPref.setText(ExtraKeysConstants.DEFAULT_VER_IVALUE_EXTRA_KEYS);
         }
 
-        // Disable edge wheel preference in free version
-        SwitchPreferenceCompat edgeWheelPref = findPreference(Constants.touchpadEdgeWheel);
-        if (edgeWheelPref != null) {
-            edgeWheelPref.setEnabled(BuildConfig.EDGE_ENABLED);
+        // Disable all efficiency tools in free version
+        PreferenceCategory efficiencyToolsPref = findPreference("efficiency_tools");
+        if (efficiencyToolsPref != null) {
+            efficiencyToolsPref.setEnabled(BuildConfig.EDGE_ENABLED);
         }
     }
 }

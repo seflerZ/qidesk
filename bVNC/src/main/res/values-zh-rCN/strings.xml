@@ -826,6 +826,8 @@ aSPICE对应的功能如下：
     <string name="touchpad_touch_feedback">启用点击反馈</string>
     <string name="touchpad_edge_wheel_hint">滑动以滚动, 单击可唤出软键盘。外接显示器时自动禁用。</string>
     <string name="touchpad_cursor_speed">光标移动速度</string>
+    <string name="drag_help_enabled">拖动放大辅助</string>
+    <string name="drag_help_enabled_hint">拖动较长时间时临时放大屏幕，方便选中文本</string>
 
     <string name="extrakeys_pref">软键盘配置</string>
     <string name="pref_extrakeys_vertical_pref">竖屏时显示内容</string>

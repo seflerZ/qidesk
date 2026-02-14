@@ -909,6 +909,8 @@ Below that is where you configure your connection.
     <string name="touchpad_touch_feedback">Enable Click Feedback</string>
     <string name="touchpad_edge_wheel_hint">Swipe to scroll and click to call soft keyboard. Disable automatically when connected to external monitor.</string>
     <string name="touchpad_cursor_speed">Cursor Speed</string>
+    <string name="drag_help_enabled">Drag Zoom Assist</string>
+    <string name="drag_help_enabled_hint">Temporarily enlarge screen when dragging for a long time</string>
 
     <string name="extrakeys_pref">Extra Key Customization</string>
     <string name="pref_extrakeys_vertical_pref">Configs for Vertical Screen</string>

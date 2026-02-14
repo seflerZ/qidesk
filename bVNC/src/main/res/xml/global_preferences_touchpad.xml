@@ -34,5 +34,11 @@
             app:defaultValue="true"
             android:title="@string/touchpad_edge_wheel"
             android:summary="@string/touchpad_edge_wheel_hint"/>
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:key="dragHelpEnabled"
+            app:defaultValue="false"
+            android:title="@string/drag_help_enabled"
+            android:summary="@string/drag_help_enabled_hint"/>
     </PreferenceCategory>
 </PreferenceScreen>

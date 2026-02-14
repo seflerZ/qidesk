@@ -139,6 +139,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     private boolean dragHelped = false;
     private boolean canEnlarge = true;
     private boolean immersiveSwipeEnabled = true;
+    private boolean dragHelpEnabled = false;
     protected boolean touchpadFeedback = true;
 
     private final View edgeRight;
@@ -177,6 +178,9 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
         immersiveSwipeEnabled = Utils.querySharedPreferenceBoolean(activity.getApplicationContext()
                 , Constants.touchpadEdgeWheel, true) && BuildConfig.EDGE_ENABLED;
+
+        dragHelpEnabled = Utils.querySharedPreferenceBoolean(activity.getApplicationContext()
+                , Constants.dragHelpEnabled, false);
 
 //        baseSwipeDist = baseSwipeDist / displayDensity;
 //        startSwipeDist = startSwipeDist / displayDensity;
@@ -922,8 +926,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                             }
 
                             // If try to drag with long time, enlarge the screen for drag helper. This is very helpful in selecting texts in small screen.
-                            if (System.currentTimeMillis() - lastDragStartTime > 800 && canEnlarge
-                                    && dragMode && (totalDragX < 100 && totalDragY < 100)
+                            if (dragHelpEnabled && System.currentTimeMillis() - lastDragStartTime > 800 && canEnlarge
+                                    && dragMode && (totalDragX < 120 && totalDragY < 120)
                                     && lastZoomFactor < 2.0f) {
                                 canvas.scaler.changeZoom(activity, 2.5f/canvas.getZoomFactor(), pointer.getX(), pointer.getY());
                                 dragHelped = true;
