@@ -887,4 +887,6 @@ aSPICE对应的功能如下：
 
     <string name="touchpad_touch_feedback_hint">在 Android 16 及以上版本，您需要先启用系统触感反馈。</string>
     <string name="rdp_gamepad_not_supported">RDP连接暂不支持手柄功能</string>
+
+    <string name="efficiency_tools">效率工具</string>
 </resources>

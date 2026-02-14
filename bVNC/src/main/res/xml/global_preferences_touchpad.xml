@@ -26,6 +26,8 @@
             android:entryValues="@array/pref_three_pointer_touch_values"
             android:key="threePointerTouchAction"
             android:title="@string/three_pointers_touch_action" />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="@string/efficiency_tools">
         <SwitchPreferenceCompat
             android:defaultValue="true"
             android:key="touchpadEdgeWheel"

@@ -972,4 +972,5 @@ Below that is where you configure your connection.
     <string name="description_ssh">[Coming soon] Pure SSH terminal, for server management.</string>
     <string name="touchpad_touch_feedback_hint">In Android 16 and later, you must enable system haptic first.</string>
     <string name="rdp_gamepad_not_supported">RDP connection does not support gamepad feature yet.</string>
+    <string name="efficiency_tools">Efficiency Tools</string>
 </resources>
