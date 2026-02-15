@@ -14,15 +14,17 @@ QiDesk is a feature-rich remote desktop client supporting multiple protocols. It
 - ✅ **Rich Interactions**: Pointer momentum, touchpad simulation, direct touch mapping, and gamepad simulation
 
 # Screenshots
+
 ### Transform Your Mobile Device into a Desktop PC
-<img src="https://github.com/user-attachments/assets/033553ac-9be0-4e92-908c-702765e260a0" width="30%">
+| | |  
+| :-: | :-: |
+|<img src="https://github.com/user-attachments/assets/0860678f-160d-4312-9180-8274be039c61" width="500">|<img src="https://github.com/user-attachments/assets/6b876c67-c61d-482b-9c84-40b79552673e" width="300">|
 
 ### Intuitive & Optimized UI
-![unnamed (4)](https://github.com/user-attachments/assets/e1f3c93c-0388-4896-942e-4b8ca1808165)
-![unnamed (3)](https://github.com/user-attachments/assets/d1f149fc-5a3b-4e8b-a0c2-4960499ca592)
-![unnamed (2)](https://github.com/user-attachments/assets/5b9f6f99-da82-46f4-af8d-cfcfae57113d)
-![unnamed (1)](https://github.com/user-attachments/assets/43e16542-7203-4bf0-a580-c46a0c452f9a)
-![unnamed](https://github.com/user-attachments/assets/e47e1fbd-67ab-4c64-be1f-4df964647061)
+| | | |
+| :-: | :-: | :-: |
+|<img src="https://github.com/user-attachments/assets/e1f3c93c-0388-4896-942e-4b8ca1808165" width="300">|<img src="https://github.com/user-attachments/assets/d1f149fc-5a3b-4e8b-a0c2-4960499ca592" width="300">|<img src="https://github.com/user-attachments/assets/5b9f6f99-da82-46f4-af8d-cfcfae57113d" width="300">|
+|<img src="https://github.com/user-attachments/assets/43e16542-7203-4bf0-a580-c46a0c452f9a" width="300">|<img src="https://github.com/user-attachments/assets/e47e1fbd-67ab-4c64-be1f-4df964647061" width="300">| |
 
 # Support QiDesk
 
