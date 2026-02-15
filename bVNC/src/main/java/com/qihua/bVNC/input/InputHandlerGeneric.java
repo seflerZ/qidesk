@@ -872,12 +872,12 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
                         if (timeElapsed > interval) {
                             if (lastX != 0) {
-                                lastSpeedX = ((e.getX() - lastX) / timeElapsed) * inertiaBaseInterval / canvas.getZoomFactor() / 1.5f;
+                                lastSpeedX = ((e.getX() - lastX) / timeElapsed) * inertiaBaseInterval / canvas.getZoomFactor() / 1.6f;
                                 lastSpeedX = lastSpeedX * Utils.querySharedPreferenceInt(activity, Constants.touchpadCursorSpeed, 1) / 10;
                             }
 
                             if (lastY != 0) {
-                                lastSpeedY = ((e.getY() - lastY) / timeElapsed) * inertiaBaseInterval / canvas.getZoomFactor() / 1.5f;
+                                lastSpeedY = ((e.getY() - lastY) / timeElapsed) * inertiaBaseInterval / canvas.getZoomFactor() / 1.6f;
                                 lastSpeedY = lastSpeedY * Utils.querySharedPreferenceInt(activity, Constants.touchpadCursorSpeed, 1) / 10;
                             }
 
