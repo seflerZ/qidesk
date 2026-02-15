@@ -86,7 +86,7 @@ public class TouchMovementAnalyzer {
         TouchPoint oldestPoint = touchPoints.getFirst();
         TouchPoint newestPoint = touchPoints.getLast();
 
-        if (newestPoint.timestamp - oldestPoint.timestamp < 1000) {
+        if (newestPoint.timestamp - oldestPoint.timestamp < 1500) {
             // 数据不足，保持当前状态
             return isSlowMovementDetected;
         }
