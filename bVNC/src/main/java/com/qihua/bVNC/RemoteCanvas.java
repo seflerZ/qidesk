@@ -1647,10 +1647,10 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     /**
      * Make sure mouse is visible on displayable part of screen
      */
-    public void movePanToMakePointerVisible() {
+    public boolean movePanToMakePointerVisible() {
         //Log.d(TAG, "movePanToMakePointerVisible");
         if (rfbconn == null)
-            return;
+            return false;
 
         // Do not pan when not scaled.
 //        if (getZoomFactor() == getMinimumScale()) {
@@ -1664,7 +1664,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
         // We only pan if the current scaling is able to pan.
         if (scaler != null && !scaler.isAbleToPan())
-            return;
+            return false;
 
         // Coordinates in screen's resolution
         int x = (int) (pointer.getX());
@@ -1734,6 +1734,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             //scrollBy(newX - absoluteXPosition, newY - absoluteYPosition);
             resetScroll();
         }
+
+        return panned;
     }
 
     public int getTopMargin(double scale) {

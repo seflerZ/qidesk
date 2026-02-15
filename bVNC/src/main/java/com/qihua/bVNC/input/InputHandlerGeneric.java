@@ -136,7 +136,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     private long lastDragStartTime;
     Queue<Float> distXQueue;
     Queue<Float> distYQueue;
-    private boolean dragHelped = false;
+    protected boolean dragHelped = false;
     private boolean canEnlarge = true;
     private boolean immersiveSwipeEnabled = true;
     private boolean dragHelpEnabled = false;
@@ -147,6 +147,9 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     private final View edgeTop;
     private final View edgeBottom;
     private long lastDragHelpTimeMs;
+    
+    // 滑动窗口分析器，用于检测慢速精细操作
+    private TouchMovementAnalyzer touchMovementAnalyzer;
 
     InputHandlerGeneric(RemoteCanvasActivity activity, RemoteCanvas canvas, RemoteCanvas touchpad, RemotePointer pointer,
                         boolean debugLogging) {
@@ -160,7 +163,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         edgeRight = activity.findViewById(R.id.edgeRight);
         edgeTop = activity.findViewById(R.id.edgeTop);
         edgeBottom = activity.findViewById(R.id.edgeBottom);
-
 //        useDpadAsArrows = true; //activity.getUseDpadAsArrows();
 //        rotateDpad = false; //activity.getRotateDpad();
 
@@ -170,6 +172,9 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         gestureDetector.setOnDoubleTapListener(this);
 
         displayDensity = touchpad.getDisplayDensity();
+
+        // 初始化滑动窗口分析器
+        touchMovementAnalyzer = new TouchMovementAnalyzer(displayDensity, debugLogging);
 
         distXQueue = new LinkedList<>();
         distYQueue = new LinkedList<>();
@@ -532,10 +537,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
         dragMode = true;
 
-        // These are for drag helper
-        lastZoomFactor = canvas.getZoomFactor();
-        lastDragStartTime = System.currentTimeMillis();
-
         return true;
     }
 
@@ -860,12 +861,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                         lastX = e.getX();
                         lastY = e.getY();
 
-//                        activity.hideKeyboardAndExtraKeys();
-
-                        // Detect whether this is potentially the start of a gesture to show the nav bar.
-                        // No single finger scrolling in free edition
-//                        detectImmersiveSwipe(dragX);
-
                         // Stop inertia scrolling
                         inertiaStartTime = System.currentTimeMillis();
 
@@ -891,6 +886,27 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
                         lastX = e.getX();
                         lastY = e.getY();
+
+                        // 添加当前触摸点到分析器，仅在单指下有效
+                        if (e.getPointerCount() == 1 && !detectImmersiveRange(e.getX(), e.getY())) {
+                            touchMovementAnalyzer.addTouchPoint(e.getX(), e.getY());
+
+                            // 强化版dragHelped功能：支持普通移动模式下的临时放大
+                            if (dragHelpEnabled) {
+                                boolean isSlowMovement = touchMovementAnalyzer.analyzeMovement();
+
+                                if (isSlowMovement && canvas.getZoomFactor() < 1.5f) {
+                                    // 检测到慢速移动，启用临时放大
+                                    lastZoomFactor = canvas.getZoomFactor();
+                                    canvas.scaler.changeZoom(activity, 2f / canvas.getZoomFactor(), pointer.getX(), pointer.getY());
+                                    dragHelped = true;
+                                } else if (dragHelped && !isSlowMovement) {
+                                    // 临时放大已结束，恢复原始缩放比例
+                                    canvas.scaler.changeZoom(activity, lastZoomFactor / canvas.getZoomFactor(), pointer.getX(), pointer.getY());
+                                    dragHelped = false;
+                                }
+                            }
+                        }
 
                         GeneralUtils.debugLog(debugLogging, TAG, "onTouchEvent: ACTION_MOVE");
                         // Send scroll up/down events if swiping is happening.
@@ -920,19 +936,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                                 totalDragY = 0.1f;
                             }
 
-                            // do not enlarge if the cursor moved away
-                            if (totalDragX > 50 || totalDragY > 50) {
-                                canEnlarge = false;
-                            }
-
-                            // If try to drag with long time, enlarge the screen for drag helper. This is very helpful in selecting texts in small screen.
-                            if (dragHelpEnabled && System.currentTimeMillis() - lastDragStartTime > 800 && canEnlarge
-                                    && dragMode && (totalDragX < 120 && totalDragY < 120)
-                                    && lastZoomFactor < 2.0f) {
-                                canvas.scaler.changeZoom(activity, 2.5f/canvas.getZoomFactor(), pointer.getX(), pointer.getY());
-                                dragHelped = true;
-                            }
-
                             // when reached to the edge, keep the cursor continue moving
                             int x = getX(e);
                             int y = getY(e);
@@ -956,8 +959,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
                             pointer.moveMouseButtonDown(x, y, meta);
                             canvas.movePanToMakePointerVisible();
-                            GeneralUtils.debugLog(debugLogging, TAG, "onTouchEvent: ACTION_MOVE in a drag mode, moving mouse with button down");
-                            break;
                         }
 
                         if (thirdPointerWasDown
@@ -1077,12 +1078,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                 inertiaSwiping = true;
                 inertiaSemaphore.release();
             }
-
+            
             if (dragMode || rightDragMode || middleDragMode) {
-                if (dragHelped) {
-                    canvas.scaler.changeZoom(activity, lastZoomFactor / canvas.getZoomFactor(), pointer.getX(), pointer.getY());
-                    dragHelped = false;
-                }
 
                 // release the drag button down
                 pointer.releaseButton(getX(e), getY(e), meta);

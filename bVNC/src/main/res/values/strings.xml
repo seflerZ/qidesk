@@ -45,7 +45,19 @@
     <string name="select_vm_title">Select Virtual Machine</string>
     <string name="vv_file_not_found">The .vv file was not found!</string>
     <string name="vv_file_error">The .vv file is either missing or corrupt!</string>
-    <string name="info_cert">Do you accept this new or changed host certificate?\n\nFingerprints:\nMD5: %1$s\nSHA1: %2$s\nSHA256: %3$s\n\nIssued to: %4$s\nIssued by: %5$s\n\nValid from: %6$s\nValid until: %7$s\n</string>
+    <string name="info_cert">Do you accept this new or changed host certificate?
+
+Fingerprints:
+MD5: %1$s
+SHA1: %2$s
+SHA256: %3$s
+
+Issued to: %4$s
+Issued by: %5$s
+
+Valid from: %6$s
+Valid until: %7$s
+</string>
 
     <string name="toggle_keyboard">Toggle Keyboard</string>
     <string name="show_keyboard">Show Keyboard</string>
@@ -55,7 +67,16 @@
     <string name="ok">Ok</string>
 
     <string name="input_methods">Input Method</string>
-    <string name="input_method_help_text">Simulated Touchpad Method:\n - Use your screen like a touchpad.\n - Swipe to move the mouse pointer around.\n - Move mouse beyond edge of screen to pan.\n - Tapping makes the mouse click where the pointer is.\n - Scroll events are sent where the mouse pointer is located.\n \n  - Left-click: Tap once.\n - Double-click: Double-tap.\n - Right-click: Tap-hold and tap with a second finger (anywhere else on screen).</string>
+    <string name="input_method_help_text">Simulated Touchpad Method:
+ - Use your screen like a touchpad.
+ - Swipe to move the mouse pointer around.
+ - Move mouse beyond edge of screen to pan.
+ - Tapping makes the mouse click where the pointer is.
+ - Scroll events are sent where the mouse pointer is located.
+ 
+  - Left-click: Tap once.
+ - Double-click: Double-tap.
+ - Right-click: Tap-hold and tap with a second finger (anywhere else on screen).</string>
 
     <string name="error_failed_to_download_vv_http">Failed to download .vv file over HTTP. Perhaps your server is unreachable.</string>
     <string name="error_failed_to_download_vv_https">Failed to download .vv file over HTTPS. Perhaps your server cert is untrusted (expired or self-signed) or your server is unreachable.</string>
@@ -279,7 +300,23 @@
     <string name="info">Info</string>
     <string name="info_cert_signatures">"The certificate information is: "</string>
     <string name="info_cert_signatures_identical">\n\nYou can ensure the information matches the server certificate to prevent a man-in-the-middle attack.</string>
-    <string name="info_cert_tunnel">Do you want to connect to the host identified by the following certificate?\n\nFingerprint: %1$s\n\nIssued to:\n%2$s\n\nIssued by:\n%3$s\n\nValid from:\n%4$s\n\nValid until:\n%5$s\n\nNote: The application does not verify certificate authorities or check for certificate revocation.</string>
+    <string name="info_cert_tunnel">Do you want to connect to the host identified by the following certificate?
+
+Fingerprint: %1$s
+
+Issued to:
+%2$s
+
+Issued by:
+%3$s
+
+Valid from:
+%4$s
+
+Valid until:
+%5$s
+
+Note: The application does not verify certificate authorities or check for certificate revocation.</string>
     <string name="info_continue_connecting">"Continue connecting to: "</string>
     <string name="info_continue_connected">Successfully connected. Waiting for incoming frames.</string>
     <string name="info_encoding">" encoding, "</string>
@@ -909,8 +946,8 @@ Below that is where you configure your connection.
     <string name="touchpad_touch_feedback">Enable Click Feedback</string>
     <string name="touchpad_edge_wheel_hint">Swipe to scroll and click to call soft keyboard. Disable automatically when connected to external monitor.</string>
     <string name="touchpad_cursor_speed">Cursor Speed</string>
-    <string name="drag_help_enabled">Drag Zoom Assist</string>
-    <string name="drag_help_enabled_hint">Temporarily enlarge screen when dragging for a long time</string>
+    <string name="drag_help_enabled">Smart Zoom Assist</string>
+    <string name="drag_help_enabled_hint">Temporarily enlarge screen during slow finger movements(both moving and dragging).</string>
 
     <string name="extrakeys_pref">Extra Key Customization</string>
     <string name="pref_extrakeys_vertical_pref">Configs for Vertical Screen</string>
