@@ -30,7 +30,7 @@ import com.qihua.bVNC.R;
 public class InputHandlerTouchpad extends InputHandlerGeneric {
     public static final String ID = "TOUCHPAD_MODE";
     static final String TAG = "InputHandlerTouchpad";
-    public static final int SCROLL_SAMPLING_MS = 40;
+    public static final int SCROLL_SAMPLING_MS = 33;
 
     public InputHandlerTouchpad(RemoteCanvasActivity activity, RemoteCanvas canvas, RemoteCanvas touchpad,
                                 RemotePointer pointer, boolean debugLogging) {
@@ -131,7 +131,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         long currentTime = System.currentTimeMillis();
         // 使用指针加速助手计算加速倍数，双指滑动的基础倍数为1.6f
         float speedMultiplier = pointerAccelerationHelper.calculateAccelerationMultiplier(
-            currentTime, cumulatedX, cumulatedY, 1.6f);
+            currentTime, cumulatedX, cumulatedY, 1.2f);
     
         // Make distanceX/Y display density independent with speed-based acceleration.
         distanceX = (cumulatedX / displayDensity) * canvas.getZoomFactor() * speedMultiplier;
