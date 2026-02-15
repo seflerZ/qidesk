@@ -37,7 +37,7 @@ public class MyGestureDectector
     // double tap
     private static final int LARGE_TOUCH_SLOP = 18;
     // Distance between the first touch and second touch to still be considered a double tap
-    private static final int DOUBLE_TAP_SLOP = 400;
+    private static final int DOUBLE_TAP_SLOP = 200;
     // constants for Message.what used by GestureHandler below
     private static final int SHOW_PRESS = 1;
     private static final int LONG_PRESS = 2;
@@ -48,7 +48,6 @@ public class MyGestureDectector
     private int mLargeTouchSlopSquare;
     private int mDoubleTapSlopSquare;
     private int mLongpressTimeout = 380;
-    private long lastTapTime = 0;
     private OnDoubleTapListener mDoubleTapListener;
     private boolean mStillDown;
     private boolean mInLongPress;

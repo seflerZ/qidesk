@@ -1,7 +1,5 @@
 package com.qihua.bVNC.input;
 
-import android.view.MotionEvent;
-import com.undatech.opaque.util.GeneralUtils;
 import java.util.LinkedList;
 
 /**
@@ -11,8 +9,8 @@ import java.util.LinkedList;
 public class TouchMovementAnalyzer {
     private static final String TAG = "TouchMovementAnalyzer";
     private static final long WINDOW_DURATION_MS = 2000; // 3 秒滑动窗口
-    private static final float MIN_DISTANCE_DP = 30.0f; // 最小移动距离阈值(dp)
-    private static final int EXIT_MULTIPLIER = 8;
+    private static final float MIN_SPEED = 20.0f; // 最小移动距离阈值(dp)
+    private static final int EXIT_MULTIPLIER = 15;
     private static final float DP_TO_PX_RATIO = 2.0f; // 粗略的dp到px转换比例
     
     // 触摸轨迹点记录
@@ -79,8 +77,8 @@ public class TouchMovementAnalyzer {
         
         lastAnalysisTime = currentTime;
         
-        // 至少需要2个点才能分析
-        if (touchPoints.size() < 2) {
+        // 至少 8 点，避免误判
+        if (touchPoints.size() < 8) {
             return isSlowMovementDetected;
         }
 
@@ -100,7 +98,7 @@ public class TouchMovementAnalyzer {
             (totalDistance / density * DP_TO_PX_RATIO) / (durationMs / 1000.0f) : 0;
 
         isSlowMovementDetected = speedInDpPerSecond < (isSlowMovementDetected
-                ? MIN_DISTANCE_DP * EXIT_MULTIPLIER : MIN_DISTANCE_DP);
+                ? MIN_SPEED * EXIT_MULTIPLIER : MIN_SPEED);
 
         return isSlowMovementDetected;
     }
@@ -118,7 +116,7 @@ public class TouchMovementAnalyzer {
             float dx = curr.x - prev.x;
             float dy = curr.y - prev.y;
             currentDistance = (float)Math.sqrt(dx * dx + dy * dy);
-            if (currentDistance > MIN_DISTANCE_DP * 10) {
+            if (currentDistance > 100 * density) {
                 // 跳过长时间的移动点
                 continue;
             }
