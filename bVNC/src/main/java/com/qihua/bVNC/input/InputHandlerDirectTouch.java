@@ -213,8 +213,8 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
         
         if (contactIdMap.containsKey(pointerId)) {
             int contactId = contactIdMap.get(pointerId);
-            int x = (int) (canvas.getAbsX() - canvas.getBlackBorderWidth() + e.getX(pointerIndex) / canvas.getZoomFactor());
-            int y = (int) (canvas.getAbsY() + (e.getY(pointerIndex) - 1.f * canvas.getTop()) / canvas.getZoomFactor());
+            int x = (int) (canvas.getAbsX() + (e.getX(pointerIndex) - canvas.getLeft()) / canvas.getZoomFactor());
+            int y = (int) (canvas.getAbsY() + (e.getY(pointerIndex) - canvas.getTop()) / canvas.getZoomFactor());
 
             GeneralUtils.debugLog(debugLogging, TAG, "Touch Up: x=" + x + ", y=" + y + ", contactId=" + contactId);
             
