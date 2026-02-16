@@ -43,7 +43,19 @@
     <string name="select_vm_title">选择虚拟机</string>
     <string name="vv_file_not_found">找不到.vv文件</string>
     <string name="vv_file_error">.vv文件不是丢失了就是损坏了!</string>
-    <string name="info_cert">你是否接受这个新的或变更的主机证书？\n\nFingerprints:\nMD5: %1$s\nSHA1: %2$s\nSHA256: %3$s\n\nIssued to: %4$s\nIssued by: %5$s\n\nValid from: %6$s\nValid until: %7$s\n</string>
+    <string name="info_cert">你是否接受这个新的或变更的主机证书？
+
+Fingerprints:
+MD5: %1$s
+SHA1: %2$s
+SHA256: %3$s
+
+Issued to: %4$s
+Issued by: %5$s
+
+Valid from: %6$s
+Valid until: %7$s
+</string>
     <string name="toggle_keyboard">切换式键盘</string>
     <string name="show_keyboard">显示键盘</string>
 
@@ -259,7 +271,23 @@
     <string name="info">信息</string>
     <string name="info_cert_signatures">"证书信息是："</string>
     <string name="info_cert_signatures_identical">\n\n您可以确认信息与服务器证书匹配，以防止中间人攻击。</string>
-    <string name="info_cert_tunnel">是否要连接以下证书标识的主机？\n\nFingerprint: %1$s\n\nIssued to:\n%2$s\n\nIssued by:\n%3$s\n\nValid from:\n%4$s\n\nValid until:\n%5$s\n\nNote: The application does not verify certificate authorities or check for certificate revocation.</string>
+    <string name="info_cert_tunnel">是否要连接以下证书标识的主机？
+
+Fingerprint: %1$s
+
+Issued to:
+%2$s
+
+Issued by:
+%3$s
+
+Valid from:
+%4$s
+
+Valid until:
+%5$s
+
+Note: The application does not verify certificate authorities or check for certificate revocation.</string>
     <string name="info_continue_connecting">"继续连接到："</string>
     <string name="info_continue_connected">接连成功。等待图像传输中……</string>
     <string name="info_encoding">"编码"</string>
@@ -288,7 +316,7 @@
     <string name="input_method_single_handed">单手</string>
     <string name="input_method_touchpad">模拟触摸板</string>
     <string name="input_method_direct_touch">直接触摸</string>
-    <string name="input_method_direct_touch_description">直接触摸：直接将触摸点映射到远程桌面。支持多点触摸手势和触摸交互。</string>
+    <string name="input_method_direct_touch_description">直接触摸：触摸直接映射至远端，非触控区域可平移画面</string>
 
     <string name="input_mode_help">输入模式操作帮助</string>
     <string name="input_mode_help_text">"

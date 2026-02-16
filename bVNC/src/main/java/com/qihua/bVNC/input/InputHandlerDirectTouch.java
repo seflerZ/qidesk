@@ -38,6 +38,11 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
     // 用于跟踪多点触摸的接触ID映射
     private final Map<Integer, Integer> contactIdMap = new HashMap<>();
     private int nextContactId = 0;
+    
+    // 平移模式相关变量
+    private boolean isPanningMode = false;
+    private float lastPanX = 0;
+    private float lastPanY = 0;
 
     public InputHandlerDirectTouch(RemoteCanvasActivity activity, RemoteCanvas canvas,
                                    RemotePointer pointer, boolean debugLogging) {
@@ -119,6 +124,21 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
         int x = (int) (canvas.getAbsX() - canvas.getBlackBorderWidth() + e.getX(pointerIndex) / canvas.getZoomFactor());
         int y = (int) (canvas.getAbsY() + (e.getY(pointerIndex) - 1.f * canvas.getTop()) / canvas.getZoomFactor());
 
+        // 检查触摸点是否在图面区域内
+        boolean isInDesktopBounds = isPointInDesktopBounds(x, y);
+        
+        // 如果触摸点不在图面区域内，则进入平移模式
+        if (!isInDesktopBounds) {
+            isPanningMode = true;
+            lastPanX = e.getX(pointerIndex);
+            lastPanY = e.getY(pointerIndex);
+            panStartAbsX = canvas.getAbsX();
+            panStartAbsY = canvas.getAbsY();
+            
+            GeneralUtils.debugLog(debugLogging, TAG, "Entering panning mode - touch outside desktop bounds at (" + x + ", " + y + ")");
+            return; // 不发送触摸事件，只进行平移
+        }
+
         // 分配或获取接触ID
         int contactId = allocateContactId(pointerId);
         
@@ -131,8 +151,36 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
     private void handleTouchMove(MotionEvent e, RemotePointer pointer) {
         int pointerCount = e.getPointerCount();
 
-        GeneralUtils.debugLog(debugLogging, TAG, "Touch Move - pointerCount: " + pointerCount + ", contactIdMap size: " + contactIdMap.size());
+        GeneralUtils.debugLog(debugLogging, TAG, "Touch Move - pointerCount: " + pointerCount + ", contactIdMap size: " + contactIdMap.size() + ", isPanningMode: " + isPanningMode);
         
+        // 如果处于平移模式，执行平移操作
+        if (isPanningMode) {
+            if (pointerCount > 0) {
+                float currentX = e.getX(0);
+                float currentY = e.getY(0);
+                
+                // 计算移动距离
+                float deltaX = currentX - lastPanX;
+                float deltaY = currentY - lastPanY;
+                
+                // 转换为画布坐标系的移动距离
+                float scale = canvas.getZoomFactor();
+                int panDeltaX = (int) (deltaX / scale);
+                int panDeltaY = (int) (deltaY / scale);
+                
+                // 执行相对平移
+                canvas.relativePan(-panDeltaX, -panDeltaY);
+                
+                // 更新上一次位置
+                lastPanX = currentX;
+                lastPanY = currentY;
+                
+                GeneralUtils.debugLog(debugLogging, TAG, "Panning: deltaX=" + panDeltaX + ", deltaY=" + panDeltaY);
+            }
+            return;
+        }
+        
+        // 正常触摸模式下的处理
         for (int i = 0; i < pointerCount; i++) {
             int pointerId = e.getPointerId(i);
             
@@ -156,7 +204,14 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
         // 获取实际的指针ID
         int pointerId = e.getPointerId(pointerIndex);
         
-        GeneralUtils.debugLog(debugLogging, TAG, "Touch Up - pointerIndex: " + pointerIndex + ", pointerId: " + pointerId + ", contactIdMap size: " + contactIdMap.size());
+        GeneralUtils.debugLog(debugLogging, TAG, "Touch Up - pointerIndex: " + pointerIndex + ", pointerId: " + pointerId + ", contactIdMap size: " + contactIdMap.size() + ", isPanningMode: " + isPanningMode);
+        
+        // 如果处于平移模式，退出平移模式
+        if (isPanningMode) {
+            isPanningMode = false;
+            GeneralUtils.debugLog(debugLogging, TAG, "Exiting panning mode");
+            return;
+        }
         
         if (contactIdMap.containsKey(pointerId)) {
             int contactId = contactIdMap.get(pointerId);
@@ -176,6 +231,12 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
     }
 
     private void handleTouchCancel(MotionEvent e, RemotePointer pointer) {
+        // 退出平移模式
+        if (isPanningMode) {
+            isPanningMode = false;
+            GeneralUtils.debugLog(debugLogging, TAG, "Touch Cancel: Exiting panning mode");
+        }
+        
         // 取消所有活动的触摸点
         for (Map.Entry<Integer, Integer> entry : contactIdMap.entrySet()) {
             int pointerId = entry.getKey();
@@ -223,5 +284,18 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
 
     private void releaseContactId(int pointerId) {
         contactIdMap.remove(pointerId);
+    }
+    
+    /**
+     * 检查给定坐标点是否在远程桌面图面区域内
+     * @param x X坐标（相对于完整的远程桌面）
+     * @param y Y坐标（相对于完整的远程桌面）
+     * @return true如果点在图面区域内，false否则
+     */
+    private boolean isPointInDesktopBounds(int x, int y) {
+        int imageWidth = canvas.getImageWidth();
+        int imageHeight = canvas.getImageHeight();
+        
+        return x >= 0 && x < imageWidth && y >= 0 && y < imageHeight;
     }
 }

@@ -345,7 +345,7 @@ Note: The application does not verify certificate authorities or check for certi
     <string name="input_method_touchpad">Simulated Touchpad</string>
     <string name="input_method_direct_touch">Direct Touch</string>
     <string name="input_method_gamepad">Gamepad</string>
-    <string name="input_method_direct_touch_description">Direct Touch: Directly map touch points to remote desktop. Supports multi-touch gestures and touch interactions.</string>
+    <string name="input_method_direct_touch_description">Direct Touch: Directly maps to remote, non-touch areas can pan the screen</string>
     <string name="input_method_gamepad_description">Gamepad: Touch left/right side of screen for analog sticks. Use on-screen buttons for actions. Long-press the “☰” button to edit positions.</string>
 
     <string name="input_mode_help">Input Mode Help</string>
