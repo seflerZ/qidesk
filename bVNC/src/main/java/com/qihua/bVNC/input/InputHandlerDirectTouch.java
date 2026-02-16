@@ -132,8 +132,6 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
             isPanningMode = true;
             lastPanX = e.getX(pointerIndex);
             lastPanY = e.getY(pointerIndex);
-            panStartAbsX = canvas.getAbsX();
-            panStartAbsY = canvas.getAbsY();
             
             GeneralUtils.debugLog(debugLogging, TAG, "Entering panning mode - touch outside desktop bounds at (" + x + ", " + y + ")");
             return; // 不发送触摸事件，只进行平移
