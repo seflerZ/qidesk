@@ -20,6 +20,7 @@
 
 package com.qihua.bVNC.input;
 
+import android.os.SystemClock;
 import android.view.MotionEvent;
 
 import com.qihua.bVNC.FpsCounter;
@@ -202,19 +203,15 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
         }
         
         if (contactIdMap.containsKey(pointerId)) {
-            try {
-                int contactId = contactIdMap.get(pointerId);
-                int x = (int) (canvas.getAbsX() - canvas.getBlackBorderWidth() + (e.getX(e.getActionIndex()) - canvas.getLeft()) / canvas.getZoomFactor());
-                int y = (int) (canvas.getAbsY() + (e.getY(e.getActionIndex()) - canvas.getTop()) / canvas.getZoomFactor());
+            int contactId = contactIdMap.get(pointerId);
+            int x = (int) (canvas.getAbsX() - canvas.getBlackBorderWidth() + (e.getX(e.getActionIndex()) - canvas.getLeft()) / canvas.getZoomFactor());
+            int y = (int) (canvas.getAbsY() + (e.getY(e.getActionIndex()) - canvas.getTop()) / canvas.getZoomFactor());
 
-                // 发送触摸抬起事件
-                pointer.touchUp(x, y, contactId);
+            // 发送触摸抬起事件
+            pointer.touchUp(x, y, contactId);
 
-                // 释放接触ID
-                releaseContactId(pointerId);
-            } catch (Exception ex) {
-                throw new RuntimeException(ex);
-            }
+            // 释放接触ID
+            releaseContactId(pointerId);
         } else {
             GeneralUtils.debugLog(debugLogging, TAG, "Touch Up: pointerId " + pointerId + " not found in contactIdMap. Available IDs: " + contactIdMap.keySet());
         }
