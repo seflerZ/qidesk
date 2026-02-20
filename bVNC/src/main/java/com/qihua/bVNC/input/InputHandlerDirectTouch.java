@@ -210,7 +210,10 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
             int x = (int) (canvas.getAbsX() - canvas.getBlackBorderWidth() + (e.getX(e.getActionIndex())) / canvas.getZoomFactor());
             int y = (int) (canvas.getAbsY() + (e.getY(e.getActionIndex())) / canvas.getZoomFactor());
 
-            // 发送触摸抬起事件
+            // The FreeRDP bug: if the up event takes too far away from the update event, up event will be ignored
+            // we send an extra update event near the up event to avoid that
+            pointer.touchUpdate(x, y, contactId);
+            SystemClock.sleep(10);
             pointer.touchUp(x, y, contactId);
 
             // 释放接触ID
