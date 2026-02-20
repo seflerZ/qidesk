@@ -87,13 +87,8 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
         // 处理多点触摸事件
         switch (action) {
             case MotionEvent.ACTION_DOWN:
-                // 第一个触摸点（总是index 0）
-                handleTouchDown(e, 0, pointer);
-                break;
-
             case MotionEvent.ACTION_POINTER_DOWN:
-                // 额外的触摸点，使用getActionIndex()获取实际的指针索引
-                handleTouchDown(e, e.getActionIndex(), pointer);
+                handleTouchDown(e, pointer);
                 break;
 
             case MotionEvent.ACTION_MOVE:
@@ -102,13 +97,8 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
                 break;
 
             case MotionEvent.ACTION_UP:
-                // 最后一个指针抬起，使用getActionIndex()获取被抬起的指针索引
-                handleTouchUp(e, e.getActionIndex(), pointer);
-                break;
-
             case MotionEvent.ACTION_POINTER_UP:
-                // 某个特定指针抬起，使用getActionIndex()获取实际的指针索引
-                handleTouchUp(e, e.getActionIndex(), pointer);
+                handleTouchUp(e, pointer);
                 break;
 
             case MotionEvent.ACTION_CANCEL:
@@ -120,10 +110,11 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
         return true;
     }
 
-    private void handleTouchDown(MotionEvent e, int pointerIndex, RemotePointer pointer) {
-        int pointerId = e.getPointerId(pointerIndex);
-        int x = (int) (canvas.getAbsX()  - canvas.getBlackBorderWidth() + (e.getX(pointerId) - canvas.getLeft()) / canvas.getZoomFactor());
-        int y = (int) (canvas.getAbsY() + (e.getY(pointerId) - canvas.getTop()) / canvas.getZoomFactor());
+    private void handleTouchDown(MotionEvent e, RemotePointer pointer) {
+        int pointerId = e.getPointerId(e.getActionIndex());
+
+        int x = (int) (canvas.getAbsX()  - canvas.getBlackBorderWidth() + (e.getX(e.getActionIndex()) - canvas.getLeft()) / canvas.getZoomFactor());
+        int y = (int) (canvas.getAbsY() + (e.getY(e.getActionIndex()) - canvas.getTop()) / canvas.getZoomFactor());
 
         // 检查触摸点是否在图面区域内
         boolean isInDesktopBounds = isPointInDesktopBounds(x, y);
@@ -131,8 +122,8 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
         // 如果触摸点不在图面区域内，则进入平移模式
         if (!isInDesktopBounds) {
             isPanningMode = true;
-            lastPanX = e.getX(pointerIndex);
-            lastPanY = e.getY(pointerIndex);
+            lastPanX = e.getX(e.getActionIndex());
+            lastPanY = e.getY(e.getActionIndex());
             
             GeneralUtils.debugLog(debugLogging, TAG, "Entering panning mode - touch outside desktop bounds at (" + x + ", " + y + ")");
             return; // 不发送触摸事件，只进行平移
@@ -141,7 +132,7 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
         // 分配或获取接触ID
         int contactId = allocateContactId(pointerId);
         
-        GeneralUtils.debugLog(debugLogging, TAG, "Touch Down - pointerIndex: " + pointerIndex + ", pointerId: " + pointerId + ", contactId: " + contactId + ", contactIdMap size after allocation: " + contactIdMap.size());
+        GeneralUtils.debugLog(debugLogging, TAG, "Touch Down, pointerId: " + pointerId + ", contactId: " + contactId + ", contactIdMap size after allocation: " + contactIdMap.size());
         
         // 发送触摸按下事件 - 使用反射来调用适当的触摸方法
         pointer.touchDown(x, y, contactId);
@@ -186,8 +177,8 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
             // 只处理已知的触摸点
             if (contactIdMap.containsKey(pointerId)) {
                 int contactId = contactIdMap.get(pointerId);
-                int x = (int) (canvas.getAbsX() - canvas.getBlackBorderWidth() + (e.getX(pointerId) - canvas.getLeft()) / canvas.getZoomFactor());
-                int y = (int) (canvas.getAbsY() + (e.getY(pointerId) - canvas.getTop()) / canvas.getZoomFactor());
+                int x = (int) (canvas.getAbsX() - canvas.getBlackBorderWidth() + (e.getX(i) - canvas.getLeft()) / canvas.getZoomFactor());
+                int y = (int) (canvas.getAbsY() + (e.getY(i) - canvas.getTop()) / canvas.getZoomFactor());
 
                 GeneralUtils.debugLog(debugLogging, TAG, "Touch Move: x=" + x + ", y=" + y + ", contactId=" + contactId);
                 
@@ -199,11 +190,9 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
         }
     }
 
-    private void handleTouchUp(MotionEvent e, int pointerIndex, RemotePointer pointer) {
-        // 获取实际的指针ID
-        int pointerId = e.getPointerId(pointerIndex);
-        
-        GeneralUtils.debugLog(debugLogging, TAG, "Touch Up - pointerIndex: " + pointerIndex + ", pointerId: " + pointerId + ", contactIdMap size: " + contactIdMap.size() + ", isPanningMode: " + isPanningMode);
+    private void handleTouchUp(MotionEvent e, RemotePointer pointer) {
+        int pointerId = e.getPointerId(e.getActionIndex());
+        GeneralUtils.debugLog(debugLogging, TAG, "Touch Up - pointerId: " + pointerId + ", contactIdMap size: " + contactIdMap.size() + ", isPanningMode: " + isPanningMode);
         
         // 如果处于平移模式，退出平移模式
         if (isPanningMode) {
@@ -213,15 +202,19 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
         }
         
         if (contactIdMap.containsKey(pointerId)) {
-            int contactId = contactIdMap.get(pointerId);
-            int x = (int) (canvas.getAbsX() - canvas.getBlackBorderWidth() + (e.getX(pointerId) - canvas.getLeft()) / canvas.getZoomFactor());
-            int y = (int) (canvas.getAbsY() + (e.getY(pointerId) - canvas.getTop()) / canvas.getZoomFactor());
-            
-            // 发送触摸抬起事件
-            pointer.touchUp(x, y, contactId);
-            
-            // 释放接触ID
-            releaseContactId(pointerId);
+            try {
+                int contactId = contactIdMap.get(pointerId);
+                int x = (int) (canvas.getAbsX() - canvas.getBlackBorderWidth() + (e.getX(e.getActionIndex()) - canvas.getLeft()) / canvas.getZoomFactor());
+                int y = (int) (canvas.getAbsY() + (e.getY(e.getActionIndex()) - canvas.getTop()) / canvas.getZoomFactor());
+
+                // 发送触摸抬起事件
+                pointer.touchUp(x, y, contactId);
+
+                // 释放接触ID
+                releaseContactId(pointerId);
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
         } else {
             GeneralUtils.debugLog(debugLogging, TAG, "Touch Up: pointerId " + pointerId + " not found in contactIdMap. Available IDs: " + contactIdMap.keySet());
         }
