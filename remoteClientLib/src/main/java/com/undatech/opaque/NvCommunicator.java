@@ -442,9 +442,9 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
                 contactId,          // pointer identifier
                 normalizedX,        // normalized x coordinate
                 normalizedY,        // normalized y coordinate
-                1.0f,               // pressure
-                1.0f,               // contact area major
-                1.0f,               // contact area minor
+                0.8f,               // pressure
+                8.0f,               // contact area major
+                6.0f,               // contact area minor
                 (short) 0            // rotation
         );
     }
