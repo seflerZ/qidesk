@@ -30,6 +30,7 @@ import com.qihua.bVNC.R;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class InputHandlerDirectTouch extends InputHandlerGeneric {
     public static final String ID = "DIRECT_TOUCH_MODE";
@@ -37,7 +38,7 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
 
     // 用于跟踪多点触摸的接触ID映射
     private final Map<Integer, Integer> contactIdMap = new HashMap<>();
-    private int nextContactId = 0;
+    private AtomicInteger nextContactId = new AtomicInteger();
     
     // 平移模式相关变量
     private boolean isPanningMode = false;
@@ -215,8 +216,6 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
             int contactId = contactIdMap.get(pointerId);
             int x = (int) (canvas.getAbsX() - canvas.getBlackBorderWidth() + (e.getX(pointerId) - canvas.getLeft()) / canvas.getZoomFactor());
             int y = (int) (canvas.getAbsY() + (e.getY(pointerId) - canvas.getTop()) / canvas.getZoomFactor());
-
-            GeneralUtils.debugLog(debugLogging, TAG, "Touch Up: x=" + x + ", y=" + y + ", contactId=" + contactId);
             
             // 发送触摸抬起事件
             pointer.touchUp(x, y, contactId);
@@ -275,7 +274,7 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
 
     private int allocateContactId(int pointerId) {
         if (!contactIdMap.containsKey(pointerId)) {
-            contactIdMap.put(pointerId, nextContactId++);
+            contactIdMap.put(pointerId, nextContactId.incrementAndGet());
         }
         return contactIdMap.get(pointerId);
     }
