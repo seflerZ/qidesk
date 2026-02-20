@@ -108,17 +108,14 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
                 break;
         }
 
-        // will crash if too fast key sending, possibly FreeRDP bugs
-        SystemClock.sleep(20);
-
         return true;
     }
 
     private void handleTouchDown(MotionEvent e, RemotePointer pointer) {
         int pointerId = e.getPointerId(e.getActionIndex());
 
-        int x = (int) (canvas.getAbsX()  - canvas.getBlackBorderWidth() + (e.getX(e.getActionIndex()) - canvas.getLeft()) / canvas.getZoomFactor());
-        int y = (int) (canvas.getAbsY() + (e.getY(e.getActionIndex()) - canvas.getTop()) / canvas.getZoomFactor());
+        int x = (int) (canvas.getAbsX()  - canvas.getBlackBorderWidth() + e.getX(e.getActionIndex()) / canvas.getZoomFactor());
+        int y = (int) (canvas.getAbsY() + e.getY(e.getActionIndex()) / canvas.getZoomFactor());
 
         // 检查触摸点是否在图面区域内
         boolean isInDesktopBounds = isPointInDesktopBounds(x, y);
@@ -128,7 +125,7 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
             isPanningMode = true;
             lastPanX = e.getX(e.getActionIndex());
             lastPanY = e.getY(e.getActionIndex());
-            
+
             GeneralUtils.debugLog(debugLogging, TAG, "Entering panning mode - touch outside desktop bounds at (" + x + ", " + y + ")");
             return; // 不发送触摸事件，只进行平移
         }
@@ -181,8 +178,8 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
             // 只处理已知的触摸点
             if (contactIdMap.containsKey(pointerId)) {
                 int contactId = contactIdMap.get(pointerId);
-                int x = (int) (canvas.getAbsX() - canvas.getBlackBorderWidth() + (e.getX(i) - canvas.getLeft()) / canvas.getZoomFactor());
-                int y = (int) (canvas.getAbsY() + (e.getY(i) - canvas.getTop()) / canvas.getZoomFactor());
+                int x = (int) (canvas.getAbsX() - canvas.getBlackBorderWidth() + (e.getX(i)) / canvas.getZoomFactor());
+                int y = (int) (canvas.getAbsY() + (e.getY(i)) / canvas.getZoomFactor());
 
                 GeneralUtils.debugLog(debugLogging, TAG, "Touch Move: x=" + x + ", y=" + y + ", contactId=" + contactId);
                 
@@ -207,8 +204,8 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
         
         if (contactIdMap.containsKey(pointerId)) {
             int contactId = contactIdMap.get(pointerId);
-            int x = (int) (canvas.getAbsX() - canvas.getBlackBorderWidth() + (e.getX(e.getActionIndex()) - canvas.getLeft()) / canvas.getZoomFactor());
-            int y = (int) (canvas.getAbsY() + (e.getY(e.getActionIndex()) - canvas.getTop()) / canvas.getZoomFactor());
+            int x = (int) (canvas.getAbsX() - canvas.getBlackBorderWidth() + (e.getX(e.getActionIndex())) / canvas.getZoomFactor());
+            int y = (int) (canvas.getAbsY() + (e.getY(e.getActionIndex())) / canvas.getZoomFactor());
 
             // 发送触摸抬起事件
             pointer.touchUp(x, y, contactId);
