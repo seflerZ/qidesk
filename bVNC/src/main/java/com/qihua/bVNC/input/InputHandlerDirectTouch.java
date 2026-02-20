@@ -108,6 +108,9 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
                 break;
         }
 
+        // will crash if too fast key sending, possibly FreeRDP bugs
+        SystemClock.sleep(20);
+
         return true;
     }
 
