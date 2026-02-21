@@ -629,7 +629,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     }
 
     protected boolean detectImmersiveVertical(float x) {
-        if (!immersiveSwipeEnabled || canvas.isOutDisplay()) {
+        if (!immersiveSwipeEnabled) {
             return false;
         }
 
@@ -647,7 +647,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     }
 
     protected boolean detectImmersiveHorizontal(float y) {
-        if (!immersiveSwipeEnabled || canvas.isOutDisplay()) {
+        if (!immersiveSwipeEnabled) {
             return false;
         }
 
@@ -657,7 +657,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     }
 
     protected boolean detectImmersiveLeft(float x, float y) {
-        if (!immersiveSwipeEnabled || canvas.isOutDisplay()) {
+        if (!immersiveSwipeEnabled) {
             return false;
         }
 
@@ -671,7 +671,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     }
 
     protected boolean detectImmersiveRight(float x, float y) {
-        if (!immersiveSwipeEnabled || canvas.isOutDisplay()) {
+        if (!immersiveSwipeEnabled) {
             return false;
         }
 
@@ -686,7 +686,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     }
 
     private boolean detectImmersiveUp(float x, float y) {
-        if (!immersiveSwipeEnabled || canvas.isOutDisplay()) {
+        if (!immersiveSwipeEnabled) {
             return false;
         }
 
@@ -697,7 +697,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     }
 
     private boolean detectImmersiveDown(float x, float y) {
-        if (!immersiveSwipeEnabled || canvas.isOutDisplay()) {
+        if (!immersiveSwipeEnabled) {
             return false;
         }
 
@@ -713,7 +713,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
     private void detectImmersiveSwipe(float x, float y) {
         // if global switch off or external display mode, disable it
-        if (!immersiveSwipeEnabled || canvas.isOutDisplay()) {
+        if (!immersiveSwipeEnabled) {
             return;
         }
 

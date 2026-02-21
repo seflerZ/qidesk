@@ -944,7 +944,7 @@ Below that is where you configure your connection.
     <string name="touchpad_control_pref">Touchpad Customization</string>
     <string name="touchpad_edge_wheel">Use Screen Edges as Wheels</string>
     <string name="touchpad_touch_feedback">Enable Click Feedback</string>
-    <string name="touchpad_edge_wheel_hint">Swipe to scroll and click to call soft keyboard. Disable automatically when connected to external monitor.</string>
+    <string name="touchpad_edge_wheel_hint">Swipe to scroll and click to call soft keyboard.</string>
     <string name="touchpad_cursor_speed">Cursor Speed</string>
     <string name="drag_help_enabled">Smart Zoom Assist</string>
     <string name="drag_help_enabled_hint">Temporarily enlarge screen during slow finger movements(both moving and dragging).</string>
