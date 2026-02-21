@@ -125,6 +125,11 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
         
         // 如果触摸点不在图面区域内，则进入平移模式
         if (!isInDesktopBounds) {
+            if (detectImmersiveDownRaw(e.getX(), e.getY())) {
+                activity.showKeyboard();
+                return;
+            }
+
             isPanningMode = true;
             lastPanX = e.getX(e.getActionIndex());
             lastPanY = e.getY(e.getActionIndex());
