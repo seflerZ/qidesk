@@ -1125,11 +1125,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     void setModes() {
         Log.d(TAG, "setModes");
         inputHandler = getInputHandlerByName(connection.getInputMode());
-        
-        // 如果是游戏手柄模式，主动显示overlay
-        if (inputHandler instanceof InputHandlerGamepad) {
-            ((InputHandlerGamepad) inputHandler).showOverlay();
-        }
+        inputHandler.setup();
         
         AbstractScaling.getByScaleType(connection.getScaleMode()).setScaleTypeForActivity(this);
         initializeOnScreenKeys();
@@ -1598,12 +1594,13 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     public boolean setInputMode(int id) {
         InputHandler input = getInputHandlerById(id);
         if (input != null) {
-            // Clean up the old input handler before switching to the new one
             if (inputHandler != null) {
                 inputHandler.cleanup();
             }
-            
+
             inputHandler = input;
+            inputHandler.setup();
+
             connection.setInputMode(input.getId());
             if (input.getId().equals(InputHandlerTouchpad.ID)) {
                 connection.setFollowMouse(true);
@@ -1612,13 +1609,6 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
                 connection.setFollowMouse(false);
                 connection.setFollowPan(false);
                 canvas.getPointer().setRelativeEvents(false);
-            }
-            
-            // If switching to gamepad mode, show the overlay
-            if (input.getId().equals(InputHandlerGamepad.ID)) {
-                if (input instanceof InputHandlerGamepad) {
-                    ((InputHandlerGamepad) input).showOverlay();
-                }
             }
 
             showPanningState(true);

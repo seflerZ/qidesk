@@ -36,6 +36,8 @@ public interface InputHandler {
 
     String getId();
 
+    default void setup() {}
+
     /**
      * Clean up any resources or views associated with this input handler
      */

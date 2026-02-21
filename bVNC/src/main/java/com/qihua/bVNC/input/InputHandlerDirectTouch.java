@@ -51,6 +51,34 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
         super(activity, canvas, canvas, pointer, debugLogging);
     }
 
+    @Override
+    public void setup() {
+        // muse delay some time because the cursor is not initialized yet
+        canvas.handler.postDelayed(() -> {
+            // 将光标移动到屏幕中间顶部
+            moveCursorToTopCenter();
+
+            // 隐藏光标
+            canvas.hideCursor();
+        }, 3000);
+    }
+
+    /**
+     * 将光标移动到屏幕中间顶部
+     */
+    private void moveCursorToTopCenter() {
+        int screenWidth = canvas.getImageWidth();
+        int screenHeight = canvas.getImageHeight();
+        
+        // 计算屏幕中间顶部的位置 (x=center, y=top)
+        int centerX = screenWidth / 2;
+        int topY = 0; // 屏幕顶部
+        
+        // 移动光标到指定位置
+        pointer.movePointer(centerX, topY);
+        GeneralUtils.debugLog(debugLogging, TAG, "Cursor moved to top center: (" + centerX + ", " + topY + ")");
+    }
+
     /*
      * (non-Javadoc)
      * @see com.qihua.bVNC.input.InputHandler#getDescription()
@@ -283,7 +311,12 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
     private void releaseContactId(int pointerId) {
         contactIdMap.remove(pointerId);
     }
-    
+
+    @Override
+    public void cleanup() {
+        canvas.showCursor();
+    }
+
     /**
      * 检查给定坐标点是否在远程桌面图面区域内
      * @param x X坐标（相对于完整的远程桌面）

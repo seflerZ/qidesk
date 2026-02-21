@@ -137,10 +137,7 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
         
         // 确保overlay可见
         if (gamepadOverlay != null) {
-            activity.runOnUiThread(() -> {
-                gamepadOverlay.setVisibility(View.VISIBLE);
-                android.util.Log.d(TAG, "Ensured gamepad overlay visibility after showOverlay");
-            });
+            gamepadOverlay.setVisibility(View.VISIBLE);
         }
         
         // 重新初始化RemoteGamepad（如果需要）
@@ -556,6 +553,11 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
         overlayInitialized = false;
         
         // Recreate overlay with new screen dimensions
+        showOverlay();
+    }
+
+    @Override
+    public void setup() {
         showOverlay();
     }
 

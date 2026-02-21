@@ -51,6 +51,7 @@ abstract public class AbstractBitmapData {
     RemoteCanvas vncCanvas;
     int xoffset = 0;
     int yoffset = 0;
+    boolean drawCursor = true;
 
     AbstractBitmapData(RfbConnectable p, RemoteCanvas c) {
         rfb = p;
@@ -90,6 +91,14 @@ abstract public class AbstractBitmapData {
             return drawable.cursorRect;
         else // Return an empty new rectangle if drawable is null.
             return new RectF();
+    }
+
+    public void setDrawCursor(boolean drawCursor) {
+        this.drawCursor = drawCursor;
+    }
+
+    public boolean isDrawCursor() {
+        return drawCursor;
     }
 
     boolean isNotInitSoftCursor() {
