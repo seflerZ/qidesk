@@ -20,8 +20,10 @@
 
 package com.qihua.bVNC.input;
 
+import android.gesture.GestureOverlayView;
 import android.os.SystemClock;
 import android.view.MotionEvent;
+import android.view.View;
 
 import com.qihua.bVNC.FpsCounter;
 import com.qihua.bVNC.RemoteCanvas;
@@ -105,6 +107,28 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
     public boolean onTouchEvent(MotionEvent e) {
         GeneralUtils.debugLog(debugLogging, TAG, "onTouchEvent, e: " + e);
 
+        GestureOverlayView gestureOverlay = activity.findViewById(R.id.gestureOverlay);
+
+        // 当手势层可见时，直接转发事件，这样可以无缝将触摸事件转至手势层
+        if (gestureOverlay.getVisibility() == View.VISIBLE) {
+            float x = e.getX();
+            float y = e.getY();
+
+            MotionEvent translatedEvent = MotionEvent.obtain(
+                    e.getDownTime(),
+                    e.getEventTime(),
+                    e.getAction(),
+                    x,
+                    y,
+                    e.getMetaState()
+            );
+
+            boolean handled = gestureOverlay.dispatchTouchEvent(translatedEvent);
+            translatedEvent.recycle();
+
+            return handled;
+        }
+
         final int action = e.getActionMasked();
         final int meta = e.getMetaState();
 
@@ -155,6 +179,11 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
         if (!isInDesktopBounds) {
             if (detectImmersiveDownRaw(e.getX(), e.getY())) {
                 activity.showKeyboard();
+                return;
+            }
+
+            if (detectImmersiveRightRaw(e.getX(), e.getY()) || detectImmersiveLeftRaw(e.getX(), e.getY())) {
+                activity.toggleGestureLayer();
                 return;
             }
 
@@ -326,7 +355,8 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
     private boolean isPointInDesktopBounds(int x, int y) {
         int imageWidth = canvas.getImageWidth();
         int imageHeight = canvas.getImageHeight();
-        
-        return x >= 0 && x < imageWidth && y >= 0 && y < imageHeight;
+
+        // add a slit of 2 pixels to the image bounds to account for potential touch events outside the visible area
+        return x >= -2 && x < (imageWidth + 2) && y >= -2 && y < (imageHeight + 2);
     }
 }

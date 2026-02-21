@@ -1915,6 +1915,14 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             gestureOverlayView.setVisibility(View.VISIBLE);
         }
     }
+    
+    /**
+     * 检查手势层是否可见
+     * @return true 如果手势层当前可见，false 否则
+     */
+    public boolean isGestureLayerVisible() {
+        return gestureOverlayView != null && gestureOverlayView.getVisibility() == View.VISIBLE;
+    }
 
     @Override
     public boolean onGenericMotion(View v, MotionEvent event) {
