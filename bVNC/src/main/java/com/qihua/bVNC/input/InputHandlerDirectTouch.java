@@ -25,9 +25,12 @@ import android.os.SystemClock;
 import android.view.MotionEvent;
 import android.view.View;
 
+import com.qihua.bVNC.BuildConfig;
+import com.qihua.bVNC.Constants;
 import com.qihua.bVNC.FpsCounter;
 import com.qihua.bVNC.RemoteCanvas;
 import com.qihua.bVNC.RemoteCanvasActivity;
+import com.qihua.bVNC.Utils;
 import com.undatech.opaque.util.GeneralUtils;
 import com.qihua.bVNC.R;
 
@@ -47,10 +50,14 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
     private boolean isPanningMode = false;
     private float lastPanX = 0;
     private float lastPanY = 0;
+    private boolean edgeEnabled = true;
 
     public InputHandlerDirectTouch(RemoteCanvasActivity activity, RemoteCanvas canvas,
                                    RemotePointer pointer, boolean debugLogging) {
         super(activity, canvas, canvas, pointer, debugLogging);
+
+        edgeEnabled = Utils.querySharedPreferenceBoolean(canvas.getContext()
+                , Constants.touchpadEdgeWheel, true) && BuildConfig.EDGE_ENABLED;
     }
 
     @Override
@@ -177,12 +184,13 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
         
         // 如果触摸点不在图面区域内，则进入平移模式
         if (!isInDesktopBounds) {
-            if (detectImmersiveDownRaw(e.getX(), e.getY())) {
+            if (detectImmersiveDownRaw(e.getX(), e.getY()) && edgeEnabled) {
                 activity.showKeyboard();
                 return;
             }
 
-            if (detectImmersiveRightRaw(e.getX(), e.getY()) || detectImmersiveLeftRaw(e.getX(), e.getY())) {
+            if (edgeEnabled && (detectImmersiveRightRaw(e.getX(), e.getY())
+                    || detectImmersiveLeftRaw(e.getX(), e.getY()))) {
                 activity.toggleGestureLayer();
                 return;
             }
