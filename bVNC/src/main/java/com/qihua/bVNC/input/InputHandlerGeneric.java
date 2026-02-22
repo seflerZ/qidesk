@@ -972,26 +972,26 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                             canvas.movePanToMakePointerVisible();
                         }
 
-                        if (thirdPointerWasDown
-                                && (Math.abs(e.getX() - dragX) > 80 || Math.abs(e.getY() - dragY) > 80)) {
-                            thirdPointerGesture = true;
-                            // Here we mock a ACTION_DOWN event for gestureOverlayView to transmit the touch events to it flawlessly
-                            // further touch events will be transmitted in method onTouchEvent.
-                            gestureOverlay = activity.findViewById(R.id.gestureOverlay);
-                            gestureOverlay.setVisibility(View.VISIBLE);
-
-                            // 生成并分发模拟事件
-                            MotionEvent downEvent = MotionEvent.obtain(
-                                    SystemClock.uptimeMillis(),
-                                    SystemClock.uptimeMillis(),
-                                    MotionEvent.ACTION_DOWN,
-                                    e.getX(),
-                                    e.getY(),
-                                    0
-                            );
-                            gestureOverlay.dispatchTouchEvent(downEvent);
-                            downEvent.recycle();
-                        }
+//                        if (thirdPointerWasDown
+//                                && (Math.abs(e.getX() - dragX) > 80 || Math.abs(e.getY() - dragY) > 80)) {
+//                            thirdPointerGesture = true;
+//                            // Here we mock a ACTION_DOWN event for gestureOverlayView to transmit the touch events to it flawlessly
+//                            // further touch events will be transmitted in method onTouchEvent.
+//                            gestureOverlay = activity.findViewById(R.id.gestureOverlay);
+//                            gestureOverlay.setVisibility(View.VISIBLE);
+//
+//                            // 生成并分发模拟事件
+//                            MotionEvent downEvent = MotionEvent.obtain(
+//                                    SystemClock.uptimeMillis(),
+//                                    SystemClock.uptimeMillis(),
+//                                    MotionEvent.ACTION_DOWN,
+//                                    e.getX(),
+//                                    e.getY(),
+//                                    0
+//                            );
+//                            gestureOverlay.dispatchTouchEvent(downEvent);
+//                            downEvent.recycle();
+//                        }
 
                         break;
                     case MotionEvent.ACTION_UP:
@@ -1004,6 +1004,12 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                         cumulatedY = 0;
 
                         canSwipeToMove = false;
+
+                        if (detectImmersiveLeft(e.getX(), e.getY())
+                                || detectImmersiveRight(e.getX(), e.getY())) {
+                            activity.toggleGestureLayer();
+                            return true;
+                        }
 
                         break;
                 }
@@ -1058,6 +1064,16 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
                 if ("keyboard".equals(threePointerAction)) {
                     activity.toggleKeyboard(null);
+                } else if ("gesture".equals(threePointerAction)) {
+                    // 唤出手势功能
+                    activity.toggleGestureLayer();
+                    canvas.getHandler().postDelayed(() -> {
+                        activity.hideGestureLayer();
+                    }, 2000);
+                    
+                    if (touchpadFeedback) {
+                        activity.sendShortVibration();
+                    }
                 } else {
                     pointer.middleButtonDown(getX(e), getY(e), meta);
 

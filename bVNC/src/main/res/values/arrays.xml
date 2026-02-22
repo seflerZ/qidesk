@@ -27,15 +27,18 @@
     <array name="pref_three_pointer_touch">
         <item>@string/three_pointers_touch_action_keyboard</item>
         <item>@string/three_pointers_touch_action_middle</item>
+        <item>@string/three_pointers_touch_action_gesture</item>
     </array>
 
     <array name="pref_three_pointer_touch_values">
         <item>@string/pref_three_pointer_touch_value_keyboard</item>
         <item>@string/pref_three_pointer_touch_value_middle</item>
+        <item>@string/pref_three_pointer_touch_value_gesture</item>
     </array>
 
     <string name="pref_three_pointer_touch_value_keyboard">keyboard</string>
     <string name="pref_three_pointer_touch_value_middle">middle</string>
+    <string name="pref_three_pointer_touch_value_gesture">gesture</string>
 
     <string name="pref_longpress_type_left">Left Button</string>
     <string name="pref_longpress_type_middle">Middle Button</string>
@@ -78,4 +81,5 @@
     <string name="pref_theme_mode_night_value">night</string>
     <string name="three_pointers_touch_action_keyboard">Call Soft Keyboard</string>
     <string name="three_pointers_touch_action_middle">Mouse Middle Button</string>
+    <string name="three_pointers_touch_action_gesture">Activate Gesture</string>
 </resources>

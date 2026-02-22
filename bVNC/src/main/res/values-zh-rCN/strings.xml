@@ -895,6 +895,7 @@ aSPICE对应的功能如下：
     <string name="three_pointers_touch_action">三指轻触效果</string>
     <string name="three_pointers_touch_action_keyboard">唤出软键盘</string>
     <string name="three_pointers_touch_action_middle">鼠标中键</string>
+    <string name="three_pointers_touch_action_gesture">唤出手势</string>
 
     <string name="connection_type_nvstream">NVStream(Sunshine)</string>
     <string name="send_pin_to_pair">配对</string>
