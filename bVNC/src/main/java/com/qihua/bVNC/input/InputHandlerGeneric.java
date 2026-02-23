@@ -72,7 +72,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
     protected float dragX, dragY;
     protected float gestureX, gestureY;
-    protected float totalDragX, totalDragY;
+    protected float totalMoveX, totalMoveY;
     protected boolean singleHandedGesture = false;
     protected boolean singleHandedJustEnded = false;
     // These variables keep track of which pointers have seen ACTION_DOWN events.
@@ -532,8 +532,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
         GeneralUtils.debugLog(debugLogging, TAG, "onDoubleTap, e: " + e);
 
-        totalDragX = 0;
-        totalDragY = 0;
+        totalMoveX = 0;
+        totalMoveY = 0;
 
         dragMode = true;
 
@@ -553,8 +553,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             return;
         }
 
-        totalDragX = 0;
-        totalDragY = 0;
+        totalMoveX = 0;
+        totalMoveY = 0;
 
         String longPressType = Utils.querySharedPreferenceString(activity.getApplicationContext(), Constants.touchpadLongPressAction, "left");
 
@@ -895,9 +895,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                             inertiaStartTime = System.currentTimeMillis();
                         }
 
-                        lastX = e.getX();
-                        lastY = e.getY();
-
                         // 添加当前触摸点到分析器，仅在单指下有效
                         if (e.getPointerCount() == 1 && !detectImmersiveRange(e.getX(), e.getY())) {
                             touchMovementAnalyzer.addTouchPoint(e.getX(), e.getY());
@@ -921,15 +918,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
                         GeneralUtils.debugLog(debugLogging, TAG, "onTouchEvent: ACTION_MOVE");
                         // Send scroll up/down events if swiping is happening.
-                        if (panMode) {
-                            float scale = canvas.getZoomFactor();
-                            canvas.relativePan(-(int) ((e.getX() - dragX) * scale), -(int) ((e.getY() - dragY) * scale));
-                            dragX = e.getX();
-                            dragY = e.getY();
-                            GeneralUtils.debugLog(debugLogging, TAG, "onTouchEvent: ACTION_MOVE panMode");
-                            break;
-                        } else if (dragMode || rightDragMode || middleDragMode) {
-                            if (totalDragY == 0 && totalDragX == 0) {
+                        if (dragMode || rightDragMode || middleDragMode) {
+                            if (totalMoveY == 0 && totalMoveX == 0) {
                                 if (dragMode) {
                                     pointer.leftButtonDown(getX(e), getY(e), meta);
                                 } else if (rightDragMode) {
@@ -943,8 +933,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                                 }
 
                                 // make it nonzero to prevent being trigger again
-                                totalDragX = 0.1f;
-                                totalDragY = 0.1f;
+                                totalMoveX = 0.1f;
+                                totalMoveY = 0.1f;
                             }
 
                             // when reached to the edge, keep the cursor continue moving
@@ -971,6 +961,12 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                             pointer.moveMouseButtonDown(x, y, meta);
                             canvas.movePanToMakePointerVisible();
                         }
+
+                        totalMoveX += Math.abs(e.getX() - lastX);
+                        totalMoveY += Math.abs(e.getY() - lastY);
+
+                        lastX = e.getX()
+                        lastY = e.getY();
 
 //                        if (thirdPointerWasDown
 //                                && (Math.abs(e.getX() - dragX) > 80 || Math.abs(e.getY() - dragY) > 80)) {
@@ -1000,14 +996,16 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                         edgeTop.setVisibility(View.INVISIBLE);
                         edgeBottom.setVisibility(View.INVISIBLE);
 
+                        canSwipeToMove = false;
+
                         cumulatedX = 0;
                         cumulatedY = 0;
 
-                        canSwipeToMove = false;
+                        if (totalMoveY <= 20 && totalMoveX <= 20 && (detectImmersiveLeft(e.getX(), e.getY())
+                                || detectImmersiveRight(e.getX(), e.getY()))) {
 
-                        if (detectImmersiveLeft(e.getX(), e.getY())
-                                || detectImmersiveRight(e.getX(), e.getY())) {
                             activity.toggleGestureLayer();
+
                             return true;
                         }
 
@@ -1113,7 +1111,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
                 SystemClock.sleep(100);
 
-                if (dragMode && totalDragX < 8 && totalDragY < 8) {
+                if (dragMode && totalMoveX < 8 && totalMoveY < 8) {
                     // if the double tap performed without any movement, perform a additional click
                     // to form a double click. note that the first click is performed during the drag
 
