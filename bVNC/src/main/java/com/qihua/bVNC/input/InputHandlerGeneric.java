@@ -508,11 +508,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         activity.readSpecialKeysState();
 
         pointer.leftButtonDown(x, y, metaState);
-
-        if (touchpadFeedback) {
-            activity.sendShortVibration();
-        }
-
         SystemClock.sleep(100);
         pointer.releaseButton(x, y, metaState);
 
@@ -875,6 +870,10 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                         // Stop inertia scrolling
                         inertiaStartTime = System.currentTimeMillis();
 
+                        if (touchpadFeedback) {
+                            activity.sendShortVibration();
+                        }
+
                         detectImmersiveSwipe(dragX, dragY);
                         break;
                     case MotionEvent.ACTION_MOVE:
@@ -926,10 +925,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                                     pointer.rightButtonDown(getX(e), getY(e), meta);
                                 } else if (middleDragMode) {
                                     pointer.middleButtonDown(getX(e), getY(e), meta);
-                                }
-
-                                if (touchpadFeedback) {
-                                    activity.sendShortVibration();
                                 }
 
                                 // make it nonzero to prevent being trigger again
@@ -1048,11 +1043,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         if (action == MotionEvent.ACTION_UP) {
             if (!inSwiping && !inScaling && secondPointerWasDown) {
                 pointer.rightButtonDown(getX(e), getY(e), meta);
-
-                if (touchpadFeedback) {
-                    activity.sendShortVibration();
-                }
-
                 SystemClock.sleep(100);
                 pointer.releaseButton(getX(e), getY(e), meta);
 
@@ -1077,11 +1067,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                     }
                 } else {
                     pointer.middleButtonDown(getX(e), getY(e), meta);
-
-                    if (touchpadFeedback) {
-                        activity.sendShortVibration();
-                    }
-
                     SystemClock.sleep(100);
                     pointer.releaseButton(getX(e), getY(e), meta);
                 }
@@ -1119,12 +1104,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                     // to form a double click. note that the first click is performed during the drag
 
                     pointer.leftButtonDown(getX(e), getY(e), meta);
-
-                    if (touchpadFeedback) {
-                        activity.sendShortVibration();
-                    }
                     SystemClock.sleep(100);
-
                     pointer.releaseButton(getX(e), getY(e), meta);
                 }
 
