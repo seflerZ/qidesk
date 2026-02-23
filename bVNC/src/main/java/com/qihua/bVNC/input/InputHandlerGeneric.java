@@ -1009,6 +1009,9 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                             return true;
                         }
 
+                        totalMoveY = 0;
+                        totalMoveX = 0;
+
                         break;
                 }
                 break;
