@@ -133,7 +133,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     boolean disregardNextOnFling = false;
     // Queue which holds the last two MotionEvents which triggered onScroll
     float lastZoomFactor = 1;
-    private long lastDragStartTime;
     Queue<Float> distXQueue;
     Queue<Float> distYQueue;
     protected boolean dragHelped = false;
