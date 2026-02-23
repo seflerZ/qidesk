@@ -579,12 +579,14 @@ If you are looking for a quick performance boost, try setting the Color mode to 
     <string name="rdp_geom_native_portrait">Native Portrait</string>
     <string name="rdp_geom_full_hd">1080p</string>
     <string name="rdp_geom_2k">1440p</string>
+    <string name="rdp_geom_smart">Smart Resolution</string>
     <string-array name="rdp_geometry">
         <item>@string/rdp_geom_full_hd</item>
         <item>@string/rdp_geom_native_landscape</item>
         <item>@string/rdp_geom_native_portrait</item>
         <item>@string/rdp_geom_custom</item>
         <item>@string/rdp_geom_2k</item>
+        <item>@string/rdp_geom_smart</item>
     </string-array>
 
     <string name="rdp_zoom_level_none">No Zoom</string>

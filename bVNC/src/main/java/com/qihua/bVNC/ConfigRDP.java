@@ -42,6 +42,7 @@ import androidx.annotation.NonNull;
 
 import com.morpheusly.common.Utilities;
 import com.qihua.bVNC.gesture.GestureEditorActivity;
+import com.qihua.bVNC.util.SmartResolutionUtils;
 import com.qihua.util.PermissionGroups;
 import com.qihua.util.PermissionsManager;
 import com.undatech.opaque.Connection;
@@ -92,6 +93,7 @@ public class ConfigRDP extends MainConfiguration {
     private CheckBox checkboxEnableGfxH264;
     private CheckBox checkboxPreferSendingUnicode;
     private Spinner spinnerRdpColor;
+    private TextView smartResolutionDesc;
     private List<String> rdpColorArray;
     private ArrayList<String> gestureFileArray;
     private ConnectionLoader connectionLoader;
@@ -304,6 +306,13 @@ public class ConfigRDP extends MainConfiguration {
         if (selected.getRdpResType() == Constants.RDP_GEOM_SELECT_CUSTOM) {
             rdpWidth.setEnabled(true);
             rdpHeight.setEnabled(true);
+        } else if (selected.getRdpResType() == Constants.RDP_GEOM_SELECT_SMART) {
+            // 智能分辨率模式下，使用计算出的分辨率但不允许编辑
+            int[] smartRes = SmartResolutionUtils.calculateSmartResolution(this);
+            rdpWidth.setText(String.valueOf(smartRes[0]));
+            rdpHeight.setText(String.valueOf(smartRes[1]));
+            rdpWidth.setEnabled(false);
+            rdpHeight.setEnabled(false);
         } else {
             rdpWidth.setEnabled(false);
             rdpHeight.setEnabled(false);
@@ -339,9 +348,12 @@ public class ConfigRDP extends MainConfiguration {
         spinnerRdpGeometry.setSelection(selected.getRdpResType());
         spinnerRdpZoomLevel.setSelection(convert2ZoomIndex(selected.getZoomLevel()));
         spinnerGestureConfig.setSelection(convert2GestureIndex(selected));
-        rdpWidth.setText(String.format(Locale.CHINA, "%d", selected.getRdpWidth()));
-        rdpHeight.setText(String.format(Locale.CHINA, "%d", selected.getRdpHeight()));
         setRemoteWidthAndHeight();
+        // 只有在非智能模式下才使用保存的分辨率值
+        if (selected.getRdpResType() != Constants.RDP_GEOM_SELECT_SMART) {
+            rdpWidth.setText(String.format(Locale.CHINA, "%d", selected.getRdpWidth()));
+            rdpHeight.setText(String.format(Locale.CHINA, "%d", selected.getRdpHeight()));
+        }
         setRemoteSoundTypeFromSettings(selected.getRemoteSoundType());
         checkboxEnableRecording.setChecked(selected.getEnableRecording());
         checkboxEnableGesture.setChecked(selected.getEnableGesture());

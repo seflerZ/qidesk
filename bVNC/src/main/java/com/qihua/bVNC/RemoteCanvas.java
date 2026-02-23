@@ -88,6 +88,7 @@ import com.qihua.bVNC.input.RemoteSpiceKeyboard;
 import com.qihua.bVNC.input.RemoteSpicePointer;
 import com.qihua.bVNC.input.RemoteVncKeyboard;
 import com.qihua.bVNC.input.RemoteVncPointer;
+import com.qihua.bVNC.util.SmartResolutionUtils;
 import com.tigervnc.rfb.AuthFailureException;
 import com.undatech.opaque.Connection;
 import com.undatech.opaque.DrawTask;
@@ -1183,6 +1184,9 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             remoteWidth = 1920;
         } else if (connection.getRdpResType() == Constants.RDP_GEOM_2K) {
             remoteWidth = 2560;
+        } else if (connection.getRdpResType() == Constants.RDP_GEOM_SELECT_SMART) {
+            int smartWidth = SmartResolutionUtils.calculateSmartResolution(getContext())[0];
+            remoteWidth = smartWidth;
         } else {
             remoteWidth = viewWidth;
         }
@@ -1209,6 +1213,9 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             remoteHeight = 1080;
         } else if (connection.getRdpResType() == Constants.RDP_GEOM_2K) {
             remoteHeight = 1440;
+        } else if (connection.getRdpResType() == Constants.RDP_GEOM_SELECT_SMART) {
+            int smartHeight = SmartResolutionUtils.calculateSmartResolution(getContext())[1];
+            remoteHeight = smartHeight;
         } else {
             remoteHeight = viewHeight;
         }

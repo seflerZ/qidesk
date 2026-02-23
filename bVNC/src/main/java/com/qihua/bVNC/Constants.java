@@ -145,6 +145,7 @@ public class Constants {
     public final static int RDP_GEOM_SELECT_AUTO = 3;
     public final static int RDP_GEOM_FULL_HD = 0;
     public final static int RDP_GEOM_2K = 4;
+    public final static int RDP_GEOM_SELECT_SMART = 5;
     public final static int VNC_GEOM_SELECT_DISABLED = 0;
     public final static int VNC_GEOM_SELECT_AUTOMATIC = 1;
     public final static int VNC_GEOM_SELECT_NATIVE_LANDSCAPE = 2;
