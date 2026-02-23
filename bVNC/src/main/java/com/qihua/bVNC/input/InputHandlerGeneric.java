@@ -965,7 +965,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                         totalMoveX += Math.abs(e.getX() - lastX);
                         totalMoveY += Math.abs(e.getY() - lastY);
 
-                        lastX = e.getX()
+                        lastX = e.getX();
                         lastY = e.getY();
 
 //                        if (thirdPointerWasDown
