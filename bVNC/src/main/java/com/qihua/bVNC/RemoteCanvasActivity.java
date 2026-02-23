@@ -107,6 +107,7 @@ import com.qihua.bVNC.input.RemoteCanvasHandler;
 import com.qihua.bVNC.input.RemoteKeyboard;
 import com.qihua.util.SamsungDexUtils;
 import com.qihua.util.UriIntentParser;
+import com.qihua.bVNC.util.SmartResolutionUtils;
 import com.undatech.opaque.Connection;
 import com.undatech.opaque.ConnectionSettings;
 import com.undatech.opaque.MessageDialogs;
@@ -842,6 +843,9 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 
         rootView.getWindowVisibleDisplayFrame(r);
         android.util.Log.d(TAG, "onGlobalLayout: getWindowVisibleDisplayFrame: " + r.toString());
+
+        // 检查是否需要自动调整远程分辨率
+        checkAndAdjustRemoteResolution();
 
         // To avoid setting the visible height to a wrong value after an screen unlock event
         // (when r.bottom holds the width of the screen rather than the height due to a rotation)
@@ -1963,5 +1967,39 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         }
 
         finish();
+    }
+
+    /**
+     * 检查并调整远程分辨率
+     * 当处于智能分辨率模式且连接类型为RDP时，自动调整远程分辨率以适应屏幕
+     */
+    private void checkAndAdjustRemoteResolution() {
+        // 仅智能分辨率模式下才会自适应分辨率
+        if (connection.getRdpResType() != Constants.RDP_GEOM_SELECT_SMART) {
+            android.util.Log.d(TAG, "checkAndAdjustRemoteResolution: not smart resolution mode, resType: " + connection.getRdpResType());
+            return;
+        }
+
+        if (canvas.getLastDrawMs() <= 0) {
+            return;
+        }
+
+        // 计算新的智能分辨率
+        int[] newResolution = SmartResolutionUtils.calculateSmartResolution(this);
+        int newWidth = newResolution[0];
+        int newHeight = newResolution[1];
+
+        if (newWidth == canvas.rfbconn.framebufferWidth()
+                && newHeight == canvas.rfbconn.framebufferHeight()) {
+            android.util.Log.d(TAG, "checkAndAdjustRemoteResolution: resolution not changed");
+            return;
+        }
+
+        try {
+            canvas.rfbconn.requestResolution(newWidth, newHeight);
+            android.util.Log.d(TAG, "Requested remote resolution change to: " + newWidth + "x" + newHeight);
+        } catch (Exception e) {
+            android.util.Log.e(TAG, "Failed to request resolution change: " + e.getMessage());
+        }
     }
 }

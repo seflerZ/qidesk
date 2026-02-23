@@ -301,7 +301,7 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
     }
 
     @Override
-    public void requestResolution(int x, int y) throws Exception {
+    public void requestResolution(int x, int y) {
 
     }
 

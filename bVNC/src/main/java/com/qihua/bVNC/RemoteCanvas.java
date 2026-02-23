@@ -1190,8 +1190,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         } else {
             remoteWidth = viewWidth;
         }
-        // We make the resolution even if it is odd.
-        if (remoteWidth % 2 == 1) remoteWidth--;
+
         return remoteWidth;
     }
 
@@ -1219,8 +1218,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         } else {
             remoteHeight = viewHeight;
         }
-        // We make the resolution even if it is odd.
-        if (remoteHeight % 2 == 1) remoteHeight--;
+
         return remoteHeight;
     }
 
@@ -1881,8 +1879,6 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             showFps = Utils.querySharedPreferenceBoolean(getContext(),
                     Constants.enableDebugInfo, false);
 
-            lastDraw = System.currentTimeMillis();
-
             thread = new Thread(this, "DrawWorker");
             thread.start();
         }
@@ -1957,14 +1953,14 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             }
         }
 
+        public long getLastDraw() {
+            return lastDraw;
+        }
+
         public boolean isShowFps() {
             return fpsCounter != null;
         }
     }
-
-    ;
-
-    long lastDraw;
 
     /**
      * Causes a redraw of the myDrawable to happen at the indicated coordinates.
@@ -2433,6 +2429,10 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                 surfaceHolder.unlockCanvasAndPost(canvas);
             }
         }
+    }
+
+    public long getLastDrawMs() {
+        return drawWorker.getLastDraw();
     }
 
     public boolean isNvStream() {

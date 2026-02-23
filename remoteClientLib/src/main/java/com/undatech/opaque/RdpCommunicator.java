@@ -303,7 +303,16 @@ public class RdpCommunicator extends RfbConnectable implements RdpKeyboardMapper
 
     @Override
     public void requestResolution(int x, int y) {
-        // TODO Auto-generated method stub
+        // 动态更新远程桌面分辨率
+        if (session == null || session.getInstance() == 0) {
+            return;
+        }
+
+        session.getBookmark().getActiveScreenSettings().setWidth(x);
+        session.getBookmark().getActiveScreenSettings().setHeight(y);
+
+        LibFreeRDP.sendClientDisplayUpdate(session.getInstance(), x, y, session.getBookmark().getScreenSettings().getZoomLevel());
+        android.util.Log.d(TAG, "Requested resolution change to: " + x + "x" + y);
     }
 
     private void initSession(String username, String domain, String password) {
