@@ -633,11 +633,11 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     }
 
     protected float getImmersiveXDistance() {
-        return Math.min(Math.max(touchpad.getWidth() * immersiveSwipeRatio, 120), 250);
+        return Math.min(Math.max(touchpad.getWidth() * immersiveSwipeRatio, 130), 250);
     }
 
     protected float getImmersiveYDistance() {
-        return Math.min(Math.max(touchpad.getHeight() * immersiveSwipeRatio, 120), 250);
+        return Math.min(Math.max(touchpad.getHeight() * immersiveSwipeRatio, 130), 250);
     }
 
     protected boolean detectImmersiveHorizontal(float y) {
