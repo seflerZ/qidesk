@@ -306,6 +306,9 @@ public class ConfigRDP extends MainConfiguration {
         if (selected.getRdpResType() == Constants.RDP_GEOM_SELECT_CUSTOM) {
             rdpWidth.setEnabled(true);
             rdpHeight.setEnabled(true);
+
+            rdpWidth.setText(Integer.toString(selected.getRdpWidth()));
+            rdpHeight.setText(Integer.toString(selected.getRdpHeight()));
         } else if (selected.getRdpResType() == Constants.RDP_GEOM_SELECT_SMART) {
             // 智能分辨率模式下，使用计算出的分辨率但不允许编辑
             int[] smartRes = SmartResolutionUtils.calculateSmartResolution(this);
@@ -319,7 +322,7 @@ public class ConfigRDP extends MainConfiguration {
         }
     }
 
-    protected void updateViewFromSelected() {
+    protected void updateViewFromConnection() {
         if (selected == null)
             return;
         super.commonUpdateViewFromSelected();
@@ -420,7 +423,7 @@ public class ConfigRDP extends MainConfiguration {
         return 0;
     }
 
-    protected void updateSelectedFromView() {
+    protected void updateConnectionFromView() {
         commonUpdateSelectedFromView();
 
         if (selected == null) {

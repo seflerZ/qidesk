@@ -399,7 +399,7 @@ public class ConfigNVStream extends MainConfiguration {
         }
     }
 
-    protected void updateViewFromSelected() {
+    protected void updateViewFromConnection() {
         if (selected == null)
             return;
         super.commonUpdateViewFromSelected();
@@ -687,7 +687,7 @@ public class ConfigNVStream extends MainConfiguration {
         }).start();
     }
 
-    protected void updateSelectedFromView() {
+    protected void updateConnectionFromView() {
         commonUpdateSelectedFromView();
 
         if (selected == null) {

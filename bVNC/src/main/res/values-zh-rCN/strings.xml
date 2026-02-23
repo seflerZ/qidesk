@@ -515,14 +515,6 @@ bVNC对应的功能如下：
     <string name="rdp_geom_full_hd">1080p</string>
     <string name="rdp_geom_2k">1440p</string>
     <string name="rdp_geom_smart">智能分辨率</string>
-    <string-array name="rdp_geometry">
-        <item>@string/rdp_geom_full_hd</item>
-        <item>@string/rdp_geom_native_landscape</item>
-        <item>@string/rdp_geom_native_portrait</item>
-        <item>@string/rdp_geom_custom</item>
-        <item>@string/rdp_geom_2k</item>
-        <item>@string/rdp_geom_smart</item>
-    </string-array>
 
     <string name="rdp_zoom_level_none">无缩放</string>
     <string name="rdp_zoom_level_middle">125%</string>

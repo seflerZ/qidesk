@@ -57,9 +57,9 @@ public abstract class MainConfiguration extends AppCompatActivity {
     private CheckBox checkboxKeepSshPass;
     private long connID = 0;
 
-    protected abstract void updateViewFromSelected();
+    protected abstract void updateViewFromConnection();
 
-    protected abstract void updateSelectedFromView();
+    protected abstract void updateConnectionFromView();
 
     public void commonUpdateViewFromSelected() {
         Log.d(TAG, "commonUpdateViewFromSelected called");
@@ -237,7 +237,7 @@ public abstract class MainConfiguration extends AppCompatActivity {
         if (database != null)
             database.close();
         if (selected != null) {
-            updateSelectedFromView();
+            updateConnectionFromView();
             selected.saveAndWriteRecent(false, this);
         }
     }
@@ -254,7 +254,7 @@ public abstract class MainConfiguration extends AppCompatActivity {
     protected void saveConnectionAndCloseLayout() {
         Log.d(TAG, "saveConnectionAndCloseLayout called");
         if (selected != null) {
-            updateSelectedFromView();
+            updateConnectionFromView();
             selected.saveAndWriteRecent(false, this);
         }
         finish();
@@ -282,7 +282,7 @@ public abstract class MainConfiguration extends AppCompatActivity {
         if (selected == null) {
             selected = new ConnectionBean(this);
         }
-        updateViewFromSelected();
+        updateViewFromConnection();
     }
 
     /**
@@ -290,7 +290,7 @@ public abstract class MainConfiguration extends AppCompatActivity {
      */
     protected void generatePubkey() {
         Log.d(TAG, "generatePubkey called");
-        updateSelectedFromView();
+        updateConnectionFromView();
         selected.saveAndWriteRecent(true, this);
         Intent intent = new Intent(this, GeneratePubkeyActivity.class);
         intent.putExtra("PrivateKey", selected.getSshPrivKey());
@@ -402,7 +402,7 @@ public abstract class MainConfiguration extends AppCompatActivity {
         if (selected.getNickname().equals(nickText.getText().toString()))
             nickText.setText(getString(R.string.copy_of) + " " + selected.getNickname());
         selected.setScreenshotFilename(Utils.newScreenshotFileName());
-        updateSelectedFromView();
+        updateConnectionFromView();
         selected.set_Id(0);
         selected.saveAndWriteRecent(false, this);
         arriveOnPage();

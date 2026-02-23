@@ -205,7 +205,7 @@ public class ConfigVNC extends MainConfiguration {
         }
     }
 
-    protected void updateViewFromSelected() {
+    protected void updateViewFromConnection() {
         if (selected == null)
             return;
         super.commonUpdateViewFromSelected();
@@ -269,7 +269,7 @@ public class ConfigVNC extends MainConfiguration {
         return 0;
     }
 
-    protected void updateSelectedFromView() {
+    protected void updateConnectionFromView() {
         commonUpdateSelectedFromView();
 
         if (selected == null) {

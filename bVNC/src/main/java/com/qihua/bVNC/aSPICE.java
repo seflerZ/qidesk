@@ -43,7 +43,6 @@ import com.qihua.util.PermissionGroups;
 import com.qihua.util.PermissionsManager;
 import com.morpheusly.common.Utilities;
 import com.undatech.opaque.util.FileUtils;
-import com.qihua.bVNC.R;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -95,7 +94,7 @@ public class aSPICE extends MainConfiguration {
         buttonImportCa.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                aSPICE.this.updateSelectedFromView();
+                aSPICE.this.updateConnectionFromView();
                 showDialog(R.layout.import_tls_ca_dialog);
             }
         });
@@ -182,7 +181,7 @@ public class aSPICE extends MainConfiguration {
         return null;
     }
 
-    public void updateViewFromSelected() {
+    public void updateViewFromConnection() {
         super.commonUpdateViewFromSelected();
 
         if (selected == null)
@@ -246,7 +245,7 @@ public class aSPICE extends MainConfiguration {
         layoutMapSpinner.setSelection(selection);
     }
 
-    protected void updateSelectedFromView() {
+    protected void updateConnectionFromView() {
         if (selected == null) {
             return;
         }
@@ -339,7 +338,7 @@ public class aSPICE extends MainConfiguration {
                         String keyData = Utilities.Companion.getStringDataFromIntent(data, this);
                         android.util.Log.i(TAG, keyData);
                         selected.setCaCert(keyData);
-                        updateViewFromSelected();
+                        updateViewFromConnection();
                         selected.saveAndWriteRecent(false, this);
                         showDialog(R.layout.import_tls_ca_dialog);
                     } else {

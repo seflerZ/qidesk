@@ -75,7 +75,7 @@ public class ImportTlsCaDialog extends AlertDialog {
     public void onBackPressed() {
         selected.setCaCert(caCert.getText().toString());
         selected.setCertSubject(certSubject.getText().toString());
-        mainConfigPage.updateViewFromSelected();
+        mainConfigPage.updateViewFromConnection();
         selected.saveAndWriteRecent(false, getContext());
         dismiss();
     }
