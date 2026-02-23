@@ -223,19 +223,6 @@
 
             <TableRow>
 
-                <EditText
-                    android:id="@+id/rdpDomain"
-                    android:layout_width="fill_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:hint="@string/rdp_domain_hint"
-                    android:inputType="textNoSuggestions|textVisiblePassword"
-                    android:singleLine="true"
-                    android:textAppearance="?android:attr/textAppearanceLarge" />
-            </TableRow>
-
-            <TableRow>
-
                 <LinearLayout
                     android:layout_width="fill_parent"
                     android:layout_height="wrap_content"
