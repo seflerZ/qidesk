@@ -474,7 +474,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             List<String> actionKeys = gestureActionLibrary.getAction(pre.name);
             if (actionKeys != null && !actionKeys.isEmpty()) {
                 performShortKeys(actionKeys);
-                Toast.makeText(RemoteCanvasActivity.this, getString(R.string.gesture_hint) + ":" + pre.name, Toast.LENGTH_SHORT).show();
+                Utils.showVeryShortToast(RemoteCanvasActivity.this, getString(R.string.gesture_hint) + ":" + pre.name, handler);
             }
 
             hideToolbar();

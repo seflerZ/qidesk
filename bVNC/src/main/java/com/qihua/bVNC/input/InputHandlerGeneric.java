@@ -119,7 +119,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     boolean canSwipeToMove = false;
     float baseSwipeDist = 4f;
     // This is how far from the top and bottom edge to detect immersive swipe.
-    float immersiveSwipeRatio = 0.09f;
+    float immersiveSwipeRatio = 0.1f;
     boolean immersiveSwipeY = false;
     boolean immersiveSwipeX = false;
     // Some variables indicating what kind of a gesture we're currently in or just finished.
@@ -634,11 +634,11 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     }
 
     protected float getImmersiveXDistance() {
-        return Math.min(Math.max(touchpad.getWidth() * immersiveSwipeRatio, 180), 250);
+        return Math.min(Math.max(touchpad.getWidth() * immersiveSwipeRatio, 120), 250);
     }
 
     protected float getImmersiveYDistance() {
-        return Math.min(Math.max(touchpad.getHeight() * immersiveSwipeRatio, 180), 250);
+        return Math.min(Math.max(touchpad.getHeight() * immersiveSwipeRatio, 120), 250);
     }
 
     protected boolean detectImmersiveHorizontal(float y) {
@@ -1004,9 +1004,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                             return true;
                         }
 
-                        totalMoveY = 0;
-                        totalMoveX = 0;
-
                         break;
                 }
                 break;
@@ -1110,6 +1107,9 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
                 endDragModesAndScrolling();
             }
+
+            totalMoveY = 0;
+            totalMoveX = 0;
         }
 
         return gestureDetector.onTouchEvent(e);

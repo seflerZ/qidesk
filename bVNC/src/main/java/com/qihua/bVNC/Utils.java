@@ -44,6 +44,7 @@ import android.net.NetworkCapabilities;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.Message;
 import android.text.ClipboardManager;
 import android.text.Html;
@@ -53,6 +54,7 @@ import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.ScrollView;
+import android.widget.Toast;
 
 import androidx.core.content.ContextCompat;
 
@@ -775,5 +777,25 @@ public class Utils {
     public static void setClipboard(Context context, String url) {
         ClipboardManager cm = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
         cm.setText(url);
+    }
+
+    /**
+     * 显示自定义时长的 Toast
+     * @param context 上下文（建议用 Application Context 避免内存泄漏）
+     * @param message 提示文本
+     * @param duration 自定义时长（毫秒，比如 1000 表示 1 秒）
+     */
+    public static void showCustomDurationToast(Context context, String message, int duration, Handler handler) {
+        // 1. 创建 Toast 实例（用 LENGTH_SHORT 作为基础，后续手动取消）
+        Toast toast = Toast.makeText(context.getApplicationContext(), message, Toast.LENGTH_SHORT);
+        toast.show();
+
+        // 2. 通过 Handler 延迟取消 Toast，实现自定义时长
+        handler.postDelayed(toast::cancel, duration);
+    }
+
+    // 快捷方法：显示 1 秒的短 Toast（比系统 SHORT 更短）
+    public static void showVeryShortToast(Context context, String message, Handler handler) {
+        showCustomDurationToast(context, message, 1000, handler); // 1000 毫秒 = 1 秒
     }
 }
