@@ -308,8 +308,8 @@ public class RdpCommunicator extends RfbConnectable implements RdpKeyboardMapper
             return;
         }
 
-        session.getBookmark().getActiveScreenSettings().setWidth(x);
-        session.getBookmark().getActiveScreenSettings().setHeight(y);
+        session.getBookmark().getScreenSettings().setWidth(x);
+        session.getBookmark().getScreenSettings().setHeight(y);
 
         LibFreeRDP.sendClientDisplayUpdate(session.getInstance(), x, y, session.getBookmark().getScreenSettings().getZoomLevel());
         android.util.Log.d(TAG, "Requested resolution change to: " + x + "x" + y);

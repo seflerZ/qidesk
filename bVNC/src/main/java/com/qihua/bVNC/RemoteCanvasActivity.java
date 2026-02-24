@@ -1980,7 +1980,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             return;
         }
 
-        if (canvas.getLastDrawMs() <= 0) {
+        if (canvas.getLastDrawMs() <= 0 || !canvas.rfbconn.isInNormalProtocol()) {
             return;
         }
 
