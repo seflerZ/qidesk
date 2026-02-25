@@ -1988,6 +1988,17 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         }
     }
 
+    private Runnable hideGestureLayerRunnable = () -> hideGestureLayer();
+
+    public void showGestureLayer(int timeoutMs) {
+        if (gestureOverlayView != null) {
+            gestureOverlayView.setVisibility(View.VISIBLE);
+
+            handler.removeCallbacks(hideGestureLayerRunnable);
+            handler.postDelayed(hideGestureLayerRunnable, timeoutMs);
+        }
+    }
+
     private class ToolbarHiderRunnable implements Runnable {
         public void run() {
             hideToolbar();

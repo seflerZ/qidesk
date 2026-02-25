@@ -299,7 +299,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                 && canvas.isOutDisplay()) {
             pointer.pointerY = pointer.pointerY - 20;
             touchpad.releasePointerCapture();
-            touchpad.showCursor();
+//            touchpad.showCursor();
 
             return true;
         }
@@ -960,7 +960,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                         if (totalMoveY <= 20 && totalMoveX <= 20 && (detectImmersiveLeft(e.getX(), e.getY())
                                 || detectImmersiveRight(e.getX(), e.getY()))) {
 
-                            activity.toggleGestureLayer();
+                            activity.showGestureLayer(2000);
 
                             return true;
                         }

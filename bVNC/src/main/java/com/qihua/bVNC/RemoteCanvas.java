@@ -2236,7 +2236,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
     @Override
     public PointerIcon onResolvePointerIcon(MotionEvent event, int pointerIndex) {
-        if (!outDisplay) {
+        // no need to hide system cursor since the remote one is on the external display
+        if (!touchpad) {
             return PointerIcon.getSystemIcon(getContext(), PointerIcon.TYPE_NULL);
         }
 
