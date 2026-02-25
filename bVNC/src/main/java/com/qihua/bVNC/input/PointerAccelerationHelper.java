@@ -100,20 +100,6 @@ public class PointerAccelerationHelper {
     }
     
     /**
-     * 计算指针移动的加速倍数（适用于没有基础乘数的情况，如onPointerEvent）
-     * 
-     * @param currentTime 当前时间戳
-     * @param currentDistanceX 当前X方向的距离
-     * @param currentDistanceY 当前Y方向的距离
-     * @return 计算得出的加速倍数
-     */
-    public float calculateAccelerationMultiplier(long currentTime, 
-                                               float currentDistanceX, 
-                                               float currentDistanceY) {
-        return calculateAccelerationMultiplier(currentTime, currentDistanceX, currentDistanceY, 1.0f);
-    }
-    
-    /**
      * 获取当前加速因子
      */
     public float getSpeedAccelerationFactor() {

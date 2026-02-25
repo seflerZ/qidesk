@@ -192,6 +192,9 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 //        GeneralUtils.debugLog(debugLogging, TAG, "displayDensity, baseSwipeDist, immersiveSwipeRatio: "
 //                + displayDensity + " " + baseSwipeDist + " " + immersiveSwipeRatio);
 
+        // 初始化指针加速助手
+        pointerAccelerationHelper = new PointerAccelerationHelper(SPEED_ACCELERATION_FACTOR, MAX_ACCELERATION);
+        
         // for inertia scrolling
         inertiaThread = new Thread(() -> {
             while (true) {
@@ -261,48 +264,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         return (int) (canvas.getAbsY() + (e.getY() - 1.f * canvas.getTop()) / scale);
     }
 
-    /**
-     * Computes the acceleration depending on the size of the supplied delta.
-     *
-     * @param delta
-     * @return
-     */
-    protected float computeAcceleration(float delta) {
-        float origSign = getSign(delta);
-        delta = Math.abs(delta);
-        boolean accelerated = pointer.isAccelerated();
-        if (delta <= 10 * canvas.getZoomFactor()) {
-            delta = delta * 0.85f;
-        } else if (accelerated && delta <= 15.0f * canvas.getZoomFactor()) {
-            delta = delta * 1f;
-        } else if (accelerated && delta <= 30.0f * canvas.getZoomFactor()) {
-            delta = delta * 1.5f;
-        } else if (accelerated && delta <= 40.0f * canvas.getZoomFactor()) {
-            delta = delta * 2.5f;
-        } else if (accelerated && delta <= 50.0f * canvas.getZoomFactor()) {
-            delta = delta * 3f;
-        } else if (accelerated) {
-            delta = delta * 3.5f;
-        }
-        return origSign * delta;
-    }
-
-    protected float computeAcceleration4mouse(float delta) {
-        float origSign = getSign(delta);
-        delta = Math.abs(delta);
-        boolean accelerated = pointer.isAccelerated();
-
-        if (accelerated && delta <= 60.0f * canvas.getZoomFactor()) {
-            delta = delta * 1.5f;
-        } else if (accelerated && delta <= 120.0f * canvas.getZoomFactor()) {
-            delta = delta * 2.0f;
-        } else {
-            delta = delta * 2.5f;
-        }
-
-        return origSign * delta;
-    }
-
     private long lastPointerEventTime = 0;
     protected static final float SPEED_ACCELERATION_FACTOR = 0.5f; // 加速度因子
     protected static final float MAX_ACCELERATION = 2.5f; // 最大加速度乘数
@@ -325,7 +286,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         float diffX = e.getX();
         float diffY = e.getY();
 
-        if (System.currentTimeMillis() - lastPointerEventTime < POINTER_SAMPLING_MS && action == MotionEvent.ACTION_MOVE) {
+        if (System.currentTimeMillis() - lastPointerEventTime < POINTER_SAMPLING_MS
+                && action == MotionEvent.ACTION_MOVE) {
             cumulatedX += diffX;
             cumulatedY += diffY;
 
@@ -358,10 +320,10 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         long currentTime = System.currentTimeMillis();
         // 使用指针加速助手计算加速倍数
         float speedMultiplier = pointerAccelerationHelper.calculateAccelerationMultiplier(
-            currentTime, diffX, diffY);
+            currentTime, diffX, diffY, 1.0f);
         
         // Make distanceX/Y display density independent and apply acceleration
-        float sensitivity = pointer.getSensitivity() / 2;
+        float sensitivity = pointer.getSensitivity();
         int x = (int) (diffX * sensitivity * speedMultiplier + pointer.pointerX);
         int y = (int) (diffY * sensitivity * speedMultiplier + pointer.pointerY);
         

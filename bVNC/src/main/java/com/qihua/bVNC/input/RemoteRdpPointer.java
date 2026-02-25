@@ -168,7 +168,6 @@ public class RemoteRdpPointer extends RemotePointer {
                 protocomm.writePointerEvent(pointerX, pointerY,
                         combinedMetaState,
                         prevPointerMask & ~POINTER_DOWN_MASK, false);
-                SystemClock.sleep(20);
             }
             prevPointerMask = pointerMask;
         }

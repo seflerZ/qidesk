@@ -37,8 +37,6 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         super(activity, canvas, touchpad, pointer, debugLogging);
 
         this.displayDensity = activity.getResources().getDisplayMetrics().density;
-        // 初始化指针加速助手
-        pointerAccelerationHelper = new PointerAccelerationHelper(SPEED_ACCELERATION_FACTOR, MAX_ACCELERATION);
     }
 
     /*
