@@ -38,12 +38,12 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.text.ClipboardManager;
@@ -130,6 +130,9 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     // Variable indicating that we are currently scrolling in simulated touchpad mode.
     public boolean cursorBeingMoved = false;
 
+    private Rect displayRect;
+    private float displayDensity;
+
     // Connection parameters
     public Connection connection;
     public SSHConnection sshConnection = null;
@@ -191,13 +194,6 @@ public class RemoteCanvas extends SurfaceView implements Viewable
      * of how much of the screen is hidden by the soft keyboard if any.
      */
     int visibleHeight = -1;
-
-    /*
-     * These variables contain the width and height of the display in pixels
-     */
-    int displayWidth = 0;
-    int displayHeight = 0;
-    float displayDensity = 0;
 
     /*
      * This flag indicates whether this is the VNC client.
@@ -281,30 +277,12 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
         clipboard = (ClipboardManager) getContext().getSystemService(Context.CLIPBOARD_SERVICE);
 
-        Display display;
-        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R) {
-            display = ((Activity) context).getWindow().getWindowManager().getDefaultDisplay();
-        } else {
-            if (context instanceof Activity) {
-                display = ((Activity) context).getWindow().getWindowManager().getDefaultDisplay();
-            } else {
-                display = context.getDisplay();
-            }
-        }
-
         if (!isTouchpad()) {
             drawWorker = new DrawWorker();
         }
 
         surfaceHolder = getHolder();
         surfaceHolder.addCallback(this);
-
-        // TODO resolve deprecated
-        displayWidth = display.getWidth();
-        displayHeight = display.getHeight();
-        DisplayMetrics metrics = new DisplayMetrics();
-        display.getMetrics(metrics);
-        displayDensity = metrics.density;
 
         LayoutInflater inflater = LayoutInflater.from(getContext());
         View dialogView = inflater.inflate(R.layout.connection_progress, null);
@@ -548,7 +526,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
      */
     @Override
     public int getDesiredWidth() {
-        int w = getRemoteWidth(getWidth(), getHeight());
+        int w = getRemoteWidth(displayRect.width(), displayRect.height());
         if (!connection.isRequestingNewDisplayResolution() &&
                 connection.getRdpResType() == Constants.RDP_GEOM_SELECT_CUSTOM) {
             w = connection.getRdpWidth();
@@ -562,7 +540,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
      */
     @Override
     public int getDesiredHeight() {
-        int h = getRemoteHeight(getWidth(), getHeight());
+        int h = getRemoteHeight(displayRect.width(), displayRect.height());
         if (!connection.isRequestingNewDisplayResolution() &&
                 connection.getRdpResType() == Constants.RDP_GEOM_SELECT_CUSTOM) {
             h = connection.getRdpHeight();
@@ -633,8 +611,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         String appName = connection.getUserName();
         int appId = Integer.parseInt(connection.getPassword());
 
-        int remoteWidth = getRemoteWidth(getWidth(), getHeight());
-        int remoteHeight = getRemoteHeight(getWidth(), getHeight());
+        int remoteWidth = getRemoteWidth(displayRect.width(), displayRect.height());
+        int remoteHeight = getRemoteHeight(displayRect.width(), displayRect.height());
 
         // defined here now, can be configured in later versions
         PreferenceConfiguration prefConfig = new PreferenceConfiguration();
@@ -728,8 +706,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         String address = getAddress();
         int rdpPort = getRemoteProtocolPort(connection.getPort());
         waitUntilInflated();
-        int remoteWidth = getRemoteWidth(getWidth(), getHeight());
-        int remoteHeight = getRemoteHeight(getWidth(), getHeight());
+        int remoteWidth = getRemoteWidth(displayRect.width(), displayRect.height());
+        int remoteHeight = getRemoteHeight(displayRect.width(), displayRect.height());
 
         rdpcomm.setConnectionParameters(address, rdpPort, connection.getNickname(), remoteWidth,
                 // currently we don't support customize performance flags
@@ -804,11 +782,11 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         // Is custom resolution enabled?
         if (connection.getRdpResType() != Constants.VNC_GEOM_SELECT_DISABLED) {
             waitUntilInflated();
-            rfb.setPreferredFramebufferSize(getVncRemoteWidth(getWidth(), getHeight()),
-                    getVncRemoteHeight(getWidth(), getHeight()));
+            rfb.setPreferredFramebufferSize(getVncRemoteWidth(displayRect.width(), displayRect.height()),
+                    getVncRemoteHeight(displayRect.width(), displayRect.height()));
         }
 
-        reallocateDrawable(displayWidth, displayHeight);
+        reallocateDrawable(displayRect.width(), displayRect.height());
         decoder.setPixelFormat(rfb);
 
         handler.post(() ->
@@ -1176,10 +1154,9 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         if (connection.getRdpResType() == Constants.RDP_GEOM_SELECT_CUSTOM &&
                 reqWidth >= 2 && reqHeight >= 2) {
             remoteWidth = reqWidth;
-        } else if (connection.getRdpResType() == Constants.RDP_GEOM_SELECT_NATIVE_PORTRAIT) {
-            remoteWidth = Math.min(viewWidth, viewHeight);
-        } else if (connection.getRdpResType() == Constants.RDP_GEOM_SELECT_NATIVE_LANDSCAPE) {
-            remoteWidth = Math.max(viewWidth, viewHeight);
+        } else if (connection.getRdpResType() == Constants.RDP_GEOM_SELECT_NATIVE
+            || connection.getRdpResType() == Constants.RDP_GEOM_SELECT_NATIVE + 1) {
+            remoteWidth = viewWidth;
         } else if (connection.getRdpResType() == Constants.RDP_GEOM_FULL_HD) {
             remoteWidth = 1920;
         } else if (connection.getRdpResType() == Constants.RDP_GEOM_2K) {
@@ -1204,10 +1181,9 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         if (connection.getRdpResType() == Constants.RDP_GEOM_SELECT_CUSTOM &&
                 reqWidth >= 2 && reqHeight >= 2) {
             remoteHeight = reqHeight;
-        } else if (connection.getRdpResType() == Constants.RDP_GEOM_SELECT_NATIVE_PORTRAIT) {
-            remoteHeight = Math.max(viewWidth, viewHeight);
-        } else if (connection.getRdpResType() == Constants.RDP_GEOM_SELECT_NATIVE_LANDSCAPE) {
-            remoteHeight = Math.min(viewWidth, viewHeight);
+        } else if (connection.getRdpResType() == Constants.RDP_GEOM_SELECT_NATIVE
+                || connection.getRdpResType() == Constants.RDP_GEOM_SELECT_NATIVE + 1) {
+            remoteHeight = viewHeight;
         } else if (connection.getRdpResType() == Constants.RDP_GEOM_FULL_HD) {
             remoteHeight = 1080;
         } else if (connection.getRdpResType() == Constants.RDP_GEOM_2K) {
@@ -1457,7 +1433,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                     disposeDrawable();
 
                     useFull = false;
-                    bitmapData = new LargeBitmapData(rfbconn, this, getWidth(), getHeight(), capacity);
+                    bitmapData = new LargeBitmapData(rfbconn, this, displayRect.width(), displayRect.height(), capacity);
                 }
                 if (decoder != null) {
                     decoder.setBitmapData(bitmapData);
@@ -1626,8 +1602,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
      * Computes the X and Y offset for converting coordinates from full-frame coordinates to view coordinates.
      */
     public void computeShiftFromFullToView() {
-        shiftX = (rfbconn.framebufferWidth() - getWidth()) / 2;
-        shiftY = (rfbconn.framebufferHeight() - getHeight()) / 2;
+        shiftX = (rfbconn.framebufferWidth() - displayRect.width()) / 2;
+        shiftY = (rfbconn.framebufferHeight() - displayRect.height()) / 2;
     }
 
     /**
@@ -1638,7 +1614,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         //android.util.Log.d(TAG, "resetScroll: " + (absoluteXPosition - shiftX) * scale + ", "
         //                                        + (absoluteYPosition - shiftY) * scale);
 
-        reDraw(0, 0, getWidth(), getHeight());
+        reDraw(0, 0, displayRect.width(), displayRect.height());
 //        scrollTo((int) ((absoluteXPosition) * scale),
 //                (int) ((absoluteYPosition) * scale));
     }
@@ -1819,7 +1795,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             int w = getImageWidth();
             int h = getImageHeight();
 
-            int bWidth = (int) ((getWidth() - w * getMinimumScale()) / 2);
+            int bWidth = (int) ((displayRect.width() - w * getMinimumScale()) / 2);
             if (bWidth <= 0) {
                 bWidth = 0;
             }
@@ -2159,14 +2135,14 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     }
 
     public int getVisibleDesktopWidth() {
-        return (int) ((double) getWidth() / getZoomFactor());
+        return (int) ((double) displayRect.width() / getZoomFactor());
     }
 
     public int getVisibleDesktopHeight() {
         if (visibleHeight > 0)
             return (int) ((double) visibleHeight / getZoomFactor());
         else
-            return (int) ((double) getHeight() / getZoomFactor());
+            return (int) ((double) displayRect.height() / getZoomFactor());
     }
 
     public int getImageVisibleInScreenHeight() {
@@ -2186,11 +2162,11 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     }
 
     public int getCenteredXOffset() {
-        return (int) (rfbconn.framebufferWidth() * getMinimumScale() - getWidth()) / 2;
+        return (int) (rfbconn.framebufferWidth() * getMinimumScale() - displayRect.width()) / 2;
     }
 
     public int getBlackBorderWidth() {
-        int bWidth = (int) ((getWidth() - getImageWidth() * getMinimumScale()) / 2);
+        int bWidth = (int) ((displayRect.width() - getImageWidth() * getMinimumScale()) / 2);
         if (bWidth <= 0) {
             bWidth = 0;
         }
@@ -2199,7 +2175,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     }
 
     public int getCenteredYOffset() {
-        return (int) (rfbconn.framebufferHeight() * getMinimumScale() - getHeight()) / 2;
+        return (int) (rfbconn.framebufferHeight() * getMinimumScale() - displayRect.height()) / 2;
     }
 
     public float getMinimumScale() {
@@ -2211,6 +2187,10 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
     public float getDisplayDensity() {
         return displayDensity;
+    }
+
+    public void setDisplayDensity(float displayDensity) {
+        this.displayDensity = displayDensity;
     }
 
     public boolean isColorModel(COLORMODEL cm) {
@@ -2244,7 +2224,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
      */
     public void waitUntilInflated() {
         synchronized (this) {
-            while (getWidth() == 0 || getHeight() == 0) {
+            while (displayRect.width() == 0 || displayRect.height() == 0) {
                 try {
                     this.wait();
                 } catch (InterruptedException e) {
@@ -2418,10 +2398,10 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                 synchronized (surfaceHolder) {
                     String text = getContext().getString(R.string.use_as_touchpad);
                     float textWidth = paint.measureText(text);
-                    float x = (canvas.getWidth() - textWidth) / 2f;
+                    float x = (displayRect.width() - textWidth) / 2f;
 
                     canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
-                    canvas.drawText(text, x, canvas.getHeight() / 2, paint);
+                    canvas.drawText(text, x, displayRect.height() / 2, paint);
                 }
             }
         } finally {
@@ -2445,5 +2425,9 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
     public boolean isRdp() {
         return isRdp;
+    }
+
+    public void setDisplayRect(Rect displayRect) {
+        this.displayRect = displayRect;
     }
 }

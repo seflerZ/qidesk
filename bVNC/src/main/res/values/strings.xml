@@ -575,7 +575,7 @@ If you are looking for a quick performance boost, try setting the Color mode to 
     <string name="rdp_geom_description_hint">The server needs ExtendedDesktopSize support</string>
     <string name="rdp_geom_disabled">Disabled</string>
     <string name="rdp_geom_zoom_level">Zoom Level</string>
-    <string name="rdp_geom_native_landscape">Native Landscape</string>
+    <string name="rdp_geom_native_landscape">Native Resolution</string>
     <string name="rdp_geom_native_portrait">Native Portrait</string>
     <string name="rdp_geom_full_hd">1080p</string>
     <string name="rdp_geom_2k">1440p</string>
@@ -585,7 +585,6 @@ If you are looking for a quick performance boost, try setting the Color mode to 
         <item>@string/rdp_geom_full_hd</item>
         <item>@string/rdp_geom_2k</item>
         <item>@string/rdp_geom_native_landscape</item>
-        <item>@string/rdp_geom_native_portrait</item>
         <item>@string/rdp_geom_custom</item>
     </string-array>
 

@@ -510,7 +510,7 @@ bVNC对应的功能如下：
     <string name="rdp_geom_custom">自定义</string>
     <string name="rdp_geom_description_hint">服务器需要支持ExtendedDesktopSize</string>
     <string name="rdp_geom_disabled">无效</string>
-    <string name="rdp_geom_native_landscape">源设备横向</string>
+    <string name="rdp_geom_native_landscape">源设备分辨率</string>
     <string name="rdp_geom_native_portrait">源设备纵向</string>
     <string name="rdp_geom_full_hd">1080p</string>
     <string name="rdp_geom_2k">1440p</string>

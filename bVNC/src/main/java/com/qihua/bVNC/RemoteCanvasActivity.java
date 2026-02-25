@@ -26,6 +26,7 @@ package com.qihua.bVNC;
 import static com.qihua.bVNC.App.getContext;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.Service;
@@ -53,9 +54,9 @@ import android.os.IBinder;
 import android.os.PersistableBundle;
 import android.os.StrictMode;
 import android.os.SystemClock;
-import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.provider.Settings;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Display;
 import android.view.Gravity;
@@ -129,8 +130,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
 
 public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyListener, OnGenericMotionListener, GameGestures {
     public static final int[] inputModeIds = {R.id.itemInputTouchpad, R.id.itemInputDirectTouch, R.id.itemInputGamepad};
@@ -230,6 +229,36 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     // 记录当前连接已显示过的输入模式提示，避免重复显示
     private Set<String> displayedInputModeTips = new HashSet<>();
     private static final String PREFS_INPUT_TIPS = "input_mode_tips";
+
+    /**
+     * Helper method to get Display object based on Android version and context type
+     */
+    private Display getDisplayFromCanvas(RemoteCanvas canvas) {
+        Context context = canvas.getContext();
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R) {
+            return ((Activity) context).getWindow().getWindowManager().getDefaultDisplay();
+        } else {
+            if (context instanceof Activity) {
+                return ((Activity) context).getWindow().getWindowManager().getDefaultDisplay();
+            } else {
+                return context.getDisplay();
+            }
+        }
+    }
+
+    /**
+     * Helper method to configure display metrics for a canvas
+     */
+    private void configureDisplayRect(RemoteCanvas canvas, Display display) {
+        DisplayMetrics metrics = new DisplayMetrics();
+        display.getMetrics(metrics);
+        
+        Rect rect = new Rect();
+        display.getRectSize(rect);
+        
+        canvas.setDisplayRect(rect);
+        canvas.setDisplayDensity(metrics.density);
+    }
 
     /**
      * Enables sticky immersive mode if supported.
@@ -336,16 +365,29 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
                                 | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                                 | View.SYSTEM_UI_FLAG_FULLSCREEN
                                 | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+
+                configureDisplayRect(canvas, choosedDisplay);
+
+                Display display = getDisplayFromCanvas(touchpad);
+                configureDisplayRect(touchpad, display);
             } catch (Throwable ignored) {
                 // fallback
                 canvasPresentation = null;
                 setContentView(R.layout.canvas_full);
                 canvas = findViewById(R.id.canvas);
+
+                Display display = getDisplayFromCanvas(canvas);
+                configureDisplayRect(canvas, display);
+
                 touchpad = canvas;
             }
         } else {
             setContentView(R.layout.canvas_full);
             canvas = findViewById(R.id.canvas);
+
+            Display display = getDisplayFromCanvas(canvas);
+            configureDisplayRect(canvas, display);
+
             touchpad = canvas;
         }
 
