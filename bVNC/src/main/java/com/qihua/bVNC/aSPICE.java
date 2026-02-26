@@ -66,8 +66,6 @@ public class aSPICE extends MainConfiguration {
     private ToggleButton toggleAdvancedSettings;
     private Spinner spinnerGeometry;
     private EditText textNickname;
-    private EditText resWidth;
-    private EditText resHeight;
     private CheckBox checkboxKeepPassword;
     private CheckBox checkboxUseDpadAsArrows;
     private CheckBox checkboxRotateDpad;
@@ -153,19 +151,6 @@ public class aSPICE extends MainConfiguration {
         // Apply the adapter to the spinner
         layoutMapSpinner.setAdapter(adapter);
         setConnectionTypeSpinnerAdapter(R.array.spice_connection_type);
-    }
-
-    /**
-     * Enables and disables the EditText boxes for width and height of remote desktop.
-     */
-    private void setRemoteWidthAndHeight() {
-        if (selected.getRdpResType() != Constants.RDP_GEOM_SELECT_CUSTOM) {
-            resWidth.setEnabled(false);
-            resHeight.setEnabled(false);
-        } else {
-            resWidth.setEnabled(true);
-            resHeight.setEnabled(true);
-        }
     }
 
     /*

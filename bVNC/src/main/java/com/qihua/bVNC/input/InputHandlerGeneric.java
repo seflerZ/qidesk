@@ -595,11 +595,11 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     }
 
     protected float getImmersiveXDistance() {
-        return Math.min(Math.max(touchpad.getWidth() * immersiveSwipeRatio, 130), 250);
+        return Math.min(Math.max(touchpad.getWidth() * immersiveSwipeRatio, 130), 200);
     }
 
     protected float getImmersiveYDistance() {
-        return Math.min(Math.max(touchpad.getHeight() * immersiveSwipeRatio, 130), 250);
+        return Math.min(Math.max(touchpad.getHeight() * immersiveSwipeRatio, 130), 200);
     }
 
     protected boolean detectImmersiveHorizontal(float y) {
@@ -621,7 +621,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     }
     protected boolean detectImmersiveLeftRaw(float x, float y) {
         float bottomXDistance = getImmersiveXDistance();
-        float bottomYDistance = touchpad.getHeight() / 2f;
 
         return x <= bottomXDistance;
     }
@@ -636,7 +635,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
     protected boolean detectImmersiveRightRaw(float x, float y) {
         float bottomXDistance = getImmersiveXDistance();
-        float bottomYDistance = touchpad.getHeight() / 2f;
 
         return x >= touchpad.getWidth() - bottomXDistance;
     }
@@ -957,7 +955,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                         cumulatedX = 0;
                         cumulatedY = 0;
 
-                        if (totalMoveY <= 20 && totalMoveX <= 20 && (detectImmersiveLeft(e.getX(), e.getY())
+                        if (totalMoveY <= 10 && totalMoveX <= 10 && (detectImmersiveLeft(e.getX(), e.getY())
                                 || detectImmersiveRight(e.getX(), e.getY()))) {
 
                             activity.showGestureLayer(2000);

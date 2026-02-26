@@ -37,15 +37,12 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
-import android.widget.CompoundButton;
-import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.RadioGroup;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.ToggleButton;
 
 import androidx.annotation.NonNull;
 
@@ -95,8 +92,6 @@ public class ConfigNVStream extends MainConfiguration {
     private String lastRawApplist;
     private Spinner spinnerGestureConfig;
     private EditText textUsername;
-    private EditText rdpWidth;
-    private EditText rdpHeight;
     private CheckBox checkboxKeepPassword;
     private RadioGroup groupRemoteSoundType;
     private CheckBox checkboxEnableGesture;
@@ -250,8 +245,8 @@ public class ConfigNVStream extends MainConfiguration {
 
         // The geometry type and dimensions boxes.
         spinnerGestureConfig = (Spinner) findViewById(R.id.spinnerGestureConfig);
-        rdpWidth = (EditText) findViewById(R.id.rdpWidth);
-        rdpHeight = (EditText) findViewById(R.id.rdpHeight);
+        resWidth = (EditText) findViewById(R.id.rdpWidth);
+        resHeight = (EditText) findViewById(R.id.rdpHeight);
 
         connectionLoader = new ConnectionLoader(getApplicationContext()
                 , this, false);
@@ -386,19 +381,6 @@ public class ConfigNVStream extends MainConfiguration {
         spinnerNvApp.setVisibility(View.VISIBLE);
     }
 
-    /**
-     * Enables and disables the EditText boxes for width and height of remote desktop.
-     */
-    private void setRemoteWidthAndHeight() {
-        if (selected.getRdpResType() == Constants.RDP_GEOM_SELECT_CUSTOM) {
-            rdpWidth.setEnabled(true);
-            rdpHeight.setEnabled(true);
-        } else {
-            rdpWidth.setEnabled(false);
-            rdpHeight.setEnabled(false);
-        }
-    }
-
     protected void updateViewFromConnection() {
         if (selected == null)
             return;
@@ -406,30 +388,30 @@ public class ConfigNVStream extends MainConfiguration {
 
         sshServer.setText(selected.getSshServer());
 
-        portText.setText(Integer.toString(selected.getPort()));
+        portText.setText(String.valueOf(selected.getPort()));
 
-        if (selected.getKeepPassword() || selected.getPassword().length() > 0) {
+        if (selected.getKeepPassword() || !selected.getPassword().isEmpty()) {
             textPassword.setText(selected.getPassword());
         }
 
         selectedConnType = Constants.CONN_TYPE_NVSTREAM;
         checkboxKeepPassword.setChecked(selected.getKeepPassword());
-        checkboxUseLastPositionToolbar.setChecked((!isNewConnection) ? selected.getUseLastPositionToolbar() : this.useLastPositionToolbarDefault());
+        checkboxUseLastPositionToolbar.setChecked((!isNewConnection)
+                ? selected.getUseLastPositionToolbar() : this.useLastPositionToolbarDefault());
         nickText.setText(selected.getNickname());
         textUsername.setText(selected.getUserName());
-        selected.setRdpResType(spinnerRdpGeometry.getSelectedItemPosition());
-        try {
-            selected.setRdpWidth(Integer.parseInt(rdpWidth.getText().toString()));
-            selected.setRdpHeight(Integer.parseInt(rdpHeight.getText().toString()));
-        } catch (NumberFormatException ignored) {
+
+        setRemoteWidthAndHeight();
+        // 只有在非智能模式下才使用保存的分辨率值
+        if (selected.getRdpResType() != Constants.RDP_GEOM_SELECT_SMART) {
+            resWidth.setText(String.format(Locale.CHINA, "%d", selected.getRdpWidth()));
+            resHeight.setText(String.format(Locale.CHINA, "%d", selected.getRdpHeight()));
         }
 
+        spinnerRdpGeometry.setSelection(selected.getRdpResType());
         spinnerRdpColor.setSelection(rdpColorArray.indexOf(String.valueOf(selected.getRdpColor())));
-
         spinnerGestureConfig.setSelection(convert2GestureIndex(selected));
-        rdpWidth.setText(String.format(Locale.CHINA, "%d", selected.getRdpWidth()));
-        rdpHeight.setText(String.format(Locale.CHINA, "%d", selected.getRdpHeight()));
-        setRemoteWidthAndHeight();
+
         setRemoteSoundTypeFromSettings(selected.getRemoteSoundType());
         checkboxEnableGesture.setChecked(selected.getEnableGesture());
     }
@@ -702,8 +684,8 @@ public class ConfigNVStream extends MainConfiguration {
         selected.setSshServer(sshServer.getText().toString());
 
         try {
-            selected.setRdpWidth(Integer.parseInt(rdpWidth.getText().toString()));
-            selected.setRdpHeight(Integer.parseInt(rdpHeight.getText().toString()));
+            selected.setRdpWidth(Integer.parseInt(resWidth.getText().toString()));
+            selected.setRdpHeight(Integer.parseInt(resHeight.getText().toString()));
         } catch (NumberFormatException ignored) {
         }
 

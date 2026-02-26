@@ -42,7 +42,6 @@ import androidx.annotation.NonNull;
 
 import com.morpheusly.common.Utilities;
 import com.qihua.bVNC.gesture.GestureEditorActivity;
-import com.qihua.bVNC.util.SmartResolutionUtils;
 import com.qihua.util.PermissionGroups;
 import com.qihua.util.PermissionsManager;
 import com.undatech.opaque.Connection;
@@ -70,8 +69,6 @@ public class ConfigRDP extends MainConfiguration {
     private Spinner spinnerGestureConfig;
     private EditText textUsername;
     private EditText rdpDomain;
-    private EditText rdpWidth;
-    private EditText rdpHeight;
     private CheckBox checkboxKeepPassword;
     private CheckBox checkboxUseDpadAsArrows;
     private RadioGroup groupRemoteSoundType;
@@ -137,8 +134,8 @@ public class ConfigRDP extends MainConfiguration {
         spinnerRdpGeometry = (Spinner) findViewById(R.id.spinnerRdpGeometry);
         spinnerRdpZoomLevel = (Spinner) findViewById(R.id.spinnerRdpZoomLevel);
         spinnerGestureConfig = (Spinner) findViewById(R.id.spinnerGestureConfig);
-        rdpWidth = (EditText) findViewById(R.id.rdpWidth);
-        rdpHeight = (EditText) findViewById(R.id.rdpHeight);
+        resWidth = (EditText) findViewById(R.id.rdpWidth);
+        resHeight = (EditText) findViewById(R.id.rdpHeight);
 
         connectionLoader = new ConnectionLoader(getApplicationContext()
                 , this, false);
@@ -299,29 +296,6 @@ public class ConfigRDP extends MainConfiguration {
         super.onDestroy();
     }
 
-    /**
-     * Enables and disables the EditText boxes for width and height of remote desktop.
-     */
-    private void setRemoteWidthAndHeight() {
-        if (selected.getRdpResType() == Constants.RDP_GEOM_SELECT_CUSTOM) {
-            rdpWidth.setEnabled(true);
-            rdpHeight.setEnabled(true);
-
-            rdpWidth.setText(Integer.toString(selected.getRdpWidth()));
-            rdpHeight.setText(Integer.toString(selected.getRdpHeight()));
-        } else if (selected.getRdpResType() == Constants.RDP_GEOM_SELECT_SMART) {
-            // 智能分辨率模式下，使用计算出的分辨率但不允许编辑
-            int[] smartRes = SmartResolutionUtils.calculateSmartResolution(this);
-            rdpWidth.setText(String.valueOf(smartRes[0]));
-            rdpHeight.setText(String.valueOf(smartRes[1]));
-            rdpWidth.setEnabled(false);
-            rdpHeight.setEnabled(false);
-        } else {
-            rdpWidth.setEnabled(false);
-            rdpHeight.setEnabled(false);
-        }
-    }
-
     protected void updateViewFromConnection() {
         if (selected == null)
             return;
@@ -347,16 +321,19 @@ public class ConfigRDP extends MainConfiguration {
         nickText.setText(selected.getNickname());
         textUsername.setText(selected.getUserName());
         rdpDomain.setText(selected.getRdpDomain());
+
         spinnerRdpColor.setSelection(rdpColorArray.indexOf(String.valueOf(selected.getRdpColor())));
         spinnerRdpGeometry.setSelection(selected.getRdpResType());
         spinnerRdpZoomLevel.setSelection(convert2ZoomIndex(selected.getZoomLevel()));
         spinnerGestureConfig.setSelection(convert2GestureIndex(selected));
+
         setRemoteWidthAndHeight();
         // 只有在非智能模式下才使用保存的分辨率值
         if (selected.getRdpResType() != Constants.RDP_GEOM_SELECT_SMART) {
-            rdpWidth.setText(String.format(Locale.CHINA, "%d", selected.getRdpWidth()));
-            rdpHeight.setText(String.format(Locale.CHINA, "%d", selected.getRdpHeight()));
+            resWidth.setText(String.format(Locale.CHINA, "%d", selected.getRdpWidth()));
+            resHeight.setText(String.format(Locale.CHINA, "%d", selected.getRdpHeight()));
         }
+
         setRemoteSoundTypeFromSettings(selected.getRemoteSoundType());
         checkboxEnableRecording.setChecked(selected.getEnableRecording());
         checkboxEnableGesture.setChecked(selected.getEnableGesture());
@@ -445,8 +422,8 @@ public class ConfigRDP extends MainConfiguration {
         selected.setRdpDomain(rdpDomain.getText().toString());
         selected.setRdpResType(spinnerRdpGeometry.getSelectedItemPosition());
         try {
-            selected.setRdpWidth(Integer.parseInt(rdpWidth.getText().toString()));
-            selected.setRdpHeight(Integer.parseInt(rdpHeight.getText().toString()));
+            selected.setRdpWidth(Integer.parseInt(resWidth.getText().toString()));
+            selected.setRdpHeight(Integer.parseInt(resHeight.getText().toString()));
         } catch (NumberFormatException ignored) {
         }
 

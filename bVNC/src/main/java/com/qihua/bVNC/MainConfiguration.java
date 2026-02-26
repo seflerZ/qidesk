@@ -26,6 +26,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.qihua.bVNC.util.SmartResolutionUtils;
 import com.qihua.pubkeygenerator.GeneratePubkeyActivity;
 import com.undatech.opaque.util.LogcatReader;
 
@@ -45,6 +46,8 @@ public abstract class MainConfiguration extends AppCompatActivity {
     protected int selectedConnType;
     protected EditText ipText;
     protected boolean isNewConnection;
+    protected EditText resWidth;
+    protected EditText resHeight;
     private Button buttonGeneratePubkey;
     private TextView versionAndCode;
     private RadioGroup radioCursor;
@@ -56,6 +59,29 @@ public abstract class MainConfiguration extends AppCompatActivity {
     private EditText sshPassphrase;
     private CheckBox checkboxKeepSshPass;
     private long connID = 0;
+
+    /**
+     * Enables and disables the EditText boxes for width and height of remote desktop.
+     */
+    protected void setRemoteWidthAndHeight() {
+        if (selected.getRdpResType() == Constants.RDP_GEOM_SELECT_CUSTOM) {
+            resWidth.setEnabled(true);
+            resHeight.setEnabled(true);
+
+            resWidth.setText(Integer.toString(selected.getRdpWidth()));
+            resHeight.setText(Integer.toString(selected.getRdpHeight()));
+        } else if (selected.getRdpResType() == Constants.RDP_GEOM_SELECT_SMART) {
+            // 智能分辨率模式下，使用计算出的分辨率但不允许编辑
+            int[] smartRes = SmartResolutionUtils.calculateSmartResolution(this);
+            resWidth.setText(String.valueOf(smartRes[0]));
+            resHeight.setText(String.valueOf(smartRes[1]));
+            resWidth.setEnabled(false);
+            resHeight.setEnabled(false);
+        } else {
+            resWidth.setEnabled(false);
+            resHeight.setEnabled(false);
+        }
+    }
 
     protected abstract void updateViewFromConnection();
 

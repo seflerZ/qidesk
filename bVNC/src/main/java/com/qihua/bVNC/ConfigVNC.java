@@ -58,8 +58,6 @@ public class ConfigVNC extends MainConfiguration {
     private EditText textPassword;
     private Spinner spinnerGestureConfig;
     private EditText textUsername;
-    private EditText rdpWidth;
-    private EditText rdpHeight;
     private CheckBox checkboxKeepPassword;
     private CheckBox checkboxUseDpadAsArrows;
     private RadioGroup groupRemoteSoundType;
@@ -106,8 +104,8 @@ public class ConfigVNC extends MainConfiguration {
         checkboxUseLastPositionToolbar = (CheckBox) findViewById(R.id.checkboxUseLastPositionToolbar);
 
         spinnerGestureConfig = (Spinner) findViewById(R.id.spinnerGestureConfig);
-        rdpWidth = (EditText) findViewById(R.id.rdpWidth);
-        rdpHeight = (EditText) findViewById(R.id.rdpHeight);
+        resWidth = (EditText) findViewById(R.id.rdpWidth);
+        resHeight = (EditText) findViewById(R.id.rdpHeight);
 
         connectionLoader = new ConnectionLoader(getApplicationContext()
                 , this, false);
@@ -192,19 +190,6 @@ public class ConfigVNC extends MainConfiguration {
         super.onDestroy();
     }
 
-    /**
-     * Enables and disables the EditText boxes for width and height of remote desktop.
-     */
-    private void setRemoteWidthAndHeight() {
-        if (selected.getRdpResType() == Constants.RDP_GEOM_SELECT_CUSTOM) {
-            rdpWidth.setEnabled(true);
-            rdpHeight.setEnabled(true);
-        } else {
-            rdpWidth.setEnabled(false);
-            rdpHeight.setEnabled(false);
-        }
-    }
-
     protected void updateViewFromConnection() {
         if (selected == null)
             return;
@@ -235,8 +220,8 @@ public class ConfigVNC extends MainConfiguration {
         textUsername.setText(selected.getUserName());
 
         spinnerGestureConfig.setSelection(convert2GestureIndex(selected));
-        rdpWidth.setText(String.format(Locale.CHINA, "%d", selected.getRdpWidth()));
-        rdpHeight.setText(String.format(Locale.CHINA, "%d", selected.getRdpHeight()));
+        resWidth.setText(String.format(Locale.CHINA, "%d", selected.getRdpWidth()));
+        resHeight.setText(String.format(Locale.CHINA, "%d", selected.getRdpHeight()));
         setRemoteWidthAndHeight();
         setRemoteSoundTypeFromSettings(selected.getRemoteSoundType());
         checkboxEnableRecording.setChecked(selected.getEnableRecording());
@@ -289,8 +274,8 @@ public class ConfigVNC extends MainConfiguration {
         // for the key pass-phrase instead.
         selected.setUseSshPubKey(checkboxUseSshPubkey.isChecked());
         try {
-            selected.setRdpWidth(Integer.parseInt(rdpWidth.getText().toString()));
-            selected.setRdpHeight(Integer.parseInt(rdpHeight.getText().toString()));
+            selected.setRdpWidth(Integer.parseInt(resWidth.getText().toString()));
+            selected.setRdpHeight(Integer.parseInt(resHeight.getText().toString()));
         } catch (NumberFormatException ignored) {
         }
 
