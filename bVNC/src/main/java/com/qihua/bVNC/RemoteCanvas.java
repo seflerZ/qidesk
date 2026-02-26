@@ -782,8 +782,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         // Is custom resolution enabled?
         if (connection.getRdpResType() != Constants.VNC_GEOM_SELECT_DISABLED) {
             waitUntilInflated();
-            rfb.setPreferredFramebufferSize(getVncRemoteWidth(displayRect.width(), displayRect.height()),
-                    getVncRemoteHeight(displayRect.width(), displayRect.height()));
+            rfb.setPreferredFramebufferSize(getRemoteWidth(displayRect.width(), displayRect.height()),
+                    getRemoteHeight(displayRect.width(), displayRect.height()));
         }
 
         reallocateDrawable(displayRect.width(), displayRect.height());
@@ -1154,8 +1154,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         if (connection.getRdpResType() == Constants.RDP_GEOM_SELECT_CUSTOM &&
                 reqWidth >= 2 && reqHeight >= 2) {
             remoteWidth = reqWidth;
-        } else if (connection.getRdpResType() == Constants.RDP_GEOM_SELECT_NATIVE
-            || connection.getRdpResType() == Constants.RDP_GEOM_SELECT_NATIVE + 1) {
+        } else if (connection.getRdpResType() == Constants.RDP_GEOM_SELECT_NATIVE) {
             remoteWidth = viewWidth;
         } else if (connection.getRdpResType() == Constants.RDP_GEOM_FULL_HD) {
             remoteWidth = 1920;
@@ -1165,7 +1164,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             int smartWidth = SmartResolutionUtils.calculateSmartResolution(getContext())[0];
             remoteWidth = smartWidth;
         } else {
-            remoteWidth = viewWidth;
+            remoteWidth = 1920;
         }
 
         return remoteWidth;
@@ -1181,8 +1180,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         if (connection.getRdpResType() == Constants.RDP_GEOM_SELECT_CUSTOM &&
                 reqWidth >= 2 && reqHeight >= 2) {
             remoteHeight = reqHeight;
-        } else if (connection.getRdpResType() == Constants.RDP_GEOM_SELECT_NATIVE
-                || connection.getRdpResType() == Constants.RDP_GEOM_SELECT_NATIVE + 1) {
+        } else if (connection.getRdpResType() == Constants.RDP_GEOM_SELECT_NATIVE) {
             remoteHeight = viewHeight;
         } else if (connection.getRdpResType() == Constants.RDP_GEOM_FULL_HD) {
             remoteHeight = 1080;
@@ -1192,53 +1190,9 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             int smartHeight = SmartResolutionUtils.calculateSmartResolution(getContext())[1];
             remoteHeight = smartHeight;
         } else {
-            remoteHeight = viewHeight;
+            remoteHeight = 1080;
         }
 
-        return remoteHeight;
-    }
-
-    /**
-     * Determines the preferred remote width for VNC conncetions.
-     */
-    private int getVncRemoteWidth(int viewWidth, int viewHeight) {
-        int remoteWidth = 0;
-        int reqWidth = connection.getRdpWidth();
-        int reqHeight = connection.getRdpHeight();
-        if (connection.getRdpResType() == Constants.VNC_GEOM_SELECT_CUSTOM &&
-                reqWidth >= 2 && reqHeight >= 2) {
-            remoteWidth = reqWidth;
-        } else if (connection.getRdpResType() == Constants.VNC_GEOM_SELECT_AUTOMATIC) {
-            remoteWidth = viewWidth;
-        } else if (connection.getRdpResType() == Constants.VNC_GEOM_SELECT_NATIVE_PORTRAIT) {
-            remoteWidth = Math.min(viewWidth, viewHeight);
-        } else if (connection.getRdpResType() == Constants.VNC_GEOM_SELECT_NATIVE_LANDSCAPE) {
-            remoteWidth = Math.max(viewWidth, viewHeight);
-        }
-        // We make the resolution even if it is odd.
-        if (remoteWidth % 2 == 1) remoteWidth--;
-        return remoteWidth;
-    }
-
-    /**
-     * Determines the preferred remote height for VNC conncetions.
-     */
-    private int getVncRemoteHeight(int viewWidth, int viewHeight) {
-        int remoteHeight = 0;
-        int reqWidth = connection.getRdpWidth();
-        int reqHeight = connection.getRdpHeight();
-        if (connection.getRdpResType() == Constants.VNC_GEOM_SELECT_CUSTOM &&
-                reqWidth >= 2 && reqHeight >= 2) {
-            remoteHeight = reqHeight;
-        } else if (connection.getRdpResType() == Constants.VNC_GEOM_SELECT_AUTOMATIC) {
-            remoteHeight = viewHeight;
-        } else if (connection.getRdpResType() == Constants.VNC_GEOM_SELECT_NATIVE_PORTRAIT) {
-            remoteHeight = Math.max(viewWidth, viewHeight);
-        } else if (connection.getRdpResType() == Constants.VNC_GEOM_SELECT_NATIVE_LANDSCAPE) {
-            remoteHeight = Math.min(viewWidth, viewHeight);
-        }
-        // We make the resolution even if it is odd.
-        if (remoteHeight % 2 == 1) remoteHeight--;
         return remoteHeight;
     }
 
