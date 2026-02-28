@@ -1310,6 +1310,12 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             return;
         }
 
+        // Update displayRect to reflect the new screen dimensions after rotation
+        Display display = getWindowManager().getDefaultDisplay();
+        Rect rect = new Rect();
+        display.getRectSize(rect);
+        canvas.setDisplayRect(rect);
+
         // Its quite common to see NullPointerExceptions here when this function is called
         // at the point of disconnection. Hence, we catch and ignore the error.
 //        float oldScale = canvas.canvasZoomer.getZoomFactor();
