@@ -995,7 +995,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         if (action == MotionEvent.ACTION_UP) {
             if (!inSwiping && !inScaling && secondPointerWasDown) {
                 pointer.rightButtonDown(getX(e), getY(e), meta);
-                SystemClock.sleep(100);
+                SystemClock.sleep(50);
                 pointer.releaseButton(getX(e), getY(e), meta);
 
                 secondPointerWasDown = false;
@@ -1012,14 +1012,14 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                     activity.toggleGestureLayer();
                     canvas.getHandler().postDelayed(() -> {
                         activity.hideGestureLayer();
-                    }, 2000);
+                    }, 1000);
                     
                     if (touchpadFeedback) {
                         activity.sendShortVibration();
                     }
                 } else {
                     pointer.middleButtonDown(getX(e), getY(e), meta);
-                    SystemClock.sleep(100);
+                    SystemClock.sleep(50);
                     pointer.releaseButton(getX(e), getY(e), meta);
                 }
 
@@ -1049,14 +1049,14 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                 // release the drag button down
                 pointer.releaseButton(getX(e), getY(e), meta);
 
-                SystemClock.sleep(100);
+                SystemClock.sleep(50);
 
-                if (dragMode && totalMoveX < 8 && totalMoveY < 8) {
+                if (totalMoveX < 8 && totalMoveY < 8) {
                     // if the double tap performed without any movement, perform a additional click
                     // to form a double click. note that the first click is performed during the drag
 
                     pointer.leftButtonDown(getX(e), getY(e), meta);
-                    SystemClock.sleep(100);
+                    SystemClock.sleep(50);
                     pointer.releaseButton(getX(e), getY(e), meta);
                 }
 

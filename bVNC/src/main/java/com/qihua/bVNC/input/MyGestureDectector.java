@@ -70,6 +70,7 @@ public class MyGestureDectector
      */
     private boolean mIgnoreMultitouch;
     private AtomicBoolean mIgnoreNextMove;
+    private final float DOUBLE_TAP_CONFIG_MULTIPLIER = 5f;
 
     /**
      * Creates a GestureDetector with the supplied listener.
@@ -162,7 +163,7 @@ public class MyGestureDectector
             final ViewConfiguration configuration = ViewConfiguration.get(context);
             touchSlop = configuration.getScaledTouchSlop();
             largeTouchSlop = (int)(density * LARGE_TOUCH_SLOP + 0.5f);
-            doubleTapSlop = (int) ((configuration.getScaledDoubleTapSlop() * 2f) * density);
+            doubleTapSlop = (int) ((configuration.getScaledDoubleTapSlop() * DOUBLE_TAP_CONFIG_MULTIPLIER) * density);
         }
         mTouchSlopSquare = touchSlop;
         mLargeTouchSlopSquare = largeTouchSlop;
