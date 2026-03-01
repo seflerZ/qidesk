@@ -853,30 +853,30 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                             inertiaStartTime = System.currentTimeMillis();
                         }
 
-                        // 添加当前触摸点到分析器，仅在单指下有效
-                        if (e.getPointerCount() == 1 && !detectImmersiveRange(e.getX(), e.getY())) {
-                            touchMovementAnalyzer.addTouchPoint(e.getX(), e.getY());
-
-                            // 强化版dragHelped功能：支持普通移动模式下的临时放大
-                            if (dragHelpEnabled) {
-                                boolean isSlowMovement = touchMovementAnalyzer.analyzeMovement();
-
-                                if (isSlowMovement && canvas.getZoomFactor() < 1.5f) {
-                                    // 检测到慢速移动，启用临时放大
-                                    lastZoomFactor = canvas.getZoomFactor();
-                                    canvas.scaler.changeZoom(activity, 2f / canvas.getZoomFactor(), pointer.getX(), pointer.getY());
-                                    dragHelped = true;
-                                } else if (dragHelped && !isSlowMovement) {
-                                    // 临时放大已结束，恢复原始缩放比例
-                                    canvas.scaler.changeZoom(activity, lastZoomFactor / canvas.getZoomFactor(), pointer.getX(), pointer.getY());
-                                    dragHelped = false;
-                                }
-                            }
-                        }
-
                         GeneralUtils.debugLog(debugLogging, TAG, "onTouchEvent: ACTION_MOVE");
                         // Send scroll up/down events if swiping is happening.
                         if (dragMode || rightDragMode || middleDragMode) {
+                            // 添加当前触摸点到分析器，仅在单指下有效
+                            if (e.getPointerCount() == 1 && !detectImmersiveRange(e.getX(), e.getY())) {
+                                touchMovementAnalyzer.addTouchPoint(e.getX(), e.getY());
+
+                                // 强化版dragHelped功能：支持普通移动模式下的临时放大
+                                if (dragHelpEnabled) {
+                                    boolean isSlowMovement = touchMovementAnalyzer.analyzeMovement();
+
+                                    if (isSlowMovement && canvas.getZoomFactor() < 1.5f) {
+                                        // 检测到慢速移动，启用临时放大
+                                        lastZoomFactor = canvas.getZoomFactor();
+                                        canvas.scaler.changeZoom(activity, 2f / canvas.getZoomFactor(), pointer.getX(), pointer.getY());
+                                        dragHelped = true;
+                                    } else if (dragHelped && !isSlowMovement) {
+                                        // 临时放大已结束，恢复原始缩放比例
+                                        canvas.scaler.changeZoom(activity, lastZoomFactor / canvas.getZoomFactor(), pointer.getX(), pointer.getY());
+                                        dragHelped = false;
+                                    }
+                                }
+                            }
+
                             if (totalMoveY == 0 && totalMoveX == 0) {
                                 if (dragMode) {
                                     pointer.leftButtonDown(getX(e), getY(e), meta);

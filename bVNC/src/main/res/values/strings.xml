@@ -948,7 +948,7 @@ Below that is where you configure your connection.
     <string name="touchpad_edge_wheel_hint">Swipe to scroll and click to call soft keyboard.</string>
     <string name="touchpad_cursor_speed">Cursor Speed</string>
     <string name="drag_help_enabled">Smart Zoom Assist</string>
-    <string name="drag_help_enabled_hint">Temporarily enlarge screen during slow finger movements(both moving and dragging).</string>
+    <string name="drag_help_enabled_hint">Temporarily zooms in when dragging slowly to help select text</string>
 
     <string name="extrakeys_pref">Extra Key Customization</string>
     <string name="pref_extrakeys_vertical_pref">Configs for Vertical Screen</string>
