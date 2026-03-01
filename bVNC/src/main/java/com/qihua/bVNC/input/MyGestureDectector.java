@@ -162,7 +162,7 @@ public class MyGestureDectector
             final ViewConfiguration configuration = ViewConfiguration.get(context);
             touchSlop = configuration.getScaledTouchSlop();
             largeTouchSlop = (int)(density * LARGE_TOUCH_SLOP + 0.5f);
-            doubleTapSlop = (int) (configuration.getScaledDoubleTapSlop() * density + 0.5f);
+            doubleTapSlop = (int) ((configuration.getScaledDoubleTapSlop() * 2f) * density);
         }
         mTouchSlopSquare = touchSlop;
         mLargeTouchSlopSquare = largeTouchSlop;
