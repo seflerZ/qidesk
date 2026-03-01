@@ -869,10 +869,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                                         lastZoomFactor = canvas.getZoomFactor();
                                         canvas.scaler.changeZoom(activity, 2f / canvas.getZoomFactor(), pointer.getX(), pointer.getY());
                                         dragHelped = true;
-                                    } else if (dragHelped && !isSlowMovement) {
-                                        // 临时放大已结束，恢复原始缩放比例
-                                        canvas.scaler.changeZoom(activity, lastZoomFactor / canvas.getZoomFactor(), pointer.getX(), pointer.getY());
-                                        dragHelped = false;
                                     }
                                 }
                             }
@@ -1062,6 +1058,12 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                     pointer.leftButtonDown(getX(e), getY(e), meta);
                     SystemClock.sleep(100);
                     pointer.releaseButton(getX(e), getY(e), meta);
+                }
+
+                if (dragHelped) {
+                    // 临时放大已结束，恢复原始缩放比例
+                    canvas.scaler.changeZoom(activity, lastZoomFactor / canvas.getZoomFactor(), pointer.getX(), pointer.getY());
+                    dragHelped = false;
                 }
 
                 endDragModesAndScrolling();
