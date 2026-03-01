@@ -1,6 +1,16 @@
 apply plugin: 'com.android.application'
 
 android {
+    signingConfigs {
+        release {
+            storeFile file("/home/sefler/Documents/qihua-release.jks")
+            storePassword "67836678"
+            keyAlias "key0"
+            keyPassword "67836678"
+        }
+    }
+
+
     compileSdkVersion compileApi
 
     namespace 'com.qihua.rmt'
@@ -35,6 +45,7 @@ android {
 //            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         release {
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.txt'
         }

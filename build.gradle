@@ -16,6 +16,9 @@ allprojects {
         mavenCentral()
         google()
         maven { url 'https://jitpack.io' }
+        flatDir {
+            dirs '/home/sefler/remote-desktop-clients/remoteClientLib'
+        }
     }
 }
 
