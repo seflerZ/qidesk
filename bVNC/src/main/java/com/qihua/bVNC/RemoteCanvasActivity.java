@@ -1306,12 +1306,12 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         Log.d(TAG, "correctAfterRotation");
         canvas.waitUntilInflated();
 
-        if (canvas.scaler == null) {
+        if (canvas.scaler == null || canvas.isTouchpad()) {
             return;
         }
 
         // Update displayRect to reflect the new screen dimensions after rotation
-        Display display = getWindowManager().getDefaultDisplay();
+        Display display = getDisplayFromCanvas(canvas);
         Rect rect = new Rect();
         display.getRectSize(rect);
         canvas.setDisplayRect(rect);
