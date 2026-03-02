@@ -331,7 +331,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     @Override
     public void surfaceChanged(@NonNull SurfaceHolder holder, int format, int width, int height) {
         if (!outDisplay && touchpad) {
-            drawTouchpadHint();
+            drawTouchpadHint(width, height);
         }
     }
 
@@ -2338,6 +2338,10 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     }
 
     public void drawTouchpadHint() {
+        drawTouchpadHint(displayRect.width(), displayRect.height());
+    }
+
+    public void drawTouchpadHint(int width, int height) {
         Paint paint = new Paint();
 
         Typeface font = Typeface.create(Typeface.DEFAULT, Typeface.BOLD);
@@ -2353,10 +2357,10 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                 synchronized (surfaceHolder) {
                     String text = getContext().getString(R.string.use_as_touchpad);
                     float textWidth = paint.measureText(text);
-                    float x = (displayRect.width() - textWidth) / 2f;
+                    float x = (width - textWidth) / 2f;
 
                     canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
-                    canvas.drawText(text, x, displayRect.height() / 2, paint);
+                    canvas.drawText(text, x, height / 2f, paint);
                 }
             }
         } finally {
