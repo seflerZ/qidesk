@@ -65,9 +65,7 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
         // muse delay some time because the cursor is not initialized yet
         canvas.handler.postDelayed(() -> {
             // 将光标移动到屏幕中间顶部
-            moveCursorToTopCenter();
-
-            // 隐藏光标
+            // 直接隐藏光标，不移动到固定位置
             canvas.hideCursor();
         }, 3000);
     }
@@ -209,6 +207,7 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
         GeneralUtils.debugLog(debugLogging, TAG, "Touch Down, pointerId: " + pointerId + ", contactId: " + contactId + ", contactIdMap size after allocation: " + contactIdMap.size());
         
         // 发送触摸按下事件 - 使用反射来调用适当的触摸方法
+        pointer.movePointer(x, y);
         pointer.touchDown(x, y, contactId);
     }
 
@@ -257,6 +256,7 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
                 GeneralUtils.debugLog(debugLogging, TAG, "Touch Move: x=" + x + ", y=" + y + ", contactId=" + contactId);
                 
                 // 发送触摸更新事件
+                // Move cursor to touch position before sending touch up event
                 pointer.touchUpdate(x, y, contactId);
             } else {
                 GeneralUtils.debugLog(debugLogging, TAG, "Touch Move: Skipping pointerId " + pointerId + ", not in contactIdMap");
@@ -282,6 +282,8 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
 
             // The FreeRDP bug: if the up event takes too far away from the update event, up event will be ignored
             // we send an extra update event near the up event to avoid that
+            // Move cursor to touch position before sending touch up event
+            pointer.movePointer(x, y);
             pointer.touchUpdate(x, y, contactId);
             SystemClock.sleep(10);
             pointer.touchUp(x, y, contactId);
