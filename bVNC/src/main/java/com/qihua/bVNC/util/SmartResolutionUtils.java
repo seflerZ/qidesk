@@ -18,29 +18,44 @@ public class SmartResolutionUtils {
     /**
      * 计算智能分辨率
      * 基于PPI分档位，原始大小乘以对应系数
-     * 
+     *
      * @param context 应用上下文
      * @return 包含宽度和高度的整数数组 [width, height]
      */
     public static int[] calculateSmartResolution(Context context) {
         try {
             WindowManager windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
-            
+
             DisplayMetrics metrics = new DisplayMetrics();
             windowManager.getDefaultDisplay().getRealMetrics(metrics);
-            
+
+            return calculateSmartResolution(metrics);
+        } catch (Exception e) {
+            Log.e(TAG, "Error calculating smart resolution: " + e.getMessage(), e);
+            return new int[]{1920, 1080}; // 出错时返回默认值
+        }
+    }
+
+    /**
+     * 计算智能分辨率（支持指定显示器的Metrics）
+     * 基于PPI分档位，原始大小乘以对应系数
+     *
+     * @param metrics 显示器的DisplayMetrics
+     * @return 包含宽度和高度的整数数组 [width, height]
+     */
+    public static int[] calculateSmartResolution(DisplayMetrics metrics) {
+        try {
             int baseWidth = metrics.widthPixels;
             int baseHeight = metrics.heightPixels;
             float density = metrics.density;
-            int orientation = context.getResources().getConfiguration().orientation;
-            
+
             // 计算PPI
             float xDpi = metrics.xdpi;
             float yDpi = metrics.ydpi;
             float ppi = (xDpi + yDpi) / 2.0f;
-            
-            Log.d(TAG, "Screen PPI: " + ppi + ", Density: " + density);
-            
+
+            Log.d(TAG, "Screen PPI: " + ppi + ", Density: " + density + ", Width: " + baseWidth + ", Height: " + baseHeight);
+
             // 基于PPI分档位确定缩放系数
             float scaleCoefficient = getPpiScaleCoefficient(ppi);
 
@@ -49,11 +64,31 @@ public class SmartResolutionUtils {
             int smartHeight = Math.round(baseHeight / scaleCoefficient);
 
             return new int[]{smartWidth, smartHeight};
-            
+
         } catch (Exception e) {
             Log.e(TAG, "Error calculating smart resolution: " + e.getMessage(), e);
             return new int[]{1920, 1080}; // 出错时返回默认值
         }
+    }
+
+    /**
+     * 计算智能分辨率（仅使用宽度和高度）
+     * 使用默认的缩放系数
+     *
+     * @param width  显示器宽度
+     * @param height 显示器高度
+     * @return 包含宽度和高度的整数数组 [width, height]
+     */
+    public static int[] calculateSmartResolution(int width, int height) {
+        // 外接显示器通常PPI较低，使用默认缩放系数1.0
+        float scaleCoefficient = 1.0f;
+
+        Log.d(TAG, "Calculating smart resolution from dimensions: " + width + "x" + height);
+
+        int smartWidth = Math.round(width / scaleCoefficient);
+        int smartHeight = Math.round(height / scaleCoefficient);
+
+        return new int[]{smartWidth, smartHeight};
     }
     
     /**

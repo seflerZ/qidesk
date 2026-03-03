@@ -2044,7 +2044,20 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         }
 
         // 计算新的智能分辨率
-        int[] newResolution = SmartResolutionUtils.calculateSmartResolution(this);
+        // 在外接显示器模式下，使用外接显示器的分辨率，而不是手机屏幕的分辨率
+        int[] newResolution;
+        if (canvas.isOutDisplay()) {
+            // 外接显示器模式：从canvas的displayRect获取分辨率
+            DisplayMetrics metrics = new DisplayMetrics();
+            Display display = getDisplayFromCanvas(canvas);
+            display.getRealMetrics(metrics);
+            newResolution = SmartResolutionUtils.calculateSmartResolution(metrics);
+            android.util.Log.d(TAG, "checkAndAdjustRemoteResolution: external display mode, using external display metrics");
+        } else {
+            // 普通模式：使用默认显示器的分辨率
+            newResolution = SmartResolutionUtils.calculateSmartResolution(this);
+        }
+
         int newWidth = newResolution[0];
         int newHeight = newResolution[1];
 

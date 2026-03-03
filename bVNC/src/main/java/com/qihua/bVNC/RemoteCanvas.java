@@ -1161,7 +1161,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         } else if (connection.getRdpResType() == Constants.RDP_GEOM_2K) {
             remoteWidth = 2560;
         } else if (connection.getRdpResType() == Constants.RDP_GEOM_SELECT_SMART) {
-            int smartWidth = SmartResolutionUtils.calculateSmartResolution(getContext())[0];
+            // 在外接显示器模式下，使用外接显示器的分辨率
+            int smartWidth = calculateSmartResolutionWidth();
             remoteWidth = smartWidth;
         } else {
             remoteWidth = 1920;
@@ -1187,13 +1188,40 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         } else if (connection.getRdpResType() == Constants.RDP_GEOM_2K) {
             remoteHeight = 1440;
         } else if (connection.getRdpResType() == Constants.RDP_GEOM_SELECT_SMART) {
-            int smartHeight = SmartResolutionUtils.calculateSmartResolution(getContext())[1];
+            // 在外接显示器模式下，使用外接显示器的分辨率
+            int smartHeight = calculateSmartResolutionHeight();
             remoteHeight = smartHeight;
         } else {
             remoteHeight = 1080;
         }
 
         return remoteHeight;
+    }
+
+    /**
+     * 计算智能分辨率的宽度
+     * 在外接显示器模式下，使用外接显示器的分辨率
+     */
+    private int calculateSmartResolutionWidth() {
+        if (outDisplay) {
+            // 外接显示器模式：使用displayRect的尺寸
+            return SmartResolutionUtils.calculateSmartResolution(displayRect.width(), displayRect.height())[0];
+        } else {
+            return SmartResolutionUtils.calculateSmartResolution(getContext())[0];
+        }
+    }
+
+    /**
+     * 计算智能分辨率的高度
+     * 在外接显示器模式下，使用外接显示器的分辨率
+     */
+    private int calculateSmartResolutionHeight() {
+        if (outDisplay) {
+            // 外接显示器模式：使用displayRect的尺寸
+            return SmartResolutionUtils.calculateSmartResolution(displayRect.width(), displayRect.height())[1];
+        } else {
+            return SmartResolutionUtils.calculateSmartResolution(getContext())[1];
+        }
     }
 
     void showMessage(final String error) {
