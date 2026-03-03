@@ -65,7 +65,8 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
         // muse delay some time because the cursor is not initialized yet
         canvas.handler.postDelayed(() -> {
             // 将光标移动到屏幕中间顶部
-            // 直接隐藏光标，不移动到固定位置
+            moveCursorToTopCenter();
+            // 隐藏光标
             canvas.hideCursor();
         }, 3000);
     }
