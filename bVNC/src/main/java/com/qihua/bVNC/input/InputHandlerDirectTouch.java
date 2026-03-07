@@ -22,6 +22,7 @@ package com.qihua.bVNC.input;
 
 import android.gesture.GestureOverlayView;
 import android.os.SystemClock;
+import android.view.InputDevice;
 import android.view.MotionEvent;
 import android.view.View;
 
@@ -111,7 +112,10 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
      */
     @Override
     public boolean onTouchEvent(MotionEvent e) {
-        GeneralUtils.debugLog(debugLogging, TAG, "onTouchEvent, e: " + e);
+        boolean pResult = super.onTouchEvent(e);
+        if (pResult) {
+            return true;
+        }
 
         GestureOverlayView gestureOverlay = activity.findViewById(R.id.gestureOverlay);
 
@@ -136,7 +140,6 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
         }
 
         final int action = e.getActionMasked();
-        final int meta = e.getMetaState();
 
         FpsCounter fpsCounter = canvas.getFpsCounter();
         if (fpsCounter != null) {
