@@ -749,7 +749,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             return true; // 消费事件，不传递给其他组件
         }
 
-        canvas.hideCursor();
         return false;
     }
 

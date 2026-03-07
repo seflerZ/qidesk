@@ -112,6 +112,8 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
      */
     @Override
     public boolean onTouchEvent(MotionEvent e) {
+        canvas.hideCursor();
+        
         boolean pResult = super.onTouchEvent(e);
         if (pResult) {
             return true;
