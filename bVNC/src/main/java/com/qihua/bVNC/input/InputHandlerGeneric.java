@@ -323,7 +323,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         long currentTime = System.currentTimeMillis();
         // 使用指针加速助手计算加速倍数
         float speedMultiplier = pointerAccelerationHelper.calculateAccelerationMultiplier(
-            currentTime, diffX, diffY, 1.0f);
+            currentTime, diffX, diffY, 1.6f);
         
         // Make distanceX/Y display density independent and apply acceleration
         float sensitivity = pointer.getSensitivity();
