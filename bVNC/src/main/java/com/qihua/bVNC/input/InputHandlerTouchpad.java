@@ -22,7 +22,6 @@ package com.qihua.bVNC.input;
 
 import android.gesture.GestureOverlayView;
 import android.os.SystemClock;
-import android.view.InputDevice;
 import android.view.MotionEvent;
 import android.view.View;
 
@@ -432,7 +431,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                 return true;
             }
 
-            Pair<Integer, Integer> pointerPos = getPointerPos(-cumulatedX, -cumulatedY);
+            Pair<Integer, Integer> pointerPos = computePointerPos(-cumulatedX, -cumulatedY);
     
             pointer.moveMouse(pointerPos.first, pointerPos.second, meta);
     

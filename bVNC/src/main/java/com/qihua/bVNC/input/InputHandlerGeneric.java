@@ -267,20 +267,20 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
     private long lastPointerEventTime = 0;
     protected static final float SPEED_ACCELERATION_FACTOR = 0.5f; // 加速度因子
-    protected static final float MAX_ACCELERATION = 2.5f; // 最大加速度乘数
+    protected static final float MAX_ACCELERATION = 5f; // 最大加速度乘数
     
     // 添加指针加速助手
     protected PointerAccelerationHelper pointerAccelerationHelper;
 
-    protected Pair<Integer, Integer> getPointerPos(float diffX, float diffY) {
+    protected Pair<Integer, Integer> computePointerPos(float diffX, float diffY) {
         long currentTime = System.currentTimeMillis();
         float speedMultiplier = pointerAccelerationHelper.calculateAccelerationMultiplier(
-                currentTime, diffX, diffY, 1.6f);
+                currentTime, diffX, diffY, 1.5f);
 
         // Make distanceX/Y display density independent and apply acceleration
         float sensitivity = pointer.getSensitivity();
-        int x = (int) (diffX * sensitivity * speedMultiplier / canvas.getDisplayDensity() + pointer.pointerX);
-        int y = (int) (diffY * sensitivity * speedMultiplier / canvas.getDisplayDensity() + pointer.pointerY);
+        int x = Math.round(diffX * sensitivity * speedMultiplier / canvas.getDisplayDensity() + pointer.pointerX);
+        int y = Math.round(diffY * sensitivity * speedMultiplier / canvas.getDisplayDensity() + pointer.pointerY);
 
         return new Pair<>(x, y);
     }
@@ -334,7 +334,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             fpsCounter.countInput();
         }
 
-        Pair<Integer, Integer> pointerPos = getPointerPos(diffX, diffY);
+        Pair<Integer, Integer> pointerPos = computePointerPos(diffX, diffY);
         int x = pointerPos.first;
         int y = pointerPos.second;
 
