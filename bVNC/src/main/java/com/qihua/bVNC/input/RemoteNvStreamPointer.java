@@ -53,11 +53,11 @@ public class RemoteNvStreamPointer extends RemotePointer {
     }
 
     private void sendButtonDownOrMoveButtonDown(int x, int y, int metaState) {
-        if (prevPointerMask == pointerMask) {
-            moveMouseButtonDown(x, y, metaState);
-        } else {
-            sendPointerEvent(x, y, metaState, false);
-        }
+//        if (prevPointerMask == pointerMask) {
+//            moveMouseButtonDown(x, y, metaState);
+//        } else {
+        sendPointerEvent(x, y, metaState, false);
+//        }
     }
 
     @Override
@@ -168,7 +168,7 @@ public class RemoteNvStreamPointer extends RemotePointer {
             prevPointerMask = pointerMask;
         }
 
-        canvas.invalidateMousePosition();
+//        canvas.invalidateMousePosition();
         pointerX = x;
         pointerY = y;
 
@@ -183,9 +183,11 @@ public class RemoteNvStreamPointer extends RemotePointer {
         } else if (pointerY > canvas.getImageHeight()) {
             pointerY = canvas.getImageHeight();
         }
-//        canvas.invalidateMousePosition();
+
         GeneralUtils.debugLog(this.debugLogging, TAG, "Sending absolute mouse event at: " + pointerX +
                 ", " + pointerY + ", pointerMask: " + pointerMask);
         protocomm.writePointerEvent(pointerX, pointerY, combinedMetaState, pointerMask, false);
+
+        canvas.invalidateMousePosition();
     }
 }

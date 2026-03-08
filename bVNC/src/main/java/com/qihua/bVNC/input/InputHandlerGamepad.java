@@ -195,6 +195,11 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
 
     @Override
     public boolean onTouchEvent(MotionEvent e) {
+        boolean bResult = super.onTouchEvent(e);
+        if (bResult) {
+            return true;
+        }
+
         canvas.hideCursor();
 
         GeneralUtils.debugLog(debugLogging, TAG, "onTouchEvent, e: " + e);

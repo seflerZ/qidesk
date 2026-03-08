@@ -596,6 +596,9 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
         pointer = new RemoteNvStreamPointer(nvcomm, RemoteCanvas.this, handler, App.debugLog);
         keyboard = new RemoteNvStreamKeyboard(nvcomm, RemoteCanvas.this, handler, App.debugLog);
+
+        // in order to support fractional sensitivity, we use the integer divide 10 to make it a float.
+        pointer.setSensitivity(Utils.querySharedPreferenceInt(getContext(), Constants.touchpadCursorSpeed, 10) / 10);
     }
 
     private void startNvStreamConnection(SurfaceHolder surfaceHolder) throws Exception {
@@ -738,6 +741,9 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                 Constants.rAltAsIsoL3ShiftTag);
         keyboard = new RemoteVncKeyboard(rfbconn, RemoteCanvas.this, handler,
                 rAltAsIsoL3Shift, App.debugLog);
+
+        // in order to support fractional sensitivity, we use the integer divide 10 to make it a float.
+        pointer.setSensitivity(Utils.querySharedPreferenceInt(getContext(), Constants.touchpadCursorSpeed, 10) / 10);
     }
 
     /**

@@ -57,11 +57,11 @@ public class RemoteRdpPointer extends RemotePointer {
     }
 
     private void sendButtonDownOrMoveButtonDown(int x, int y, int metaState) {
-        if (prevPointerMask == pointerMask) {
-            moveMouseButtonDown(x, y, metaState);
-        } else {
-            sendPointerEvent(x, y, metaState, false);
-        }
+//        if (prevPointerMask == pointerMask) {
+//            moveMouseButtonDown(x, y, metaState);
+//        } else {
+        sendPointerEvent(x, y, metaState, false);
+//        }
     }
 
     @Override
@@ -192,9 +192,9 @@ public class RemoteRdpPointer extends RemotePointer {
 //                ", " + pointerY + ", pointerMask: " + pointerMask);
         protocomm.writePointerEvent(pointerX, pointerY, combinedMetaState, pointerMask, false);
 
-        if (isMoving) {
+//        if (isMoving) {
             canvas.invalidateMousePosition();
-        }
+//        }
     }
 
 }

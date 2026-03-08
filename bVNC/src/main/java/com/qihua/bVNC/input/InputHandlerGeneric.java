@@ -748,7 +748,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         InputDevice device = e.getDevice();
         if (device == null) return false;
 
-        if ((device.getSources() & InputDevice.SOURCE_MOUSE) == InputDevice.SOURCE_MOUSE) {
+        if (((device.getSources() & InputDevice.SOURCE_MOUSE) == InputDevice.SOURCE_MOUSE)
+                || (device.getSources() & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK) {
             if ((e.getButtonState() & MotionEvent.BUTTON_PRIMARY) != 0
                     && e.getY() < canvas.getHeight() - 20
                     && e.getAction() == MotionEvent.ACTION_DOWN) {

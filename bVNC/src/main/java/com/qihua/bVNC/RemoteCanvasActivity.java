@@ -1654,14 +1654,15 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             inputHandler.setup();
 
             connection.setInputMode(input.getId());
-            if (input.getId().equals(InputHandlerTouchpad.ID)) {
+//            if (input.getId().equals(InputHandlerTouchpad.ID)) {
                 connection.setFollowMouse(true);
                 connection.setFollowPan(true);
-            } else {
-                connection.setFollowMouse(false);
-                connection.setFollowPan(false);
-                canvas.getPointer().setRelativeEvents(false);
-            }
+                canvas.getPointer().setRelativeEvents(true);
+//            } else {
+//                connection.setFollowMouse(false);
+//                connection.setFollowPan(false);
+//                canvas.getPointer().setRelativeEvents(false);
+//            }
 
             showPanningState(true);
             connection.save(this);
