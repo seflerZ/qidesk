@@ -29,6 +29,7 @@ import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.widget.FrameLayout;
 
+import androidx.core.util.Pair;
 import androidx.core.view.InputDeviceCompat;
 
 import com.qihua.bVNC.Constants;
@@ -271,6 +272,19 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     // 添加指针加速助手
     protected PointerAccelerationHelper pointerAccelerationHelper;
 
+    protected Pair<Integer, Integer> getPointerPos(float diffX, float diffY) {
+        long currentTime = System.currentTimeMillis();
+        float speedMultiplier = pointerAccelerationHelper.calculateAccelerationMultiplier(
+                currentTime, diffX, diffY, 1.5f);
+
+        // Make distanceX/Y display density independent and apply acceleration
+        float sensitivity = pointer.getSensitivity();
+        int x = (int) (diffX * sensitivity * speedMultiplier / canvas.getDisplayDensity() + pointer.pointerX);
+        int y = (int) (diffY * sensitivity * speedMultiplier / canvas.getDisplayDensity() + pointer.pointerY);
+
+        return new Pair<>(x, y);
+    }
+
     /**
      * Handles actions performed by a mouse-like device.
      * @param e touch or generic motion event
@@ -294,7 +308,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             return true;
         }
 
-        if (pointer.pointerY >= canvas.getImageHeight()
+        if (pointer.pointerY >= canvas.getHeight()
                 && action == MotionEvent.ACTION_DOWN
                 && canvas.isOutDisplay()) {
             pointer.pointerY = pointer.pointerY - 20;
@@ -320,16 +334,10 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             fpsCounter.countInput();
         }
 
-        long currentTime = System.currentTimeMillis();
-        // 使用指针加速助手计算加速倍数
-        float speedMultiplier = pointerAccelerationHelper.calculateAccelerationMultiplier(
-            currentTime, diffX, diffY, 1.6f);
-        
-        // Make distanceX/Y display density independent and apply acceleration
-        float sensitivity = pointer.getSensitivity();
-        int x = (int) (diffX * sensitivity * speedMultiplier + pointer.pointerX);
-        int y = (int) (diffY * sensitivity * speedMultiplier + pointer.pointerY);
-        
+        Pair<Integer, Integer> pointerPos = getPointerPos(diffX, diffY);
+        int x = pointerPos.first;
+        int y = pointerPos.second;
+
         switch (action) {
             // If a mouse button was pressed or mouse was moved.
             case MotionEvent.ACTION_DOWN:
@@ -741,7 +749,9 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         if (device == null) return false;
 
         if ((device.getSources() & InputDevice.SOURCE_MOUSE) == InputDevice.SOURCE_MOUSE) {
-            if ((e.getButtonState() & MotionEvent.BUTTON_PRIMARY) != 0) {
+            if ((e.getButtonState() & MotionEvent.BUTTON_PRIMARY) != 0
+                    && e.getY() < canvas.getHeight() - 20
+                    && e.getAction() == MotionEvent.ACTION_DOWN) {
                 touchpad.post(() -> touchpad.startPointerCapture());
             }
 

@@ -26,6 +26,8 @@ import android.view.InputDevice;
 import android.view.MotionEvent;
 import android.view.View;
 
+import androidx.core.util.Pair;
+
 import com.qihua.bVNC.Constants;
 import com.qihua.bVNC.FpsCounter;
 import com.qihua.bVNC.RemoteCanvas;
@@ -429,18 +431,10 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             if (System.currentTimeMillis() - lastScrollTimeMs < POINTER_SAMPLING_MS) {
                 return true;
             }
+
+            Pair<Integer, Integer> pointerPos = getPointerPos(-cumulatedX, -cumulatedY);
     
-            // Calculate swipe speed and apply acceleration using the helper
-            long currentTime = System.currentTimeMillis();
-            // 使用指针加速助手计算加速倍数，单指滑动的基础倍数为0.6f
-            float speedMultiplier = pointerAccelerationHelper.calculateAccelerationMultiplier(
-                currentTime, cumulatedX, cumulatedY, 0.5f);
-    
-            // Compute the absolute new mouse position with speed-based acceleration.
-            int newX = Math.round(pointer.getX() + -cumulatedX * speedMultiplier * canvas.getZoomFactor());
-            int newY = Math.round(pointer.getY() + -cumulatedY * speedMultiplier * canvas.getZoomFactor());
-    
-            pointer.moveMouse(newX, newY, meta);
+            pointer.moveMouse(pointerPos.first, pointerPos.second, meta);
     
             canvas.movePanToMakePointerVisible();
     
