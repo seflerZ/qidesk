@@ -275,7 +275,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     protected Pair<Integer, Integer> getPointerPos(float diffX, float diffY) {
         long currentTime = System.currentTimeMillis();
         float speedMultiplier = pointerAccelerationHelper.calculateAccelerationMultiplier(
-                currentTime, diffX, diffY, 1.5f);
+                currentTime, diffX, diffY, 1.6f);
 
         // Make distanceX/Y display density independent and apply acceleration
         float sensitivity = pointer.getSensitivity();

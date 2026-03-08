@@ -1507,7 +1507,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
                     if (id == R.id.itemInputTouchpad) {
                         inputModeHandlers[i] = new InputHandlerTouchpad(this, canvas, touchpad, canvas.getPointer(), App.debugLog);
                     } else if (id == R.id.itemInputDirectTouch) {
-                        inputModeHandlers[i] = new InputHandlerDirectTouch(this, canvas, canvas.getPointer(), App.debugLog);
+                        inputModeHandlers[i] = new InputHandlerDirectTouch(this, canvas, touchpad, canvas.getPointer(), App.debugLog);
                     } else if (id == R.id.itemInputGamepad) {
                         // 创建游戏手柄处理器，它会在内部创建适当的RemoteGamepad实例
                         inputModeHandlers[i] = new InputHandlerGamepad(this, canvas, canvas.getPointer(), App.debugLog);

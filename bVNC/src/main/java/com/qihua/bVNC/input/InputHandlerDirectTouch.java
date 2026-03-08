@@ -53,9 +53,9 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
     private float lastPanY = 0;
     private boolean edgeEnabled = true;
 
-    public InputHandlerDirectTouch(RemoteCanvasActivity activity, RemoteCanvas canvas,
+    public InputHandlerDirectTouch(RemoteCanvasActivity activity, RemoteCanvas canvas, RemoteCanvas touchpad,
                                    RemotePointer pointer, boolean debugLogging) {
-        super(activity, canvas, canvas, pointer, debugLogging);
+        super(activity, canvas, touchpad, pointer, debugLogging);
 
         edgeEnabled = Utils.querySharedPreferenceBoolean(canvas.getContext()
                 , Constants.touchpadEdgeWheel, true) && BuildConfig.EDGE_ENABLED;
