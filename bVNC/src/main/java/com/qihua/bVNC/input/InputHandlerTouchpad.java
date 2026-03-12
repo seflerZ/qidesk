@@ -395,6 +395,8 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                     // 临时放大已结束，恢复原始缩放比例
                     canvas.scaler.changeZoom(activity, lastZoomFactor / canvas.getZoomFactor(), pointer.getX(), pointer.getY());
                     dragHelped = false;
+                    // 重置触摸分析器，避免下次拖拽立即触发放大
+                    touchMovementAnalyzer.reset();
                 }
 
                 endDragModesAndScrolling();

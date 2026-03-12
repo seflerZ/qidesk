@@ -130,10 +130,9 @@ public class TouchMovementAnalyzer {
     /**
      * 重置分析器状态
      */
-//    public void reset() {
-//        touchPoints.clear();
-//        isSlowMovementDetected = false;
-//        lastAnalysisTime = 0;
-//        GeneralUtils.debugLog(debugLogging, TAG, "Analyzer reset");
-//    }
-}
+public void reset() {
+touchPoints.clear();
+isSlowMovementDetected = false;
+lastAnalysisTime = 0;
+
+}}
