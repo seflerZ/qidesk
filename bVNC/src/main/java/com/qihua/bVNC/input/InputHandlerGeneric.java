@@ -272,10 +272,10 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     // 添加指针加速助手
     protected PointerAccelerationHelper pointerAccelerationHelper;
 
-    protected Pair<Integer, Integer> computePointerPos(float diffX, float diffY) {
+    protected Pair<Integer, Integer> computePointerPos(float diffX, float diffY, float base) {
         long currentTime = System.currentTimeMillis();
         float speedMultiplier = pointerAccelerationHelper.calculateAccelerationMultiplier(
-                currentTime, diffX, diffY, 1.5f);
+                currentTime, diffX, diffY, base);
 
         // Make distanceX/Y display density independent and apply acceleration
         float sensitivity = pointer.getSensitivity();
@@ -334,7 +334,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             fpsCounter.countInput();
         }
 
-        Pair<Integer, Integer> pointerPos = computePointerPos(diffX, diffY);
+        Pair<Integer, Integer> pointerPos = computePointerPos(diffX, diffY, 2.1f);
         int x = pointerPos.first;
         int y = pointerPos.second;
 

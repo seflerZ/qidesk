@@ -300,7 +300,6 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                     .setView(dialogView)
                     .setCancelable(true)
                     .setOnCancelListener(dialog -> {
-                        closeConnection();
                         handler.post(() ->
                                 Utils.showFatalErrorMessage(getContext(),
                                         getContext().getString(R.string.info_progress_dialog_aborted)));

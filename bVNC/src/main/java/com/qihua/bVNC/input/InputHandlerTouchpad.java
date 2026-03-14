@@ -433,7 +433,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                 return true;
             }
 
-            Pair<Integer, Integer> pointerPos = computePointerPos(-cumulatedX, -cumulatedY);
+            Pair<Integer, Integer> pointerPos = computePointerPos(-cumulatedX, -cumulatedY, 1.5f);
     
             pointer.moveMouse(pointerPos.first, pointerPos.second, meta);
     
