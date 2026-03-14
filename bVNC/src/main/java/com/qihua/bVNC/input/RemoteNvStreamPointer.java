@@ -52,30 +52,22 @@ public class RemoteNvStreamPointer extends RemotePointer {
         protocomm.writeTouchEvent(x, y, CONTACT_FLAG_CANCELED, contactId);
     }
 
-    private void sendButtonDownOrMoveButtonDown(int x, int y, int metaState) {
-        if (prevPointerMask == pointerMask) {
-            moveMouseButtonDown(x, y, metaState);
-        } else {
-            sendPointerEvent(x, y, metaState, false);
-        }
-    }
-
     @Override
     public void leftButtonDown(int x, int y, int metaState) {
         pointerMask = MOUSE_BUTTON_LEFT | POINTER_DOWN_MASK;
-        sendButtonDownOrMoveButtonDown(x, y, metaState);
+        sendPointerEvent(x, y, metaState, true);
     }
 
     @Override
     public void middleButtonDown(int x, int y, int metaState) {
         pointerMask = MOUSE_BUTTON_MIDDLE | POINTER_DOWN_MASK;
-        sendButtonDownOrMoveButtonDown(x, y, metaState);
+        sendPointerEvent(x, y, metaState, true);
     }
 
     @Override
     public void rightButtonDown(int x, int y, int metaState) {
         pointerMask = MOUSE_BUTTON_RIGHT | POINTER_DOWN_MASK;
-        sendButtonDownOrMoveButtonDown(x, y, metaState);
+        sendPointerEvent(x, y, metaState, true);
     }
 
     @Override
@@ -121,73 +113,29 @@ public class RemoteNvStreamPointer extends RemotePointer {
 
     @Override
     public void moveMouse(int x, int y, int metaState) {
-        pointerMask = MOUSE_BUTTON_MOVE | prevPointerMask;
+        pointerMask = MOUSE_BUTTON_MOVE;
         sendPointerEvent(x, y, metaState, true);
     }
 
     @Override
     public void moveMouseButtonDown(int x, int y, int metaState) {
-        pointerMask = MOUSE_BUTTON_MOVE | POINTER_DOWN_MASK;
+        pointerMask |= MOUSE_BUTTON_MOVE;
         sendPointerEvent(x, y, metaState, true);
     }
 
     @Override
     public void moveMouseButtonUp(int x, int y, int metaState) {
-        pointerMask = MOUSE_BUTTON_MOVE;
+        pointerMask = MOUSE_BUTTON_MOVE & ~POINTER_DOWN_MASK;
         sendPointerEvent(x, y, metaState, true);
     }
 
     @Override
     public void releaseButton(int x, int y, int metaState) {
-        pointerMask = MOUSE_BUTTON_MOVE;
+        if ((pointerMask & POINTER_DOWN_MASK) == 0) {
+            return;
+        }
+
+        pointerMask &= ~(POINTER_DOWN_MASK | MOUSE_BUTTON_MOVE);
         sendPointerEvent(x, y, metaState, false);
-        prevPointerMask = 0;
-    }
-
-    /**
-     * Sends a pointer event to the server.
-     *
-     * @param x
-     * @param y
-     * @param metaState
-     * @param isMoving
-     */
-    private void sendPointerEvent(int x, int y, int metaState, boolean isMoving) {
-
-        int combinedMetaState = metaState | canvas.getKeyboard().getMetaState();
-
-        // Save the previous pointer mask other than action_move, so we can
-        // send it with the pointer flag "not down" to clear the action.
-        if (!isMoving) {
-            // If this is a new mouse down event, release previous button pressed to avoid confusing the remote OS.
-            if (prevPointerMask != 0 && prevPointerMask != pointerMask) {
-                protocomm.writePointerEvent(pointerX, pointerY,
-                        combinedMetaState,
-                        prevPointerMask & ~POINTER_DOWN_MASK, false);
-            }
-            prevPointerMask = pointerMask;
-        }
-
-//        canvas.invalidateMousePosition();
-        pointerX = x;
-        pointerY = y;
-
-        // Do not let mouse pointer leave the bounds of the desktop.
-        if (pointerX < 0) {
-            pointerX = 0;
-        } else if (pointerX > canvas.getImageWidth()) {
-            pointerX = canvas.getImageWidth();
-        }
-        if (pointerY < 0) {
-            pointerY = 0;
-        } else if (pointerY > canvas.getImageHeight()) {
-            pointerY = canvas.getImageHeight();
-        }
-
-        GeneralUtils.debugLog(this.debugLogging, TAG, "Sending absolute mouse event at: " + pointerX +
-                ", " + pointerY + ", pointerMask: " + pointerMask);
-        protocomm.writePointerEvent(pointerX, pointerY, combinedMetaState, pointerMask, false);
-
-        canvas.invalidateMousePosition();
     }
 }

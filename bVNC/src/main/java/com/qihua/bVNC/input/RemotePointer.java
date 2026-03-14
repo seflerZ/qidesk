@@ -21,7 +21,6 @@ public abstract class RemotePointer {
      * Current state of "mouse" buttons
      */
     protected int pointerMask = 0;
-    protected int prevPointerMask = 0;
     protected RemoteCanvas canvas;
     protected Context context;
     protected Handler handler;
@@ -43,8 +42,6 @@ public abstract class RemotePointer {
         this.canvas = canvas;
         this.context = canvas.getContext();
         this.handler = handler;
-        //pointerX  = canvas.getImageWidth()/2;
-        //pointerY  = canvas.getImageHeight()/2;
         scroller = new MouseScroller();
         this.debugLogging = debugLogging;
     }
@@ -98,29 +95,9 @@ public abstract class RemotePointer {
      * Move mouse pointer to specified coordinates.
      */
     public void movePointer(int x, int y) {
-        //android.util.Log.d("RemotePointer", "movePointer");
-//        canvas.invalidateMousePosition();
         pointerX = x;
         pointerY = y;
-//        canvas.invalidateMousePosition();
         moveMouseButtonUp(x, y, 0);
-    }
-
-    /**
-     * If necessary move the pointer to be visible.
-     */
-    public void movePointerToMakeVisible() {
-        //android.util.Log.d("RemotePointer", "movePointerToMakeVisible");
-        if (canvas.getMouseFollowPan()) {
-            int absX = canvas.getAbsX();
-            int absY = canvas.getAbsY();
-            int vW = canvas.getVisibleDesktopWidth();
-            int vH = canvas.getVisibleDesktopHeight();
-            if (pointerX < absX || pointerX >= absX + vW ||
-                    pointerY < absY || pointerY >= absY + vH) {
-                movePointer(absX + vW / 2, absY + vH / 2);
-            }
-        }
     }
 
     /**
@@ -221,6 +198,35 @@ public abstract class RemotePointer {
             handler.postDelayed(this, delay);
 
         }
+    }
+
+    /**
+     * Sends a pointer event to the server.
+     *
+     * @param x
+     * @param y
+     * @param metaState
+     * @param isMoving
+     */
+    protected void sendPointerEvent(int x, int y, int metaState, boolean isMoving) {
+        pointerX = x;
+        pointerY = y;
+
+        // Do not let mouse pointer leave the bounds of the desktop.
+        if (pointerX < 0) {
+            pointerX = 0;
+        } else if (pointerX > canvas.getImageWidth()) {
+            pointerX = canvas.getImageWidth();
+        }
+        if (pointerY < 0) {
+            pointerY = 0;
+        } else if (pointerY > canvas.getImageHeight()) {
+            pointerY = canvas.getImageHeight();
+        }
+
+        protocomm.writePointerEvent(pointerX, pointerY, metaState, pointerMask, false);
+
+        canvas.invalidateMousePosition();
     }
 
 }

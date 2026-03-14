@@ -27,6 +27,7 @@ import com.undatech.opaque.util.GeneralUtils;
 
 public class RemoteVncPointer extends RemotePointer {
     public static final int MOUSE_BUTTON_NONE = 0;
+    public static final int MOUSE_BUTTON_MOVE = 0;
     public static final int MOUSE_BUTTON_LEFT = 1;
     public static final int MOUSE_BUTTON_MIDDLE = 2;
     public static final int MOUSE_BUTTON_RIGHT = 4;
@@ -123,20 +124,31 @@ public class RemoteVncPointer extends RemotePointer {
 
     @Override
     public void moveMouse(int x, int y, int metaState) {
-        pointerMask = prevPointerMask;
+        pointerMask = MOUSE_BUTTON_MOVE;
         sendPointerEvent(x, y, metaState, true);
     }
 
     @Override
     public void moveMouseButtonDown(int x, int y, int metaState) {
-        pointerMask = prevPointerMask | POINTER_DOWN_MASK;
+        pointerMask |= MOUSE_BUTTON_MOVE;
         sendPointerEvent(x, y, metaState, true);
     }
 
     @Override
     public void moveMouseButtonUp(int x, int y, int metaState) {
-        pointerMask = 0;
+        pointerMask = MOUSE_BUTTON_MOVE & ~POINTER_DOWN_MASK;
         sendPointerEvent(x, y, metaState, true);
+    }
+
+
+    @Override
+    public void releaseButton(int x, int y, int metaState) {
+        if ((pointerMask & POINTER_DOWN_MASK) == 0) {
+            return;
+        }
+
+        pointerMask &= ~(POINTER_DOWN_MASK | MOUSE_BUTTON_MOVE);
+        sendPointerEvent(x, y, metaState, false);
     }
 
     @Override
@@ -161,56 +173,5 @@ public class RemoteVncPointer extends RemotePointer {
     public void touchCancel(int x, int y, int contactId) {
         // VNC协议不支持原生触摸事件，使用鼠标释放模拟
         releaseButton(x, y, 0);
-    }
-
-    @Override
-    public void releaseButton(int x, int y, int metaState) {
-        pointerMask = 0;
-        prevPointerMask = 0;
-        sendPointerEvent(x, y, metaState, false);
-    }
-
-    /**
-     * Sends a pointer event to the server.
-     * @param x
-     * @param y
-     * @param metaState
-     * @param isMoving
-     */
-    private void sendPointerEvent(int x, int y, int metaState, boolean isMoving) {
-
-        int combinedMetaState = metaState | canvas.getKeyboard().getMetaState();
-
-        // Save the previous pointer mask other than action_move, so we can
-        // send it with the pointer flag "not down" to clear the action.
-        if (!isMoving) {
-            // If this is a new mouse down event, release previous button pressed to avoid confusing the remote OS.
-            if (prevPointerMask != 0 && prevPointerMask != pointerMask) {
-                protocomm.writePointerEvent(pointerX, pointerY,
-                        combinedMetaState,
-                        prevPointerMask & ~POINTER_DOWN_MASK, false);
-            }
-            prevPointerMask = pointerMask;
-        }
-
-        canvas.invalidateMousePosition();
-        pointerX = x;
-        pointerY = y;
-
-        // Do not let mouse pointer leave the bounds of the desktop.
-        if (pointerX < 0) {
-            pointerX = 0;
-        } else if (pointerX >= canvas.getImageWidth()) {
-            pointerX = canvas.getImageWidth() - 1;
-        }
-        if (pointerY < 0) {
-            pointerY = 0;
-        } else if (pointerY >= canvas.getImageHeight()) {
-            pointerY = canvas.getImageHeight() - 1;
-        }
-        canvas.invalidateMousePosition();
-        GeneralUtils.debugLog(this.debugLogging, TAG, "Sending absolute mouse event at: " + pointerX +
-                ", " + pointerY + ", pointerMask: " + pointerMask);
-        protocomm.writePointerEvent(pointerX, pointerY, combinedMetaState, pointerMask, false);
     }
 }

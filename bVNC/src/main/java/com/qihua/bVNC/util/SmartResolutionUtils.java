@@ -63,6 +63,14 @@ public class SmartResolutionUtils {
             int smartWidth = Math.round(baseWidth / scaleCoefficient);
             int smartHeight = Math.round(baseHeight / scaleCoefficient);
 
+            // 确保分辨率为偶数, 这是规范
+            if (smartWidth % 2 != 0) {
+                smartWidth += 1;
+            }
+            if (smartHeight % 2 != 0) {
+                smartHeight += 1;
+            }
+
             return new int[]{smartWidth, smartHeight};
 
         } catch (Exception e) {

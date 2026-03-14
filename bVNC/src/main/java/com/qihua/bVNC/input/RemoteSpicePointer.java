@@ -120,8 +120,8 @@ public class RemoteSpicePointer extends RemotePointer {
 
     @Override
     public void releaseButton(int x, int y, int metaState) {
-        pointerMask = prevPointerMask & ~POINTER_DOWN_MASK;
-        prevPointerMask = 0;
+//        pointerMask = prevPointerMask & ~POINTER_DOWN_MASK;
+//        prevPointerMask = 0;
         sendPointerEvent(x, y, metaState, false);
     }
 
@@ -131,56 +131,14 @@ public class RemoteSpicePointer extends RemotePointer {
     private void clearPointerMaskEvent(int x, int y, boolean isMoving, int combinedMetaState) {
         // Save the previous pointer mask other than action_move, so we can
         // send it with the pointer flag "not down" to clear the action.
-        if (!isMoving) {
-            // If this is a new mouse down event,
-            // release previous button pressed to avoid confusing the remote OS.
-            if (prevPointerMask != 0 && prevPointerMask != pointerMask) {
-                protocomm.writePointerEvent(x, y, combinedMetaState,
-                        prevPointerMask & ~POINTER_DOWN_MASK, relativeEvents);
-            }
-            prevPointerMask = pointerMask;
-        }
-    }
-
-    /**
-     * Sends a pointer event to the server.
-     * @param x
-     * @param y
-     * @param metaState
-     * @param isMoving
-     */
-    private void sendPointerEvent(int x, int y, int metaState, boolean isMoving) {
-
-        int combinedMetaState = metaState | canvas.getKeyboard().getMetaState();
-
-        if (relativeEvents) {
-            int relX = x - pointerX;
-            int relY = y - pointerY;
-            GeneralUtils.debugLog(this.debugLogging, TAG, "Sending relative mouse event: " + relX + ", " + relY);
-            clearPointerMaskEvent(relX, relY, isMoving, combinedMetaState);
-            protocomm.writePointerEvent(relX, relY, combinedMetaState, pointerMask, relativeEvents);
-
-        } else {
-            canvas.invalidateMousePosition();
-            pointerX = x;
-            pointerY = y;
-            // Do not let mouse pointer leave the bounds of the desktop.
-            if (pointerX < 0) {
-                pointerX = 0;
-            } else if (pointerX >= canvas.getImageWidth()) {
-                pointerX = canvas.getImageWidth() - 1;
-            }
-            if (pointerY < 0) {
-                pointerY = 0;
-            } else if (pointerY >= canvas.getImageHeight()) {
-                pointerY = canvas.getImageHeight() - 1;
-            }
-            clearPointerMaskEvent(x, y, isMoving, combinedMetaState);
-            GeneralUtils.debugLog(this.debugLogging, TAG, "Sending absolute mouse event at: " + pointerX +
-                    ", " + pointerY + ", pointerMask: " + pointerMask);
-            protocomm.writePointerEvent(pointerX, pointerY, combinedMetaState, pointerMask,
-                    relativeEvents);
-            canvas.invalidateMousePosition();
-        }
+//        if (!isMoving) {
+//            // If this is a new mouse down event,
+//            // release previous button pressed to avoid confusing the remote OS.
+//            if (prevPointerMask != 0 && prevPointerMask != pointerMask) {
+//                protocomm.writePointerEvent(x, y, combinedMetaState,
+//                        prevPointerMask & ~POINTER_DOWN_MASK, relativeEvents);
+//            }
+//            prevPointerMask = pointerMask;
+//        }
     }
 }

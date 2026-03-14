@@ -341,7 +341,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         switch (action) {
             // If a mouse button was pressed or mouse was moved.
             case MotionEvent.ACTION_DOWN:
-            case MotionEvent.ACTION_MOVE:
                 switch (bstate) {
                     case MotionEvent.BUTTON_PRIMARY:
                         pointer.leftButtonDown(x, y, meta);
@@ -364,22 +363,25 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                 }
                 used = true;
                 break;
-            // If a mouse button was released.
-            case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_MOVE:
                 switch (bstate) {
-                    case 0:
-                        if (e.getToolType(0) != MotionEvent.TOOL_TYPE_MOUSE) {
-                            break;
-                        }
                     case MotionEvent.BUTTON_PRIMARY:
                     case MotionEvent.BUTTON_SECONDARY:
-                    case MotionEvent.BUTTON_TERTIARY:
                     case MotionEvent.BUTTON_STYLUS_PRIMARY:
+                    case MotionEvent.BUTTON_TERTIARY:
                     case MotionEvent.BUTTON_STYLUS_SECONDARY:
-                        pointer.releaseButton(x, y, meta);
-                        used = true;
+                        pointer.moveMouseButtonDown(x, y, meta);
                         break;
+                    default:
+                        // move only
+                        pointer.moveMouse(x, y, meta);
+                        canvas.movePanToMakePointerVisible();
                 }
+                used = true;
+                break;
+            // If a mouse button was released.
+            case MotionEvent.ACTION_UP:
+                pointer.releaseButton(x, y, meta);
                 break;
             // If the mouse wheel was scrolled.
             case MotionEvent.ACTION_SCROLL:
@@ -409,14 +411,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                 used = true;
                 break;
         }
-
-        // if in external displaying mode and pointer reached to the bottom of the screen, release the pointer capture
-//        if (action == MotionEvent.ACTION_MOVE && (canvas != touchpad)) {
-//            if (pointer.getY() >= canvas.getImageHeight() - 1) {
-//                touchpad.releasePointerCapture();
-//            }
-//        }
-//        canvas.setMousePointerPosition(pointer.getX(), pointer.getY());
 
         activity.readSpecialKeysState();
 
