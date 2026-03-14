@@ -38,7 +38,7 @@ public class RemoteRdpPointer extends RemotePointer {
                             boolean debugLogging) {
         super(rfbConnectable, canvas, handler, debugLogging);
     }
-    
+
     // 添加触摸事件方法
     public void touchDown(int x, int y, int contactId) {
         protocomm.writeTouchEvent(x, y, CONTACT_FLAG_DOWN, contactId);
@@ -57,11 +57,11 @@ public class RemoteRdpPointer extends RemotePointer {
     }
 
     private void sendButtonDownOrMoveButtonDown(int x, int y, int metaState) {
-//        if (prevPointerMask == pointerMask) {
-//            moveMouseButtonDown(x, y, metaState);
-//        } else {
+        if (prevPointerMask == pointerMask) {
+            moveMouseButtonDown(x, y, metaState);
+        } else {
             sendPointerEvent(x, y, metaState, false);
-//        }
+        }
     }
 
     @Override
@@ -143,8 +143,7 @@ public class RemoteRdpPointer extends RemotePointer {
 
     @Override
     public void releaseButton(int x, int y, int metaState) {
-        pointerMask = MOUSE_BUTTON_LEFT | MOUSE_BUTTON_RIGHT
-                | MOUSE_BUTTON_MIDDLE;
+        pointerMask = MOUSE_BUTTON_MOVE;
         sendPointerEvent(x, y, metaState, false);
         prevPointerMask = 0;
     }
@@ -163,15 +162,15 @@ public class RemoteRdpPointer extends RemotePointer {
 
         // Save the previous pointer mask other than action_move, so we can
         // send it with the pointer flag "not down" to clear the action.
-//        if (!isMoving) {
-//            // If this is a new mouse down event, release previous button pressed to avoid confusing the remote OS.
-//            if (prevPointerMask != 0 && prevPointerMask != pointerMask) {
-//                protocomm.writePointerEvent(pointerX, pointerY,
-//                        combinedMetaState,
-//                        prevPointerMask & ~POINTER_DOWN_MASK, false);
-//            }
-//            prevPointerMask = pointerMask;
-//        }
+        if (!isMoving) {
+            // If this is a new mouse down event, release previous button pressed to avoid confusing the remote OS.
+            if (prevPointerMask != 0 && prevPointerMask != pointerMask) {
+                protocomm.writePointerEvent(pointerX, pointerY,
+                        combinedMetaState,
+                        prevPointerMask & ~POINTER_DOWN_MASK, false);
+            }
+            prevPointerMask = pointerMask;
+        }
 
 //        canvas.invalidateMousePosition();
         pointerX = x;
@@ -194,7 +193,7 @@ public class RemoteRdpPointer extends RemotePointer {
         protocomm.writePointerEvent(pointerX, pointerY, combinedMetaState, pointerMask, false);
 
 //        if (isMoving) {
-            canvas.invalidateMousePosition();
+        canvas.invalidateMousePosition();
 //        }
     }
 
