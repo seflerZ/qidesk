@@ -134,6 +134,14 @@
                 android:text="ESC"
                 android:tag="keycode_special"
                 />
+
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:onClick="changeBtnBackground"
+                android:text="ENTER"
+                android:tag="keycode_special"
+                />
         </LinearLayout>
     </HorizontalScrollView>
 
