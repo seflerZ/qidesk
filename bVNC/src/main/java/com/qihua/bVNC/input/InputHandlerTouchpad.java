@@ -214,8 +214,8 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                                 }
 
                                 // make it nonzero to prevent being trigger again
-                                totalMoveX = 0.1f;
-                                totalMoveY = 0.1f;
+                                totalMoveX = 1f;
+                                totalMoveY = 1f;
                             }
 
                             // when reached to the edge, keep the cursor continue moving
@@ -382,12 +382,17 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
 
                 SystemClock.sleep(50);
 
-                if (totalMoveX < 8 && totalMoveY < 8) {
-                    // if the double tap performed without any movement, perform a additional click
-                    // to form a double click. note that the first click is performed during the drag
-
+                // Some Android release doesn't trigger move event when double-clicking, so compensate a click here
+                if (totalMoveX < 1 && totalMoveY < 1 && dragMode) {
+                    // double-clicked, simulate double left click
                     pointer.leftButtonDown(getX(e), getY(e), meta);
+                    pointer.releaseButton(getX(e), getY(e), meta);
                     SystemClock.sleep(50);
+                }
+
+                if (totalMoveX < 4 && totalMoveY < 4 && dragMode) {
+                    // double-clicked, simulate double left click
+                    pointer.leftButtonDown(getX(e), getY(e), meta);
                     pointer.releaseButton(getX(e), getY(e), meta);
                 }
 

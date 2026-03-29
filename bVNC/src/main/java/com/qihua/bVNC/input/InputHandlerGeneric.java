@@ -48,7 +48,7 @@ import java.util.concurrent.Semaphore;
 abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureListener
         implements InputHandler, ScaleGestureDetector.OnScaleGestureListener {
     private static final String TAG = "InputHandlerGeneric";
-    public static final int POINTER_SAMPLING_MS = 13;
+    public static final int POINTER_SAMPLING_MS = 8;
     protected final boolean debugLogging;
 
     // If swipe events are registered once every baseSwipeTime miliseconds, then
@@ -474,10 +474,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         activity.readSpecialKeysState();
 
         pointer.leftButtonDown(x, y, metaState);
-        SystemClock.sleep(100);
         pointer.releaseButton(x, y, metaState);
-
-//        activity.resetOnScreenKeys(0);
 
         return true;
     }
