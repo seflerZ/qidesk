@@ -38,7 +38,7 @@ import com.qihua.bVNC.R;
 public class InputHandlerTouchpad extends InputHandlerGeneric {
     public static final String ID = "TOUCHPAD_MODE";
     static final String TAG = "InputHandlerTouchpad";
-    public static final int SCROLL_SAMPLING_MS = 33;
+    public static final int SCROLL_SAMPLING_MS = 30;
 
     public InputHandlerTouchpad(RemoteCanvasActivity activity, RemoteCanvas canvas, RemoteCanvas touchpad,
                                 RemotePointer pointer, boolean debugLogging) {
