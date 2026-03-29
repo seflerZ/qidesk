@@ -675,7 +675,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             return;
         }
 
-        GeneralUtils.debugLog(debugLogging, TAG, "detectImmersiveSwipe");
+        GeneralUtils.debugLog(debugLogging, TAG, "detectImmersiveSwipe: x=" + x + ", y=" + y);
 
         float immersiveXDistance = getImmersiveXDistance();
         float immersiveYDistance = getImmersiveYDistance();
@@ -696,6 +696,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                 float pos = y / touchpad.getHeight();
                 edgeLeft.setTouchPosition(pos);
                 activeEdgeSlider = edgeLeft;
+                GeneralUtils.debugLog(debugLogging, TAG, "Set activeEdgeSlider = edgeLeft, pos=" + pos);
             } else {
                 edgeRight.setVisibility(View.VISIBLE);
                 edgeRight.setOrientation(DotMatrixEdgeView.EdgeOrientation.RIGHT);
@@ -765,15 +766,38 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     }
 
     protected void hideEdgeViews() {
-        edgeLeft.setVisibility(View.INVISIBLE);
-        edgeRight.setVisibility(View.INVISIBLE);
-        edgeTop.setVisibility(View.INVISIBLE);
-        edgeBottom.setVisibility(View.INVISIBLE);
-        edgeLeft.reset();
-        edgeRight.reset();
-        edgeTop.reset();
-        edgeBottom.reset();
+        GeneralUtils.debugLog(debugLogging, TAG, "hideEdgeViews: activeEdgeSlider = " + (activeEdgeSlider != null));
+
+        // Save reference to active slider before clearing
+        final DotMatrixEdgeView fadingSlider = activeEdgeSlider;
         activeEdgeSlider = null;
+
+        // Fade out the active slider
+        if (fadingSlider != null) {
+            fadingSlider.fadeOut(() -> {
+                GeneralUtils.debugLog(debugLogging, TAG, "fadeOut complete");
+                fadingSlider.setVisibility(View.INVISIBLE);
+                fadingSlider.resetFade();
+            });
+        }
+
+        // Immediately hide and reset others (not the fading one)
+        if (fadingSlider != edgeLeft) {
+            edgeLeft.setVisibility(View.INVISIBLE);
+            edgeLeft.reset();
+        }
+        if (fadingSlider != edgeRight) {
+            edgeRight.setVisibility(View.INVISIBLE);
+            edgeRight.reset();
+        }
+        if (fadingSlider != edgeTop) {
+            edgeTop.setVisibility(View.INVISIBLE);
+            edgeTop.reset();
+        }
+        if (fadingSlider != edgeBottom) {
+            edgeBottom.setVisibility(View.INVISIBLE);
+            edgeBottom.reset();
+        }
     }
 
 

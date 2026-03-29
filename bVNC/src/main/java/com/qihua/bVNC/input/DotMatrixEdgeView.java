@@ -126,7 +126,51 @@ public class DotMatrixEdgeView extends View {
 
     public void reset() {
         touchPosition = 0.5f;
+        fadeProgress = 1f;
+        if (fadeAnimator != null) {
+            fadeAnimator.cancel();
+        }
         invalidate();
+    }
+
+    public void resetFade() {
+        fadeProgress = 1f;
+        if (fadeAnimator != null) {
+            fadeAnimator.cancel();
+        }
+    }
+
+    private float fadeProgress = 1f; // 1 = fully visible, 0 = invisible
+    private ValueAnimator fadeAnimator;
+    private Runnable fadeCompleteCallback;
+
+    /**
+     * Fade out and hide with callback
+     */
+    public void fadeOut(Runnable onComplete) {
+        fadeCompleteCallback = onComplete;
+        fadeProgress = 1f;
+
+        if (fadeAnimator != null) {
+            fadeAnimator.cancel();
+        }
+
+        fadeAnimator = ValueAnimator.ofFloat(1f, 0f);
+        fadeAnimator.setDuration(400);
+        fadeAnimator.setInterpolator(new DecelerateInterpolator());
+        fadeAnimator.addUpdateListener(animation -> {
+            fadeProgress = (float) animation.getAnimatedValue();
+            invalidate();
+        });
+        fadeAnimator.addListener(new android.animation.AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(android.animation.Animator animation) {
+                if (fadeCompleteCallback != null) {
+                    fadeCompleteCallback.run();
+                }
+            }
+        });
+        fadeAnimator.start();
     }
 
     @Override
@@ -169,6 +213,9 @@ public class DotMatrixEdgeView extends View {
                 float alpha = Math.max(0f, 1f - normalizedDist);
                 alpha = (float) Math.pow(alpha, 1.5); // Ease-out curve for smoother gradient
 
+                // Apply fade
+                alpha *= fadeProgress;
+
                 // Calculate radius (closer = larger)
                 float radius = dotRadius + (activeRadius - dotRadius) * alpha;
 
@@ -205,6 +252,9 @@ public class DotMatrixEdgeView extends View {
                 // Calculate alpha based on distance (closer = brighter)
                 float alpha = Math.max(0f, 1f - normalizedDist);
                 alpha = (float) Math.pow(alpha, 1.5); // Ease-out curve
+
+                // Apply fade
+                alpha *= fadeProgress;
 
                 // Calculate radius (closer = larger)
                 float radius = dotRadius + (activeRadius - dotRadius) * alpha;

@@ -277,8 +277,6 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
 
                         break;
                     case MotionEvent.ACTION_UP:
-                        // Snap slider to end before hiding
-                        snapActiveEdgeSlider();
                         hideEdgeViews();
 
                         canSwipeToMove = false;
