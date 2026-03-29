@@ -243,6 +243,11 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                             canvas.movePanToMakePointerVisible();
                         }
 
+                        // Update edge slider position during swipe
+                        if (inSwiping) {
+                            updateActiveEdgeSlider(e.getX(), e.getY());
+                        }
+
                         totalMoveX += Math.abs(e.getX() - lastX);
                         totalMoveY += Math.abs(e.getY() - lastY);
 
@@ -272,10 +277,9 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
 
                         break;
                     case MotionEvent.ACTION_UP:
-                        edgeLeft.setVisibility(View.INVISIBLE);
-                        edgeRight.setVisibility(View.INVISIBLE);
-                        edgeTop.setVisibility(View.INVISIBLE);
-                        edgeBottom.setVisibility(View.INVISIBLE);
+                        // Snap slider to end before hiding
+                        snapActiveEdgeSlider();
+                        hideEdgeViews();
 
                         canSwipeToMove = false;
 

@@ -19,5 +19,10 @@
     <color name="extraKeysButtonBackgroundColor">@color/gesture_overlay</color>
     <color name="extraKeysButtonActiveBackgroundColor">@color/black_overlay</color>
 
+    <!-- Dot matrix edge view colors (Tesla-style) -->
+    <color name="dot_matrix_inactive">#33ffffff</color>
+    <color name="dot_matrix_active">#ffffffff</color>
+    <color name="dot_matrix_inactive_dark">#33000000</color>
+    <color name="dot_matrix_active_dark">#ff000000</color>
 
 </resources>

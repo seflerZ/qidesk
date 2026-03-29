@@ -15,36 +15,32 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <View
+    <com.qihua.bVNC.input.DotMatrixEdgeView
         android:id="@+id/edgeTop"
         android:layout_width="match_parent"
         android:layout_height="50dp"
         android:layout_gravity="top"
-        android:background="@color/white_overlay"
         android:visibility="gone" />
 
-    <View
+    <com.qihua.bVNC.input.DotMatrixEdgeView
         android:id="@+id/edgeBottom"
         android:layout_width="match_parent"
         android:layout_height="50dp"
         android:layout_gravity="bottom"
-        android:background="@color/white_overlay"
         android:visibility="gone" />
 
-    <View
+    <com.qihua.bVNC.input.DotMatrixEdgeView
         android:id="@+id/edgeRight"
         android:layout_width="50dp"
         android:layout_height="match_parent"
         android:layout_gravity="end"
-        android:background="@color/white_overlay"
         android:visibility="gone" />
 
-    <View
+    <com.qihua.bVNC.input.DotMatrixEdgeView
         android:id="@+id/edgeLeft"
         android:layout_width="50dp"
         android:layout_height="match_parent"
         android:layout_gravity="start"
-        android:background="@color/white_overlay"
         android:visibility="gone" />
 
     <android.gesture.GestureOverlayView

@@ -141,13 +141,14 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     private boolean immersiveSwipeEnabled = true;
     protected boolean touchpadFeedback = true;
 
-    protected final View edgeRight;
-    protected final View edgeLeft;
-    protected final View edgeTop;
-    protected final View edgeBottom;
+    protected final DotMatrixEdgeView edgeRight;
+    protected final DotMatrixEdgeView edgeLeft;
+    protected final DotMatrixEdgeView edgeTop;
+    protected final DotMatrixEdgeView edgeBottom;
+    protected DotMatrixEdgeView activeEdgeSlider = null; // Currently active edge slider
     protected long lastDragHelpTimeMs;
     protected boolean dragHelpEnabled = false;
-    
+
     // 滑动窗口分析器，用于检测慢速精细操作
     protected TouchMovementAnalyzer touchMovementAnalyzer;
 
@@ -679,15 +680,28 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         float immersiveXDistance = getImmersiveXDistance();
         float immersiveYDistance = getImmersiveYDistance();
 
+        // Hide all edge views first
+        edgeLeft.setVisibility(View.INVISIBLE);
+        edgeRight.setVisibility(View.INVISIBLE);
+        edgeTop.setVisibility(View.INVISIBLE);
+        edgeBottom.setVisibility(View.INVISIBLE);
+        activeEdgeSlider = null;
+
         if (detectImmersiveVertical(x)) {
             inSwiping = true;
             immersiveSwipeY = true;
             if (x <= immersiveXDistance) {
                 edgeLeft.setVisibility(View.VISIBLE);
-                setEdgeWidth(edgeLeft, (int) immersiveXDistance);
+                edgeLeft.setOrientation(DotMatrixEdgeView.EdgeOrientation.LEFT);
+                float pos = y / touchpad.getHeight();
+                edgeLeft.setTouchPosition(pos);
+                activeEdgeSlider = edgeLeft;
             } else {
                 edgeRight.setVisibility(View.VISIBLE);
-                setEdgeWidth(edgeRight, (int) immersiveXDistance);
+                edgeRight.setOrientation(DotMatrixEdgeView.EdgeOrientation.RIGHT);
+                float pos = y / touchpad.getHeight();
+                edgeRight.setTouchPosition(pos);
+                activeEdgeSlider = edgeRight;
             }
 
             return;
@@ -699,10 +713,16 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
             if (y <= immersiveYDistance) {
                 edgeTop.setVisibility(View.VISIBLE);
-                setEdgeHeight(edgeTop, (int) immersiveYDistance);
+                edgeTop.setOrientation(DotMatrixEdgeView.EdgeOrientation.TOP);
+                float pos = x / touchpad.getWidth();
+                edgeTop.setTouchPosition(pos);
+                activeEdgeSlider = edgeTop;
             } else {
                 edgeBottom.setVisibility(View.VISIBLE);
-                setEdgeHeight(edgeBottom, (int) immersiveYDistance);
+                edgeBottom.setOrientation(DotMatrixEdgeView.EdgeOrientation.BOTTOM);
+                float pos = x / touchpad.getWidth();
+                edgeBottom.setTouchPosition(pos);
+                activeEdgeSlider = edgeBottom;
             }
 
             return;
@@ -713,22 +733,47 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         immersiveSwipeY = false;
     }
 
-    private void setEdgeWidth(View view, int newWidthDp) {
-        // 1. 获取布局参数
-        FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) view.getLayoutParams();
-        params.width = newWidthDp;
+    /**
+     * Update the active edge slider position based on touch coordinates.
+     * Call this during touch move events.
+     */
+    protected void updateActiveEdgeSlider(float x, float y) {
+        if (activeEdgeSlider == null) return;
 
-        // 3. 应用参数
-        view.setLayoutParams(params);
+        float pos;
+        DotMatrixEdgeView.EdgeOrientation orientation = activeEdgeSlider.getOrientation();
+
+        if (orientation == DotMatrixEdgeView.EdgeOrientation.LEFT ||
+            orientation == DotMatrixEdgeView.EdgeOrientation.RIGHT) {
+            pos = y / touchpad.getHeight();
+        } else {
+            pos = x / touchpad.getWidth();
+        }
+
+        activeEdgeSlider.setTouchPosition(pos);
     }
 
-    private void setEdgeHeight(View view, int newHeightDp) {
-        // 1. 获取布局参数
-        FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) view.getLayoutParams();
-        params.height = newHeightDp;
+    /**
+     * Snap the active edge slider to nearest end (0 or 1).
+     * Call this when touch ends.
+     */
+    protected void snapActiveEdgeSlider() {
+        if (activeEdgeSlider != null) {
+            activeEdgeSlider.snapToEnd();
+            activeEdgeSlider = null;
+        }
+    }
 
-        // 3. 应用参数
-        view.setLayoutParams(params);
+    protected void hideEdgeViews() {
+        edgeLeft.setVisibility(View.INVISIBLE);
+        edgeRight.setVisibility(View.INVISIBLE);
+        edgeTop.setVisibility(View.INVISIBLE);
+        edgeBottom.setVisibility(View.INVISIBLE);
+        edgeLeft.reset();
+        edgeRight.reset();
+        edgeTop.reset();
+        edgeBottom.reset();
+        activeEdgeSlider = null;
     }
 
 
