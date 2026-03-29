@@ -376,19 +376,14 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             }
 
             if (dragMode || rightDragMode || middleDragMode) {
-
-                // release the drag button down
-                pointer.releaseButton(getX(e), getY(e), meta);
-
-                SystemClock.sleep(50);
-
                 // Some Android release doesn't trigger move event when double-clicking, so compensate a click here
                 if (totalMoveX < 1 && totalMoveY < 1 && dragMode) {
                     // double-clicked, simulate double left click
                     pointer.leftButtonDown(getX(e), getY(e), meta);
-                    pointer.releaseButton(getX(e), getY(e), meta);
-                    SystemClock.sleep(50);
                 }
+
+                pointer.releaseButton(getX(e), getY(e), meta);
+                SystemClock.sleep(50);
 
                 if (totalMoveX < 4 && totalMoveY < 4 && dragMode) {
                     // double-clicked, simulate double left click
@@ -411,6 +406,12 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             totalMoveX = 0;
         }
 
+        if (dragMode || rightDragMode || middleDragMode) {
+            // prevent scrolling when dragging
+            return true;
+        }
+
+        // handle scrolling, pinching, double click and long press
         return gestureDetector.onTouchEvent(e);
     }
 

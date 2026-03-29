@@ -546,6 +546,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             downEvent.recycle();
         }  // else do nothing
 
+        activity.sendShortVibration();
     }
 
     /**
