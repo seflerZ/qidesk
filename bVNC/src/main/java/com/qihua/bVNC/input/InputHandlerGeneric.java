@@ -680,55 +680,72 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         float immersiveXDistance = getImmersiveXDistance();
         float immersiveYDistance = getImmersiveYDistance();
 
-        // Hide all edge views first
-        edgeLeft.setVisibility(View.INVISIBLE);
-        edgeRight.setVisibility(View.INVISIBLE);
-        edgeTop.setVisibility(View.INVISIBLE);
-        edgeBottom.setVisibility(View.INVISIBLE);
-        activeEdgeSlider = null;
-
         if (detectImmersiveVertical(x)) {
             inSwiping = true;
             immersiveSwipeY = true;
             if (x <= immersiveXDistance) {
-                edgeLeft.setVisibility(View.VISIBLE);
-                edgeLeft.setOrientation(DotMatrixEdgeView.EdgeOrientation.LEFT);
+                if (activeEdgeSlider != edgeLeft) {
+                    // Hide others and show left
+                    edgeRight.setVisibility(View.INVISIBLE);
+                    edgeTop.setVisibility(View.INVISIBLE);
+                    edgeBottom.setVisibility(View.INVISIBLE);
+                    edgeLeft.setVisibility(View.VISIBLE);
+                    edgeLeft.setOrientation(DotMatrixEdgeView.EdgeOrientation.LEFT);
+                }
                 float pos = y / touchpad.getHeight();
                 edgeLeft.setTouchPosition(pos);
                 activeEdgeSlider = edgeLeft;
-                GeneralUtils.debugLog(debugLogging, TAG, "Set activeEdgeSlider = edgeLeft, pos=" + pos);
+                inSwiping = true;
+                immersiveSwipeY = true;
             } else {
-                edgeRight.setVisibility(View.VISIBLE);
-                edgeRight.setOrientation(DotMatrixEdgeView.EdgeOrientation.RIGHT);
+                if (activeEdgeSlider != edgeRight) {
+                    edgeLeft.setVisibility(View.INVISIBLE);
+                    edgeTop.setVisibility(View.INVISIBLE);
+                    edgeBottom.setVisibility(View.INVISIBLE);
+                    edgeRight.setVisibility(View.VISIBLE);
+                    edgeRight.setOrientation(DotMatrixEdgeView.EdgeOrientation.RIGHT);
+                }
                 float pos = y / touchpad.getHeight();
                 edgeRight.setTouchPosition(pos);
                 activeEdgeSlider = edgeRight;
+                inSwiping = true;
+                immersiveSwipeY = true;
             }
 
             return;
         }
 
         if (detectImmersiveHorizontal(y)) {
-            inSwiping = true;
-            immersiveSwipeX = true;
-
             if (y <= immersiveYDistance) {
-                edgeTop.setVisibility(View.VISIBLE);
-                edgeTop.setOrientation(DotMatrixEdgeView.EdgeOrientation.TOP);
+                if (activeEdgeSlider != edgeTop) {
+                    edgeLeft.setVisibility(View.INVISIBLE);
+                    edgeRight.setVisibility(View.INVISIBLE);
+                    edgeBottom.setVisibility(View.INVISIBLE);
+                    edgeTop.setVisibility(View.VISIBLE);
+                    edgeTop.setOrientation(DotMatrixEdgeView.EdgeOrientation.TOP);
+                }
                 float pos = x / touchpad.getWidth();
                 edgeTop.setTouchPosition(pos);
                 activeEdgeSlider = edgeTop;
             } else {
-                edgeBottom.setVisibility(View.VISIBLE);
-                edgeBottom.setOrientation(DotMatrixEdgeView.EdgeOrientation.BOTTOM);
+                if (activeEdgeSlider != edgeBottom) {
+                    edgeLeft.setVisibility(View.INVISIBLE);
+                    edgeRight.setVisibility(View.INVISIBLE);
+                    edgeTop.setVisibility(View.INVISIBLE);
+                    edgeBottom.setVisibility(View.VISIBLE);
+                    edgeBottom.setOrientation(DotMatrixEdgeView.EdgeOrientation.BOTTOM);
+                }
                 float pos = x / touchpad.getWidth();
                 edgeBottom.setTouchPosition(pos);
                 activeEdgeSlider = edgeBottom;
             }
+            inSwiping = true;
+            immersiveSwipeX = true;
 
             return;
         }
 
+        // Not in any edge zone, clear states but don't hide - let fade handle it
         inSwiping = false;
         immersiveSwipeX = false;
         immersiveSwipeY = false;

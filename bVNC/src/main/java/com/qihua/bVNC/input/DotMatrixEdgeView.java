@@ -85,6 +85,15 @@ public class DotMatrixEdgeView extends View {
 
     public void setTouchPosition(float position) {
         this.touchPosition = Math.max(0f, Math.min(1f, position));
+        // Interrupt any ongoing fade animation
+        if (fadeAnimator != null && fadeAnimator.isRunning()) {
+            fadeAnimator.cancel();
+        }
+        fadeProgress = 1f;
+        // Make sure view is visible when touched
+        if (getVisibility() != View.VISIBLE) {
+            setVisibility(View.VISIBLE);
+        }
         invalidate();
     }
 
