@@ -2024,6 +2024,10 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             canvasPresentation.dismiss();
         }
 
+        if (touchpad != null) {
+            touchpad.dismissProgressDialog();
+        }
+
         canvas.disconnectWithoutMessage();
         if (canvas.isOutDisplay()) {
             touchpad.closeConnection();

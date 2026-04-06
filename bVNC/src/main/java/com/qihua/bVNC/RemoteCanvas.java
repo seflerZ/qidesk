@@ -446,6 +446,12 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         progressDialog.show();
     }
 
+    public void dismissProgressDialog() {
+        if (progressDialog != null && progressDialog.isShowing()) {
+            progressDialog.dismiss();
+        }
+    }
+
     /**
      * Create a view showing a remote desktop connection
      *

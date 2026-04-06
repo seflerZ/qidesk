@@ -460,7 +460,7 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
 
     @Override
     public void close() {
-        if (prefConfig.enableLatencyToast) {
+        if (prefConfig != null && prefConfig.enableLatencyToast && decoderRenderer != null) {
             int averageEndToEndLat = decoderRenderer.getAverageEndToEndLatency();
             int averageDecoderLat = decoderRenderer.getAverageDecoderLatency();
             String message = null;
@@ -507,7 +507,9 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
             }
         }
 
-        conn.stop();
+        if (conn != null) {
+            conn.stop();
+        }
     }
 
     @Override
