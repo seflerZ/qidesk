@@ -404,6 +404,10 @@ public class NvCommunicator extends RfbConnectable implements NvConnectionListen
 
     @Override
     public void writeKeyEvent(int key, int metaState, boolean down) {
+        if (conn == null) {
+            return;
+        }
+
         this.metaState = metaState;
 
         translateModifierKeys(down);

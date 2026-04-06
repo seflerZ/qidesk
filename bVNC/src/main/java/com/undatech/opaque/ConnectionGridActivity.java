@@ -79,6 +79,7 @@ import com.qihua.bVNC.dialogs.ImportExportDialog;
 import com.qihua.bVNC.dialogs.IntroTextDialog;
 import com.qihua.bVNC.dialogs.RateOrShareFragment;
 import com.qihua.bVNC.input.InputHandlerDirectSwipePan;
+import com.qihua.bVNC.gesture.GestureImportExportUtil;
 import com.qihua.util.MasterPasswordDelegate;
 import com.undatech.opaque.util.ConnectionLoader;
 import com.undatech.opaque.util.FileUtils;
@@ -86,12 +87,18 @@ import com.undatech.opaque.util.GeneralUtils;
 import com.undatech.opaque.util.LogcatReader;
 import com.qihua.bVNC.R;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class ConnectionGridActivity extends AppCompatActivity implements GetTextFragment.OnFragmentDismissedListener {
     private static String TAG = "ConnectionGridActivity";
@@ -560,13 +567,121 @@ public class ConnectionGridActivity extends AppCompatActivity implements GetText
                 if (resultCode == Activity.RESULT_OK) {
                     if (data != null && data.getData() != null) {
                         ContentResolver resolver = getContentResolver();
-
                         boolean connectionsInSharedPrefs = Utils.isOpaque(this);
                         InputStream in = FileUtils.getInputStreamFromUri(resolver, data.getData());
-                        if (connectionsInSharedPrefs) {
-                            ConnectionSettings.importSettingsFromJsonToSharedPrefs(in, this);
+
+                        // Read all bytes first to check format and support multiple reads
+                        byte[] allBytes;
+                        try {
+                            allBytes = readAllBytes(in);
+                        } catch (IOException e) {
+                            android.util.Log.e(TAG, "Error reading input stream", e);
+                            break;
+                        }
+
+                        // Check if it's a ZIP file (starts with PK magic bytes)
+                        boolean isZip = (allBytes.length >= 2 && allBytes[0] == 0x50 && allBytes[1] == 0x4B);
+
+                        if (isZip) {
+                            // It's a ZIP file - handle gestures
+                            android.util.Log.i(TAG, "Detected ZIP format with gestures");
+                            ByteArrayInputStream zipStream = new ByteArrayInputStream(allBytes);
+
+                            if (connectionsInSharedPrefs) {
+                                // For Opaque: IDs are filenames, map directly
+                                SharedPreferences sp = getSharedPreferences("generalSettings", Context.MODE_PRIVATE);
+                                String oldConnections = sp.getString("connections", "");
+                                String[] oldConnIds = oldConnections != null ? oldConnections.trim().split("\\s+") : new String[0];
+
+                                // Import connection data and extract gestures
+                                InputStream connDataStream;
+                                try {
+                                    Map<String, String> oldToNewIdMap = new HashMap<>();
+                                    // For Opaque, filenames are preserved, so oldId = newId
+                                    for (String id : oldConnIds) {
+                                        oldToNewIdMap.put(id, id);
+                                    }
+                                    connDataStream = GestureImportExportUtil.importGesturesAndConnections(
+                                            this, oldToNewIdMap, "connections.json", zipStream);
+                                } catch (IOException e) {
+                                    android.util.Log.e(TAG, "Error importing gestures", e);
+                                    connDataStream = zipStream;
+                                }
+                                ConnectionSettings.importSettingsFromJsonToSharedPrefs(connDataStream, this);
+                            } else {
+                                // For bVNC: need to map old IDs to new IDs by content matching
+                                try {
+                                    // Get existing connections before import for matching
+                                    ConnectionLoader loader = getConnectionLoader(this);
+                                    Map<String, Connection> existingBefore = loader.loadConnectionsById();
+
+                                    // First extract ZIP to temp dir and import connections
+                                    File tempDir = new File(this.getCacheDir(), "gesture_import_temp");
+                                    if (tempDir.exists()) {
+                                        deleteDirectoryRecursively(tempDir);
+                                    }
+                                    tempDir.mkdirs();
+
+                                    // Extract ZIP
+                                    zipStream = new ByteArrayInputStream(allBytes);
+                                    Map<String, GestureImportExportUtil.GestureFiles> manifest =
+                                            GestureImportExportUtil.extractZipToDir(zipStream, tempDir);
+
+                                    // Import connections from the extracted XML
+                                    File connXmlFile = new File(tempDir, "connections.xml");
+                                    FileInputStream connXmlStream = new FileInputStream(connXmlFile);
+                                    Utils.importSettingsFromXml(connXmlStream, database.getWritableDatabase());
+
+                                    // Get new connections after import
+                                    database.close();
+                                    database = ((App) getApplication()).getDatabase();
+                                    Map<String, Connection> existingAfter = loader.loadConnectionsById();
+
+                                    // Map and copy gesture files
+                                    File gesturesDir = this.getDir("gestures", Context.MODE_PRIVATE);
+                                    File actionsDir = this.getDir("actions", Context.MODE_PRIVATE);
+
+                                    List<String> orderedNewIds = new java.util.ArrayList<>(existingAfter.keySet());
+                                    int manifestIndex = 0;
+                                    for (Map.Entry<String, GestureImportExportUtil.GestureFiles> manifestEntry : manifest.entrySet()) {
+                                        GestureImportExportUtil.GestureFiles files = manifestEntry.getValue();
+                                        if (files.gestureFile == null && files.actionFile == null) continue;
+
+                                        if (manifestIndex < orderedNewIds.size()) {
+                                            String newId = orderedNewIds.get(manifestIndex);
+
+                                            // Copy gesture file
+                                            if (files.gestureFile != null) {
+                                                File src = new File(tempDir, files.gestureFile);
+                                                File dest = new File(gesturesDir, newId + "_gestures.dat");
+                                                com.undatech.opaque.util.FileUtils.copyFile(src, dest.getPath());
+                                            }
+
+                                            // Copy action file
+                                            if (files.actionFile != null) {
+                                                File src = new File(tempDir, files.actionFile);
+                                                File dest = new File(actionsDir, newId + "_actions.dat");
+                                                com.undatech.opaque.util.FileUtils.copyFile(src, dest.getPath());
+                                            }
+                                            manifestIndex++;
+                                        }
+                                    }
+
+                                    // Clean up temp dir
+                                    deleteDirectoryRecursively(tempDir);
+
+                                } catch (IOException e) {
+                                    android.util.Log.e(TAG, "Error importing gestures for bVNC", e);
+                                    Utils.importSettingsFromXml(new ByteArrayInputStream(allBytes), database.getWritableDatabase());
+                                }
+                            }
                         } else {
-                            Utils.importSettingsFromXml(in, database.getWritableDatabase());
+                            // Old format without gestures - process as before
+                            if (connectionsInSharedPrefs) {
+                                ConnectionSettings.importSettingsFromJsonToSharedPrefs(new ByteArrayInputStream(allBytes), this);
+                            } else {
+                                Utils.importSettingsFromXml(new ByteArrayInputStream(allBytes), database.getWritableDatabase());
+                            }
                         }
                         recreate();
                     } else {
@@ -580,13 +695,34 @@ public class ConnectionGridActivity extends AppCompatActivity implements GetText
                 if (resultCode == Activity.RESULT_OK) {
                     if (data != null && data.getData() != null) {
                         ContentResolver resolver = getContentResolver();
-
                         boolean connectionsInSharedPrefs = Utils.isOpaque(this);
-                        OutputStream out = FileUtils.getOutputStreamFromUri(resolver, data.getData());
-                        if (connectionsInSharedPrefs) {
-                            ConnectionSettings.exportSettingsFromSharedPrefsToJson(out, this);
-                        } else {
-                            Utils.exportSettingsToXml(out, database.getReadableDatabase());
+
+                        try {
+                            ConnectionLoader connectionLoader = getConnectionLoader(this);
+                            Map<String, Connection> connections = connectionLoader.loadConnectionsById();
+                            String[] connectionIds = connections.keySet().toArray(new String[0]);
+
+                            if (connectionsInSharedPrefs) {
+                                // For Opaque: export to byte array first, then package with gestures
+                                ByteArrayOutputStream jsonOut = new ByteArrayOutputStream();
+                                ConnectionSettings.exportSettingsFromSharedPrefsToJson(jsonOut, this);
+                                ByteArrayInputStream jsonIn = new ByteArrayInputStream(jsonOut.toByteArray());
+
+                                OutputStream out = FileUtils.getOutputStreamFromUri(resolver, data.getData());
+                                GestureImportExportUtil.exportGesturesAndConnections(
+                                        this, connectionIds, "connections.json", jsonIn, out);
+                            } else {
+                                // For bVNC: export to byte array first, then package with gestures
+                                ByteArrayOutputStream xmlOut = new ByteArrayOutputStream();
+                                Utils.exportSettingsToXml(xmlOut, database.getReadableDatabase());
+                                ByteArrayInputStream xmlIn = new ByteArrayInputStream(xmlOut.toByteArray());
+
+                                OutputStream out = FileUtils.getOutputStreamFromUri(resolver, data.getData());
+                                GestureImportExportUtil.exportGesturesAndConnections(
+                                        this, connectionIds, "connections.xml", xmlIn, out);
+                            }
+                        } catch (IOException e) {
+                            android.util.Log.e(TAG, "Error exporting settings with gestures", e);
                         }
                     } else {
                         android.util.Log.e(TAG, "File uri not found, not exporting settings");
@@ -720,6 +856,70 @@ public class ConnectionGridActivity extends AppCompatActivity implements GetText
             tx.commit();
             fragmentManager.executePendingTransactions();
         }
+    }
+
+    private byte[] readAllBytes(InputStream in) throws IOException {
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        byte[] data = new byte[8192];
+        int bytesRead;
+        while ((bytesRead = in.read(data, 0, data.length)) != -1) {
+            buffer.write(data, 0, bytesRead);
+        }
+        return buffer.toByteArray();
+    }
+
+    /**
+     * Builds a mapping from old connection IDs to new connection IDs based on
+     * matching connection content (address, username, etc.).
+     * Only connections that have gestures (present in gestureConnIds) are mapped.
+     */
+    private Map<String, String> buildConnectionIdMapping(
+            Map<String, Connection> before,
+            Map<String, Connection> after,
+            Set<String> gestureConnIds) {
+
+        Map<String, String> mapping = new HashMap<>();
+
+        for (String oldId : gestureConnIds) {
+            Connection oldConn = before.get(oldId);
+            if (oldConn == null) continue;
+
+            // Try to find matching connection in after map by content
+            for (Map.Entry<String, Connection> entry : after.entrySet()) {
+                Connection newConn = entry.getValue();
+                if (connectionsMatch(oldConn, newConn)) {
+                    mapping.put(oldId, entry.getKey());
+                    break;
+                }
+            }
+        }
+
+        return mapping;
+    }
+
+    /**
+     * Checks if two connections match based on their content.
+     */
+    private boolean connectionsMatch(Connection c1, Connection c2) {
+        // Match by address and username as primary indicators
+        String addr1 = c1.getAddress() != null ? c1.getAddress() : "";
+        String addr2 = c2.getAddress() != null ? c2.getAddress() : "";
+        String user1 = c1.getUserName() != null ? c1.getUserName() : "";
+        String user2 = c2.getUserName() != null ? c2.getUserName() : "";
+
+        return addr1.equals(addr2) && user1.equals(user2);
+    }
+
+    private void deleteDirectoryRecursively(File file) {
+        if (file.isDirectory()) {
+            File[] children = file.listFiles();
+            if (children != null) {
+                for (File child : children) {
+                    deleteDirectoryRecursively(child);
+                }
+            }
+        }
+        file.delete();
     }
 
     public void showMainScreenHelp(View item) {

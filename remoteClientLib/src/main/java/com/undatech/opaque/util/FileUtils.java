@@ -229,11 +229,9 @@ public class FileUtils {
      * @return 是否复制成功
      */
     public static boolean copyFile(File sourceFile, String destinationFilePath) {
-        // 检查源文件是否存在，存在删除再建
+        // 检查源文件是否存在
         if (!sourceFile.exists()) {
-            if (!sourceFile.delete()) {
-                return false;
-            }
+            return false;
         }
 
         // 创建目标文件对象
@@ -242,6 +240,11 @@ public class FileUtils {
         // 如果目标文件的父目录不存在，创建父目录
         if (!destinationFile.getParentFile().exists()) {
             destinationFile.getParentFile().mkdirs();
+        }
+
+        // 如果目标文件已存在，先删除
+        if (destinationFile.exists()) {
+            destinationFile.delete();
         }
 
         try (InputStream inputStream = new FileInputStream(sourceFile);
