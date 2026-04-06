@@ -1607,7 +1607,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         //android.util.Log.d(TAG, "resetScroll: " + (absoluteXPosition - shiftX) * scale + ", "
         //                                        + (absoluteYPosition - shiftY) * scale);
 
-        reDraw(0, 0, displayRect.width(), displayRect.height());
+        reDraw(0, 0, getWidth(), getHeight());
 //        scrollTo((int) ((absoluteXPosition) * scale),
 //                (int) ((absoluteYPosition) * scale));
     }
@@ -2132,10 +2132,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     }
 
     public int getVisibleDesktopHeight() {
-        if (visibleHeight > 0)
-            return (int) ((double) visibleHeight / getZoomFactor());
-        else
-            return (int) ((double) getHeight() / getZoomFactor());
+        return (int) ((double) getHeight() / getZoomFactor());
     }
 
     public int getImageVisibleInScreenHeight() {
