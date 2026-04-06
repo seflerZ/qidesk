@@ -1788,7 +1788,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             int w = getImageWidth();
             int h = getImageHeight();
 
-            int bWidth = (int) ((displayRect.width() - w * getMinimumScale()) / 2);
+            int bWidth = (int) ((getWidth() - w * getMinimumScale()) / 2);
             if (bWidth <= 0) {
                 bWidth = 0;
             }
@@ -2128,14 +2128,14 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     }
 
     public int getVisibleDesktopWidth() {
-        return (int) ((double) displayRect.width() / getZoomFactor());
+        return (int) ((double) getWidth() / getZoomFactor());
     }
 
     public int getVisibleDesktopHeight() {
         if (visibleHeight > 0)
             return (int) ((double) visibleHeight / getZoomFactor());
         else
-            return (int) ((double) displayRect.height() / getZoomFactor());
+            return (int) ((double) getHeight() / getZoomFactor());
     }
 
     public int getImageVisibleInScreenHeight() {
@@ -2155,11 +2155,11 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     }
 
     public int getCenteredXOffset() {
-        return (int) (rfbconn.framebufferWidth() * getMinimumScale() - displayRect.width()) / 2;
+        return (int) (rfbconn.framebufferWidth() * getMinimumScale() - getWidth()) / 2;
     }
 
     public int getBlackBorderWidth() {
-        int bWidth = (int) ((displayRect.width() - getImageWidth() * getMinimumScale()) / 2);
+        int bWidth = (int) ((getWidth() - getImageWidth() * getMinimumScale()) / 2);
         if (bWidth <= 0) {
             bWidth = 0;
         }
@@ -2168,7 +2168,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     }
 
     public int getCenteredYOffset() {
-        return (int) (rfbconn.framebufferHeight() * getMinimumScale() - displayRect.height()) / 2;
+        return (int) (rfbconn.framebufferHeight() * getMinimumScale() - getHeight()) / 2;
     }
 
     public float getMinimumScale() {
