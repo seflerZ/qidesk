@@ -99,6 +99,7 @@ import com.qihua.bVNC.extrakeys.ExtraKeysView;
 import com.qihua.bVNC.extrakeys.SpecialButton;
 import com.qihua.bVNC.gesture.GestureActionLibrary;
 import com.qihua.bVNC.input.InputHandler;
+import com.qihua.util.BackTapKeyboardHelper;
 import com.qihua.bVNC.input.InputHandlerDirectTouch;
 import com.qihua.bVNC.input.InputHandlerGamepad;
 import com.qihua.bVNC.input.InputHandlerTouchpad;
@@ -229,6 +230,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     // 记录当前连接已显示过的输入模式提示，避免重复显示
     private Set<String> displayedInputModeTips = new HashSet<>();
     private static final String PREFS_INPUT_TIPS = "input_mode_tips";
+    private BackTapKeyboardHelper backTapKeyboardHelper;
 
     /**
      * Helper method to get Display object based on Android version and context type
@@ -1155,6 +1157,11 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 //            imm.hideSoftInputFromWindow(canvas.getWindowToken(), 0);
 //        } catch (NullPointerException e) {
 //        }
+
+        // Stop back tap keyboard helper
+        if (backTapKeyboardHelper != null) {
+            backTapKeyboardHelper.stop();
+        }
     }
 
     @Override
@@ -1165,6 +1172,16 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 //            canvas.postInvalidateDelayed(2500);
 //        } catch (NullPointerException e) {
 //        }
+
+        // Start back tap keyboard helper if enabled
+        SharedPreferences prefs = getSharedPreferences(Constants.generalSettingsTag, Context.MODE_PRIVATE);
+        if (prefs.getBoolean(Constants.backTapShowKeyboard, false)) {
+            if (backTapKeyboardHelper == null) {
+                backTapKeyboardHelper = new BackTapKeyboardHelper(this);
+                backTapKeyboardHelper.setOnBackTapListener(this::showKeyboardAndExtraKeys);
+            }
+            backTapKeyboardHelper.start();
+        }
     }
 
     /**

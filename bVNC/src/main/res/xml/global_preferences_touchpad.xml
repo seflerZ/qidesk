@@ -40,5 +40,11 @@
             app:defaultValue="false"
             android:title="@string/drag_help_enabled"
             android:summary="@string/drag_help_enabled_hint"/>
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:key="backTapShowKeyboard"
+            app:defaultValue="false"
+            android:title="@string/back_tap_show_keyboard"
+            android:summary="@string/back_tap_show_keyboard_hint"/>
     </PreferenceCategory>
 </PreferenceScreen>
