@@ -51,8 +51,13 @@ public class BackTapKeyboardHelper implements SensorEventListener {
 
     public void start() {
         if (accelerometer != null) {
-            sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_FASTEST);
-            Log.d(TAG, "Started listening for back taps");
+            try {
+                sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_FASTEST);
+                Log.d(TAG, "Started listening for back taps (FASTEST)");
+            } catch (Exception e) {
+                Log.w(TAG, "FASTEST sensor rate failed, falling back to UI: " + e.getMessage());
+                sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_UI);
+            }
         } else {
             Log.w(TAG, "Accelerometer not available");
         }

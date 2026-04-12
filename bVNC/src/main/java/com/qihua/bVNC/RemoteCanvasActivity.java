@@ -1178,7 +1178,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         if (prefs.getBoolean(Constants.backTapShowKeyboard, false)) {
             if (backTapKeyboardHelper == null) {
                 backTapKeyboardHelper = new BackTapKeyboardHelper(this);
-                backTapKeyboardHelper.setOnBackTapListener(this::showKeyboardAndExtraKeys);
+                backTapKeyboardHelper.setOnBackTapListener(this::toggleKeyboard);
             }
             backTapKeyboardHelper.start();
         }
