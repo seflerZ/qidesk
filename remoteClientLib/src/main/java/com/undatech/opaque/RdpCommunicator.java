@@ -21,6 +21,8 @@ import com.undatech.opaque.util.GeneralUtils;
 
 import org.apache.commons.validator.routines.InetAddressValidator;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.HashMap;
@@ -386,6 +388,30 @@ public class RdpCommunicator extends RfbConnectable implements RdpKeyboardMapper
     }
 
     public void connect() {
+        // Pre-validate hostname before connecting to avoid crashes in FreeRDP
+        // when DNS resolution fails (SIGBUS crash in freerdp_set_last_error_ex)
+        String hostname = ((ManualBookmark) session.getBookmark()).getHostname();
+        if (hostname == null || hostname.isEmpty()) {
+            Log.w(TAG, "Cannot connect: hostname is empty");
+            OnConnectionFailure(session.getInstance());
+            handler.sendEmptyMessage(RemoteClientLibConstants.RDP_UNABLE_TO_CONNECT);
+            return;
+        }
+
+        // Try to resolve hostname using Java's DNS resolver before calling FreeRDP
+        // This won't catch all failures (network may change) but helps avoid the crash
+        // in freerdp_set_last_error_ex when DNS truly fails
+        // Note: InetAddress.getByName handles both IPv4 and IPv6 (with or without brackets)
+        try {
+            InetAddress.getByName(hostname);
+            Log.d(TAG, "Hostname validated: " + hostname);
+        } catch (UnknownHostException e) {
+            Log.w(TAG, "Hostname resolution failed for: " + hostname + " - " + e.getMessage());
+            OnConnectionFailure(session.getInstance());
+            handler.sendEmptyMessage(RemoteClientLibConstants.RDP_UNABLE_TO_CONNECT);
+            return;
+        }
+
         session.connect(context);
     }
 
