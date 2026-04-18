@@ -78,7 +78,6 @@ import com.qihua.bVNC.dialogs.GetTextFragment;
 import com.qihua.bVNC.dialogs.ImportExportDialog;
 import com.qihua.bVNC.dialogs.IntroTextDialog;
 import com.qihua.bVNC.dialogs.RateOrShareFragment;
-import com.qihua.bVNC.input.InputHandlerDirectSwipePan;
 import com.qihua.bVNC.gesture.GestureImportExportUtil;
 import com.qihua.util.MasterPasswordDelegate;
 import com.undatech.opaque.util.ConnectionLoader;
@@ -740,38 +739,7 @@ public class ConnectionGridActivity extends AppCompatActivity implements GetText
     @Override
     public boolean onMenuOpened(int featureId, Menu menu) {
         android.util.Log.d(TAG, "onMenuOpened");
-//        try {
-//            updateInputMenu(menu.findItem(R.id.itemInputMode).getSubMenu());
-//            MenuItem itemMasterPassword = menu.findItem(R.id.itemMasterPassword);
-//            itemMasterPassword.setChecked(Utils.querySharedPreferenceBoolean(this, Constants.masterPasswordEnabledTag));
-//        } catch (NullPointerException e) {
-//        }
         return true;
-    }
-
-    /**
-     * Check the right item in the input mode sub-menu
-     */
-    void updateInputMenu(Menu inputMenu) {
-        MenuItem[] inputModeMenuItems = new MenuItem[RemoteCanvasActivity.inputModeIds.length];
-        for (int i = 0; i < RemoteCanvasActivity.inputModeIds.length; i++) {
-            inputModeMenuItems[i] = inputMenu.findItem(RemoteCanvasActivity.inputModeIds[i]);
-        }
-        String defaultInputHandlerId = Utils.querySharedPreferenceString(
-                this, Constants.defaultInputMethodTag, InputHandlerDirectSwipePan.ID);
-        android.util.Log.d(TAG, "Default Input Mode Item: " + defaultInputHandlerId);
-
-        try {
-            for (MenuItem item : inputModeMenuItems) {
-                android.util.Log.d(TAG, "Input Mode Item: " +
-                        RemoteCanvasActivity.inputModeMap.get(item.getItemId()));
-
-                if (defaultInputHandlerId.equals(RemoteCanvasActivity.inputModeMap.get(item.getItemId()))) {
-                    item.setChecked(true);
-                }
-            }
-        } catch (NullPointerException e) {
-        }
     }
 
     /* (non-Javadoc)
@@ -806,11 +774,6 @@ public class ConnectionGridActivity extends AppCompatActivity implements GetText
 //                    showGetTextFragment(getNewPassword);
 //                }
 //            }
-//        } else if (item.getGroupId() == R.id.itemInputModeGroup) {
-//            Log.d(TAG, RemoteCanvasActivity.inputModeMap.get(item.getItemId()));
-//            Utils.setSharedPreferenceString(this, Constants.defaultInputMethodTag,
-//                    RemoteCanvasActivity.inputModeMap.get(item.getItemId()));
-//        }
         return true;
     }
 

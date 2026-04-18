@@ -72,8 +72,6 @@ public class ConnectionBean extends AbstractConnectionBean implements Connection
         }
 
         if (context != null) {
-            inputMode = Utils.querySharedPreferenceString(context, Constants.defaultInputMethodTag,
-                    InputHandlerTouchpad.ID);
             preferSendingUnicode = Utils.querySharedPreferenceBoolean(context, Constants.preferSendingUnicode);
         } else {
             android.util.Log.e(TAG, "Failed to query defaults from shared preferences, context is null.");

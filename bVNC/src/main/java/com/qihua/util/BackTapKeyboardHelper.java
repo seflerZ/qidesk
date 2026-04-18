@@ -12,16 +12,17 @@ public class BackTapKeyboardHelper implements SensorEventListener {
 
     // Threshold for tap detection (in m/s², gravity is ~9.8)
     // A tap typically produces a spike of 15-30 m/s²
-    private static final float TAP_THRESHOLD = 18.0f;
+    // Set higher to avoid accidental triggers when placing phone on table
+    private static final float TAP_THRESHOLD = 20.0f;
 
-    // Number of taps required
+    // Number of taps required (2 to reduce accidental triggers)
     private static final int REQUIRED_TAPS = 2;
 
     // Time window for completing the taps (in ms)
-    private static final long TAP_TIME_WINDOW_MS = 600;
+    private static final long TAP_TIME_WINDOW_MS = 700;
 
     // Minimum time between taps to avoid double counting (in ms)
-    private static final long MIN_TIME_BETWEEN_TAPS_MS = 150;
+    private static final long MIN_TIME_BETWEEN_TAPS_MS = 240;
 
     // Cooldown after triggering to prevent repeated triggers (in ms)
     private static final long TRIGGER_COOLDOWN_MS = 1000;
