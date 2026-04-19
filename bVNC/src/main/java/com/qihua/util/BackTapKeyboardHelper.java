@@ -22,7 +22,7 @@ public class BackTapKeyboardHelper implements SensorEventListener {
     private static final long TAP_TIME_WINDOW_MS = 700;
 
     // Minimum time between taps to avoid double counting (in ms)
-    private static final long MIN_TIME_BETWEEN_TAPS_MS = 240;
+    private static final long MIN_TIME_BETWEEN_TAPS_MS = 140;
 
     // Cooldown after triggering to prevent repeated triggers (in ms)
     private static final long TRIGGER_COOLDOWN_MS = 1000;

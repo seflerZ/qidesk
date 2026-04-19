@@ -637,7 +637,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         prefConfig.width = remoteWidth;
         prefConfig.height = remoteHeight;
         prefConfig.enableHdr = false;
-        prefConfig.bitrate = 15000 * (remoteWidth / 1920);
+        prefConfig.bitrate = 18000 * (remoteWidth / 1920);
         prefConfig.disableWarnings = true;
         prefConfig.incomingFrameQueueSize = 2;
         prefConfig.videoFormat = PreferenceConfiguration.FormatOption.AUTO;
