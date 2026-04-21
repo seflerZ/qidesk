@@ -1575,15 +1575,17 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     
     /**
      * Toggles between input modes (touchpad, direct touch, gamepad)
+     * Gamepad is only available for NVStream connections
      */
-    private void toggleInputMode() {
+    public void toggleInputMode() {
         int currentModeId = getModeIdFromHandler(inputHandler);
         int newModeId;
 
         if (currentModeId == R.id.itemInputTouchpad) {
             newModeId = R.id.itemInputDirectTouch;
         } else if (currentModeId == R.id.itemInputDirectTouch) {
-            newModeId = R.id.itemInputGamepad;
+            // Only cycle to gamepad if NVStream supports it, otherwise go back to touchpad
+            newModeId = canvas.isNvStream ? R.id.itemInputGamepad : R.id.itemInputTouchpad;
         } else {
             newModeId = R.id.itemInputTouchpad;
         }
