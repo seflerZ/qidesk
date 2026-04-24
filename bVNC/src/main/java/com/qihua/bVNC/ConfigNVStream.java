@@ -388,13 +388,16 @@ public class ConfigNVStream extends MainConfiguration {
 
         sshServer.setText(selected.getSshServer());
 
+        selectedConnType = Constants.CONN_TYPE_NVSTREAM;
+        if (isNewConnection) {
+            selected.setConnectionType(Constants.CONN_TYPE_NVSTREAM);
+        }
+
         portText.setText(String.valueOf(selected.getPort()));
 
         if (selected.getKeepPassword() || !selected.getPassword().isEmpty()) {
             textPassword.setText(selected.getPassword());
         }
-
-        selectedConnType = Constants.CONN_TYPE_NVSTREAM;
         checkboxKeepPassword.setChecked(selected.getKeepPassword());
         checkboxUseLastPositionToolbar.setChecked((!isNewConnection)
                 ? selected.getUseLastPositionToolbar() : this.useLastPositionToolbarDefault());

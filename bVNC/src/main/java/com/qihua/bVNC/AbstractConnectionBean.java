@@ -406,6 +406,18 @@ public abstract class AbstractConnectionBean extends com.antlersoft.android.dbim
 
     public void setConnectionType(int arg_connectionType) {
         gen_connectionType = arg_connectionType;
+        // Set correct default port based on connection type
+        switch (arg_connectionType) {
+            case Constants.CONN_TYPE_VNC:
+                setPort(Constants.DEFAULT_VNC_PORT);
+                break;
+            case Constants.CONN_TYPE_NVSTREAM:
+                setPort(Constants.DEFAULT_NVSTREAM_PORT);
+                break;
+            default:
+                setPort(Constants.DEFAULT_RDP_PORT);
+                break;
+        }
     }
 
     public java.lang.String getSshServer() {
