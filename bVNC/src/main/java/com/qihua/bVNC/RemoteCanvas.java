@@ -630,7 +630,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         prefConfig.enableSops = true;
         prefConfig.bindAllUsb = true;
         prefConfig.audioConfiguration = MoonBridge.AUDIO_CONFIGURATION_STEREO;
-        prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_BALANCED;
+        prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_MIN_LATENCY;
         prefConfig.multiController = false;
         prefConfig.disableWarnings = true;
         prefConfig.enablePip = false;
@@ -647,8 +647,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
         // reduce bitrate if on cellular connection
         if (!computerDetails.activeAddress.address.equals(computerDetails.localAddress.address)) {
-            prefConfig.bitrate = 8000 * (remoteWidth / 1920);
-            prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_MIN_LATENCY;
+            prefConfig.bitrate = 10000 * (remoteWidth / 1920);
+            prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_BALANCED;
             prefConfig.incomingFrameQueueSize = 3;
             prefConfig.fps = 60;
 
