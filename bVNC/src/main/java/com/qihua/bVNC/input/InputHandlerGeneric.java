@@ -20,6 +20,8 @@
 
 package com.qihua.bVNC.input;
 
+import static com.qihua.bVNC.input.InputHandlerTouchpad.SCROLL_SAMPLING_MS;
+
 import android.gesture.GestureOverlayView;
 import android.os.SystemClock;
 import android.view.InputDevice;
@@ -48,12 +50,9 @@ import java.util.concurrent.Semaphore;
 abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureListener
         implements InputHandler, ScaleGestureDetector.OnScaleGestureListener {
     private static final String TAG = "InputHandlerGeneric";
-    public static final int POINTER_SAMPLING_MS = 8;
+    public static final int POINTER_SAMPLING_MS = 13;
     protected final boolean debugLogging;
 
-    // If swipe events are registered once every baseSwipeTime miliseconds, then
-    // swipeSpeed will be one. If more often, swipe-speed goes up, if less, down.
-    final long baseSwipeTime = 200;
     // The minimum distance a scale event has to traverse the FIRST time before scaling starts.
     final double minScaleFactor = 0.1;
     protected MyGestureDectector gestureDetector;
@@ -267,6 +266,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     }
 
     private long lastPointerEventTime = 0;
+    private long lastScrollEventTime = 0;
     protected static final float SPEED_ACCELERATION_FACTOR = 0.5f; // 加速度因子
     protected static final float MAX_ACCELERATION = 5f; // 最大加速度乘数
     
@@ -301,13 +301,26 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         float diffX = e.getX();
         float diffY = e.getY();
 
-        if (System.currentTimeMillis() - lastPointerEventTime < POINTER_SAMPLING_MS
-                && action == MotionEvent.ACTION_MOVE) {
-            cumulatedX += diffX;
-            cumulatedY += diffY;
+        long currentTime = System.currentTimeMillis();
 
-            return true;
+        if (action == MotionEvent.ACTION_MOVE) {
+            if (currentTime - lastPointerEventTime < POINTER_SAMPLING_MS) {
+                cumulatedX += diffX;
+                cumulatedY += diffY;
+
+                return true;
+            }
+
+            lastPointerEventTime = currentTime;
         }
+//
+//        if (action == MotionEvent.ACTION_SCROLL) {
+//            if (currentTime - lastScrollEventTime < SCROLL_SAMPLING_MS) {
+//                return true;
+//            }
+//
+//            lastScrollEventTime = currentTime;
+//        }
 
         if (pointer.pointerY >= canvas.getHeight()
                 && action == MotionEvent.ACTION_DOWN
@@ -322,13 +335,11 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         // will trigger pointer hide event
         canvas.showCursor();
 
-        cumulatedX = 0;
-        cumulatedY = 0;
-
         diffX += cumulatedX;
         diffY += cumulatedY;
 
-        lastPointerEventTime = System.currentTimeMillis();
+        cumulatedX = 0;
+        cumulatedY = 0;
 
         FpsCounter fpsCounter = canvas.getFpsCounter();
         if (fpsCounter != null) {
