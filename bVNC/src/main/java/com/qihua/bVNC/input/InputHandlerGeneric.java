@@ -313,14 +313,14 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
             lastPointerEventTime = currentTime;
         }
-//
-//        if (action == MotionEvent.ACTION_SCROLL) {
-//            if (currentTime - lastScrollEventTime < SCROLL_SAMPLING_MS) {
-//                return true;
-//            }
-//
-//            lastScrollEventTime = currentTime;
-//        }
+
+        if (action == MotionEvent.ACTION_SCROLL) {
+            if (currentTime - lastScrollEventTime < SCROLL_SAMPLING_MS) {
+                return true;
+            }
+
+            lastScrollEventTime = currentTime;
+        }
 
         if (pointer.pointerY >= canvas.getHeight()
                 && action == MotionEvent.ACTION_DOWN
@@ -405,16 +405,12 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                 scrollLeft = false;
                 // Determine direction and speed of scrolling.
                 if (vscroll < 0) {
-                    swipeSpeed = (int) (-1 * vscroll);
                     scrollDown = true;
                 } else if (vscroll > 0) {
-                    swipeSpeed = (int) vscroll;
                     scrollUp = true;
                 } else if (hscroll < 0) {
-                    swipeSpeed = (int) (-1 * hscroll);
                     scrollRight = true;
                 } else if (hscroll > 0) {
-                    swipeSpeed = (int) hscroll;
                     scrollLeft = true;
                 } else
                     break;
