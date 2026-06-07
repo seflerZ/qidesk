@@ -7,16 +7,16 @@ import android.view.KeyEvent;
 
 import com.qihua.bVNC.App;
 import com.qihua.bVNC.RemoteCanvas;
-import com.qihua.bVNC.RfbProto;
+import com.qihua.bVNC.communicator.RfbCommunicator;
 import com.qihua.tigervnc.rfb.UnicodeToKeysym;
-import com.undatech.opaque.RfbConnectable;
+import com.undatech.opaque.RemoteConnectable;
 
 public class RemoteVncKeyboard extends RemoteKeyboard {
     private final static String TAG = "RemoteKeyboard";
     public static boolean rAltAsIsoL3Shift = false;
     protected RemoteCanvas canvas;
 
-    public RemoteVncKeyboard(RfbConnectable r, RemoteCanvas v, Handler h,
+    public RemoteVncKeyboard(RemoteConnectable r, RemoteCanvas v, Handler h,
                              boolean rAltAsIsoL3Shift, boolean debugLog) {
         super(r, v.getContext(), h, debugLog);
         canvas = v;
@@ -220,16 +220,16 @@ public class RemoteVncKeyboard extends RemoteKeyboard {
                     keysym = 0xff7f;
                     break;
                 case KeyEvent.KEYCODE_ALT_LEFT:
-                    keysym = RfbProto.XK_LALT;
+                    keysym = RfbCommunicator.XK_LALT;
                     break;
                 case KeyEvent.KEYCODE_ALT_RIGHT:
-                    keysym = RfbProto.XK_RALT;
+                    keysym = RfbCommunicator.XK_RALT;
                     break;
                 case KeyEvent.KEYCODE_SHIFT_LEFT:
-                    keysym = RfbProto.XK_LSHIFT;
+                    keysym = RfbCommunicator.XK_LSHIFT;
                     break;
                 case KeyEvent.KEYCODE_SHIFT_RIGHT:
-                    keysym = RfbProto.XK_RSHIFT;
+                    keysym = RfbCommunicator.XK_RSHIFT;
                     break;
 
                 case 0   /* KEYCODE_UNKNOWN */:

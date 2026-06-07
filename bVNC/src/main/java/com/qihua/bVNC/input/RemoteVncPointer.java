@@ -22,8 +22,7 @@ package com.qihua.bVNC.input;
 import android.os.Handler;
 
 import com.qihua.bVNC.RemoteCanvas;
-import com.undatech.opaque.RfbConnectable;
-import com.undatech.opaque.util.GeneralUtils;
+import com.undatech.opaque.RemoteConnectable;
 
 public class RemoteVncPointer extends RemotePointer {
     public static final int MOUSE_BUTTON_NONE = 0;
@@ -37,7 +36,7 @@ public class RemoteVncPointer extends RemotePointer {
     public static final int MOUSE_BUTTON_SCROLL_RIGHT = 64;
     private static final String TAG = "RemotePointer";
 
-    public RemoteVncPointer(RfbConnectable rfb, RemoteCanvas canvas, Handler handler,
+    public RemoteVncPointer(RemoteConnectable rfb, RemoteCanvas canvas, Handler handler,
                             boolean debugLogging) {
         super(rfb, canvas, handler, debugLogging);
     }

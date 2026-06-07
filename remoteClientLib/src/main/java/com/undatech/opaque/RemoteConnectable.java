@@ -28,7 +28,7 @@ import com.undatech.opaque.input.RemoteKeyboardState;
 import java.util.HashMap;
 import java.util.Map;
 
-public abstract class RfbConnectable {
+public abstract class RemoteConnectable {
     private final static String TAG = "RfbConnectable";
     public RemoteKeyboardState remoteKeyboardState = null;
     protected Map<Integer, Integer> modifierMap = new HashMap<>();
@@ -36,7 +36,7 @@ public abstract class RfbConnectable {
     protected int metaState = 0;
     protected Handler handler = null;
 
-    public RfbConnectable(boolean debugLogging, Handler handler) {
+    public RemoteConnectable(boolean debugLogging, Handler handler) {
         this.handler = handler;
         this.debugLogging = debugLogging;
         this.remoteKeyboardState = new RemoteKeyboardState(debugLogging);

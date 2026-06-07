@@ -21,17 +21,15 @@ package com.qihua.bVNC;
 
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Matrix;
 import android.graphics.Paint;
 
-import com.undatech.opaque.RfbConnectable;
+import com.undatech.opaque.RemoteConnectable;
 
 class UltraCompactBitmapData extends AbstractBitmapData {
     private final static String TAG = "UltraCompactBitmapData";
     Bitmap.Config cfg = Bitmap.Config.RGB_565;
 
-    UltraCompactBitmapData(RfbConnectable rfb, RemoteCanvas c, boolean trueColor) {
+    UltraCompactBitmapData(RemoteConnectable rfb, RemoteCanvas c, boolean trueColor) {
         super(rfb, c);
         bitmapwidth = framebufferwidth;
         bitmapheight = framebufferheight;

@@ -5,7 +5,7 @@ import android.os.Handler;
 import android.widget.Toast;
 
 import com.qihua.bVNC.RemoteCanvas;
-import com.undatech.opaque.RfbConnectable;
+import com.undatech.opaque.RemoteConnectable;
 
 /**
  * 抽象游戏手柄类，为不同连接类型提供统一的游戏手柄接口
@@ -17,7 +17,7 @@ public abstract class RemoteGamepad {
     protected RemoteCanvas canvas;
     protected Context context;
     protected Handler handler;
-    protected RfbConnectable protocomm;
+    protected RemoteConnectable protocomm;
     protected boolean debugLogging = false;
     
     // 当前按钮状态

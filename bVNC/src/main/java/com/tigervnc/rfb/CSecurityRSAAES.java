@@ -23,7 +23,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 
-import com.qihua.bVNC.RfbProto;
+import com.qihua.bVNC.communicator.RfbCommunicator;
 import com.tigervnc.rdr.AESInStream;
 import com.tigervnc.rdr.AESOutStream;
 import com.tigervnc.rdr.InStream;
@@ -59,7 +59,7 @@ public class CSecurityRSAAES {
     private static final int MaxKeyLength = 8192;
     private static final String TAG = "CSecurityRSAAES";
 
-    private final RfbProto cc;
+    private final RfbCommunicator cc;
     private final int secType;
     private final int keySize;
     private final boolean isAllEncrypted;
@@ -75,7 +75,7 @@ public class CSecurityRSAAES {
     private byte[] clientRandom;
     private AESInStream rais;
     private AESOutStream raos;
-    public CSecurityRSAAES(RfbProto cc, int secType, int keySize, boolean isAllEncrypted) {
+    public CSecurityRSAAES(RfbCommunicator cc, int secType, int keySize, boolean isAllEncrypted) {
         this.cc = cc;
         this.secType = secType;
         this.keySize = keySize;
@@ -313,7 +313,7 @@ public class CSecurityRSAAES {
 
     private void readSubtype() throws AuthFailureException, Exception {
         int subtype = rais.readUnsignedByte();
-        if (subtype != RfbProto.secTypeRA2UserPass && subtype != RfbProto.secTypeRA2Pass)
+        if (subtype != RfbCommunicator.secTypeRA2UserPass && subtype != RfbCommunicator.secTypeRA2Pass)
             throw new AuthFailureException("unknown RSA-AES subtype");
     }
 

@@ -24,7 +24,7 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 
-import com.undatech.opaque.RfbConnectable;
+import com.undatech.opaque.RemoteConnectable;
 
 import java.util.Arrays;
 
@@ -44,7 +44,7 @@ class FullBufferBitmapData extends AbstractBitmapData {
      * @param p
      * @param c
      */
-    public FullBufferBitmapData(RfbConnectable p, RemoteCanvas c, int capacity) {
+    public FullBufferBitmapData(RemoteConnectable p, RemoteCanvas c, int capacity) {
         super(p, c);
         framebufferwidth = rfb.framebufferWidth();
         framebufferheight = rfb.framebufferHeight();

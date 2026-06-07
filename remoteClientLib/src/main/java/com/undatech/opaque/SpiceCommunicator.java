@@ -40,12 +40,12 @@ import com.undatech.opaque.input.RemotePointer;
 import com.undatech.opaque.util.GeneralUtils;
 import com.undatech.opaque.util.UsbDeviceManager;
 
-import org.freedesktop.gstreamer.GStreamer;
+//import org.freedesktop.gstreamer.GStreamer;
 
 import java.util.ArrayList;
 import java.util.Objects;
 
-public class SpiceCommunicator extends RfbConnectable {
+public class SpiceCommunicator extends RemoteConnectable {
 
     final static int LCONTROL = 29;
     final static int RCONTROL = 285;
@@ -139,7 +139,7 @@ public class SpiceCommunicator extends RfbConnectable {
         myself = this;
 
         try {
-            GStreamer.init(context);
+//            GStreamer.init(context);
         } catch (Exception e) {
             e.printStackTrace();
             Toast.makeText(context, e.getMessage(), Toast.LENGTH_LONG).show();
@@ -147,7 +147,7 @@ public class SpiceCommunicator extends RfbConnectable {
 
         usbDeviceManager = new UsbDeviceManager(context, usbEnabled);
         if (usbEnabled) {
-            context.registerReceiver(usbPermissionRequestedReceiver, new IntentFilter(ACTION_USB_PERMISSION));
+//            context.registerReceiver(usbPermissionRequestedReceiver, new IntentFilter(ACTION_USB_PERMISSION));
             IntentFilter filter = new IntentFilter();
             filter.addAction("android.hardware.usb.action.USB_STATE");
             context.registerReceiver(usbStateChangedReceiver, filter);

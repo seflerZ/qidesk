@@ -34,6 +34,7 @@ import android.graphics.RectF;
 import android.util.Log;
 
 import com.github.luben.zstd.Zstd;
+import com.qihua.bVNC.communicator.RfbCommunicator;
 import com.qihua.bVNC.input.RemotePointer;
 
 import java.io.IOException;
@@ -56,7 +57,7 @@ public class Decoder {
     private byte[] tightPalette8 = new byte[2];
     private int[] tightPalette24 = new int[256];
     private byte[] colorBuf = new byte[768];
-    private byte[] uncompDataBuf = new byte[RfbProto.TightMinToCompress * 3];
+    private byte[] uncompDataBuf = new byte[RfbCommunicator.TightMinToCompress * 3];
     private byte[] zlibData = new byte[4096];
     private byte[] inflBuf = new byte[8192];
     private BitmapFactory.Options bitmapopts = new BitmapFactory.Options();
@@ -110,7 +111,7 @@ public class Decoder {
         bitmapData = b;
     }
 
-    void setPixelFormat(RfbProto rfb) throws IOException {
+    public void setPixelFormat(RfbCommunicator rfb) throws IOException {
         pendingColorModel.setPixelFormat(rfb);
         bytesPerPixel = pendingColorModel.bpp();
         colorPalette = pendingColorModel.palette();
@@ -132,11 +133,11 @@ public class Decoder {
         return (pendingColorModel != null);
     }
 
-    void handleRawRect(RfbProto rfb, int x, int y, int w, int h) throws IOException {
+    public void handleRawRect(RfbCommunicator rfb, int x, int y, int w, int h) throws IOException {
         handleRawRect(rfb, x, y, w, h, true);
     }
 
-    void handleRawRect(RfbProto rfb, int x, int y, int w, int h, boolean paint) throws IOException {
+    public void handleRawRect(RfbCommunicator rfb, int x, int y, int w, int h, boolean paint) throws IOException {
         boolean valid = bitmapData.validDraw(x, y, w, h);
         int[] pixels = bitmapData.bitmapPixels;
         if (bytesPerPixel == 1) {
@@ -187,7 +188,7 @@ public class Decoder {
     //
     // Handle a CopyRect rectangle.
     //
-    void handleCopyRect(RfbProto rfb, int x, int y, int w, int h) throws IOException {
+    public void handleCopyRect(RfbCommunicator rfb, int x, int y, int w, int h) throws IOException {
         // Read the source coordinates.
         rfb.readCopyRect();
 
@@ -201,7 +202,7 @@ public class Decoder {
     //
     // Handle an RRE-encoded rectangle.
     //
-    void handleRRERect(RfbProto rfb, int x, int y, int w, int h) throws IOException {
+    public void handleRRERect(RfbCommunicator rfb, int x, int y, int w, int h) throws IOException {
         boolean valid = bitmapData.validDraw(x, y, w, h);
         int nSubrects = rfb.is.readInt();
 
@@ -254,7 +255,7 @@ public class Decoder {
     // Handle a CoRRE-encoded rectangle.
     //
 
-    void handleCoRRERect(RfbProto rfb, int x, int y, int w, int h) throws IOException {
+    public void handleCoRRERect(RfbCommunicator rfb, int x, int y, int w, int h) throws IOException {
         boolean valid = bitmapData.validDraw(x, y, w, h);
         int nSubrects = rfb.is.readInt();
 
@@ -302,7 +303,7 @@ public class Decoder {
     //
     // Handle a Hextile-encoded rectangle.
     //
-    void handleHextileRect(RfbProto rfb, int x, int y, int w, int h) throws IOException {
+    public void handleHextileRect(RfbCommunicator rfb, int x, int y, int w, int h) throws IOException {
 
         hextile_bg = Color.BLACK;
         hextile_fg = Color.BLACK;
@@ -328,12 +329,12 @@ public class Decoder {
     //
     // Handle one tile in the Hextile-encoded data.
     //
-    private void handleHextileSubrect(RfbProto rfb, int tx, int ty, int tw, int th) throws IOException {
+    private void handleHextileSubrect(RfbCommunicator rfb, int tx, int ty, int tw, int th) throws IOException {
 
         int subencoding = rfb.is.readUnsignedByte();
 
         // Is it a raw-encoded sub-rectangle?
-        if ((subencoding & RfbProto.HextileRaw) != 0) {
+        if ((subencoding & RfbCommunicator.HextileRaw) != 0) {
             handleRawRect(rfb, tx, ty, tw, th, false);
             return;
         }
@@ -343,7 +344,7 @@ public class Decoder {
         if (bytesPerPixel > backgroundColorBuffer.length) {
             throw new RuntimeException("impossible colordepth");
         }
-        if ((subencoding & RfbProto.HextileBackgroundSpecified) != 0) {
+        if ((subencoding & RfbCommunicator.HextileBackgroundSpecified) != 0) {
             rfb.readFully(backgroundColorBuffer, 0, bytesPerPixel);
             if (bytesPerPixel == 1) {
                 hextile_bg = colorPalette[0xFF & backgroundColorBuffer[0]];
@@ -357,7 +358,7 @@ public class Decoder {
             bitmapData.drawRect(tx, ty, tw, th, handleHextileSubrectPaint);
 
         // Read the foreground color if specified.
-        if ((subencoding & RfbProto.HextileForegroundSpecified) != 0) {
+        if ((subencoding & RfbCommunicator.HextileForegroundSpecified) != 0) {
             rfb.readFully(backgroundColorBuffer, 0, bytesPerPixel);
             if (bytesPerPixel == 1) {
                 hextile_fg = colorPalette[0xFF & backgroundColorBuffer[0]];
@@ -367,12 +368,12 @@ public class Decoder {
         }
 
         // Done with this tile if there is no sub-rectangles.
-        if ((subencoding & RfbProto.HextileAnySubrects) == 0)
+        if ((subencoding & RfbCommunicator.HextileAnySubrects) == 0)
             return;
 
         int nSubrects = rfb.is.readUnsignedByte();
         int bufsize = nSubrects * 2;
-        if ((subencoding & RfbProto.HextileSubrectsColoured) != 0) {
+        if ((subencoding & RfbCommunicator.HextileSubrectsColoured) != 0) {
             bufsize += nSubrects * bytesPerPixel;
         }
         if (rre_buf.length < bufsize)
@@ -381,7 +382,7 @@ public class Decoder {
 
         int b1, b2, sx, sy, sw, sh;
         int i = 0;
-        if ((subencoding & RfbProto.HextileSubrectsColoured) == 0) {
+        if ((subencoding & RfbCommunicator.HextileSubrectsColoured) == 0) {
 
             // Sub-rectangles are all of the same color.
             handleHextileSubrectPaint.setColor(hextile_fg);
@@ -434,7 +435,7 @@ public class Decoder {
     //
     // Handle a ZRLE-encoded rectangle.
     //
-    void handleZRLERect(RfbProto rfb, int x, int y, int w, int h) throws Exception {
+    public void handleZRLERect(RfbCommunicator rfb, int x, int y, int w, int h) throws Exception {
 
         if (zrleInStream == null)
             zrleInStream = new ZlibInStream();
@@ -503,7 +504,7 @@ public class Decoder {
     //
     // Handle a Zlib-encoded rectangle.
     //
-    void handleZlibRect(RfbProto rfb, int x, int y, int w, int h) throws Exception {
+    public void handleZlibRect(RfbCommunicator rfb, int x, int y, int w, int h) throws Exception {
         boolean valid = bitmapData.validDraw(x, y, w, h);
         int nBytes = rfb.is.readInt();
 
@@ -717,7 +718,7 @@ public class Decoder {
     //
     // Handle a Tight-encoded rectangle.
     //
-    void handleTightRect(RfbProto rfb, int x, int y, int w, int h, boolean zstd) throws Exception {
+    public void handleTightRect(RfbCommunicator rfb, int x, int y, int w, int h, boolean zstd) throws Exception {
 
         int[] pixels = bitmapData.bitmapPixels;
         valid = bitmapData.validDraw(x, y, w, h);
@@ -737,12 +738,12 @@ public class Decoder {
         }
 
         // Check correctness of sub-encoding value.
-        if (comp_ctl > RfbProto.TightMaxSubencoding) {
+        if (comp_ctl > RfbCommunicator.TightMaxSubencoding) {
             throw new Exception("Incorrect tight subencoding: " + comp_ctl);
         }
 
         // Handle solid-color rectangles.
-        if (comp_ctl == RfbProto.TightFill) {
+        if (comp_ctl == RfbCommunicator.TightFill) {
             if (bytesPerPixel == 1) {
                 idx = rfb.is.readUnsignedByte();
                 handleTightRectPaint.setColor(colorPalette[0xFF & idx]);
@@ -758,7 +759,7 @@ public class Decoder {
             return;
         }
 
-        if (comp_ctl == RfbProto.TightJpeg) {
+        if (comp_ctl == RfbCommunicator.TightJpeg) {
             // Read JPEG data.
             jpegDataLen = rfb.readCompactLen();
             if (jpegDataLen > inflBuf.length) {
@@ -781,10 +782,10 @@ public class Decoder {
         }
 
         // Read filter id and parameters.
-        if ((comp_ctl & RfbProto.TightExplicitFilter) != 0) {
+        if ((comp_ctl & RfbCommunicator.TightExplicitFilter) != 0) {
             int filter_id = rfb.is.readUnsignedByte();
 
-            if (filter_id == RfbProto.TightFilterPalette) {
+            if (filter_id == RfbCommunicator.TightFilterPalette) {
                 numColors = rfb.is.readUnsignedByte() + 1;
 
                 if (bytesPerPixel == 1) {
@@ -806,9 +807,9 @@ public class Decoder {
                 if (numColors == 2)
                     rowSize = (w + 7) / 8;
 
-            } else if (filter_id == RfbProto.TightFilterGradient) {
+            } else if (filter_id == RfbCommunicator.TightFilterGradient) {
                 useGradient = true;
-            } else if (filter_id != RfbProto.TightFilterCopy) {
+            } else if (filter_id != RfbCommunicator.TightFilterCopy) {
                 throw new Exception("Incorrect tight filter id: " + filter_id);
             }
         }
@@ -819,7 +820,7 @@ public class Decoder {
         // Read, optionally uncompress and decode data.
         dataSize = h * rowSize;
 
-        if (dataSize < RfbProto.TightMinToCompress) {
+        if (dataSize < RfbCommunicator.TightMinToCompress) {
             // Data size is small - not compressed with zlib.
             rfb.readFully(uncompDataBuf, 0, dataSize);
             if (!valid)
@@ -1062,8 +1063,8 @@ public class Decoder {
     /**
      * Handles cursor shape update (XCursor and RichCursor encodings).
      */
-    synchronized void
-    handleCursorShapeUpdate(RfbProto rfb, int encodingType, int hotX, int hotY, int w, int h) throws IOException {
+    public synchronized void
+    handleCursorShapeUpdate(RfbCommunicator rfb, int encodingType, int hotX, int hotY, int w, int h) throws IOException {
 
         RemotePointer p = vncCanvas.getPointer();
         int x = p.getX();
@@ -1108,14 +1109,14 @@ public class Decoder {
      * @return
      * @throws IOException
      */
-    synchronized int[] decodeCursorShape(RfbProto rfb, int encodingType, int width, int height) throws IOException {
+    synchronized int[] decodeCursorShape(RfbCommunicator rfb, int encodingType, int width, int height) throws IOException {
 
         int bytesPerRow = (width + 7) / 8;
         int bytesMaskData = bytesPerRow * height;
 
         int[] softCursorPixels = new int[width * height];
 
-        if (encodingType == RfbProto.EncodingXCursor) {
+        if (encodingType == RfbCommunicator.EncodingXCursor) {
 
             // Read foreground and background colors of the cursor.
             byte[] rgb = new byte[6];

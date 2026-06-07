@@ -20,8 +20,7 @@
 
 package com.qihua.bVNC;
 
-import com.undatech.opaque.RfbConnectable;
-import com.qihua.bVNC.R;
+import com.undatech.opaque.RemoteConnectable;
 
 import java.io.IOException;
 
@@ -60,7 +59,7 @@ public enum COLORMODEL {
         return super.toString();
     }
 
-    public void setPixelFormat(RfbConnectable rfb) throws IOException {
+    public void setPixelFormat(RemoteConnectable rfb) throws IOException {
         switch (this) {
             case C24bit:
                 // 24-bit color

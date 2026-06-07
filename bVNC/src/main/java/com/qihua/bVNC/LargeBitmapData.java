@@ -29,7 +29,7 @@ import android.graphics.Rect;
 import com.qihua.android.drawing.OverlappingCopy;
 import com.qihua.android.drawing.RectList;
 import com.qihua.util.ObjectPool;
-import com.undatech.opaque.RfbConnectable;
+import com.undatech.opaque.RemoteConnectable;
 
 class LargeBitmapData extends AbstractBitmapData {
 
@@ -71,7 +71,7 @@ class LargeBitmapData extends AbstractBitmapData {
      * @param displayHeight
      * @param capacity Max process heap size in bytes
      */
-    LargeBitmapData(RfbConnectable p, RemoteCanvas c, int displayWidth, int displayHeight, int capacity) {
+    LargeBitmapData(RemoteConnectable p, RemoteCanvas c, int displayWidth, int displayHeight, int capacity) {
         super(p, c);
         this.capacity = capacity;
         this.displayWidth = displayWidth;

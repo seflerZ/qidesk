@@ -28,9 +28,9 @@ import android.util.Log;
 import android.widget.ImageView.ScaleType;
 
 import com.antlersoft.android.dbimpl.NewInstance;
+import com.qihua.bVNC.communicator.RfbCommunicator;
 import com.qihua.bVNC.input.InputHandlerTouchpad;
 import com.undatech.opaque.Connection;
-import com.qihua.bVNC.R;
 
 import net.sqlcipher.database.SQLiteDatabase;
 
@@ -119,7 +119,7 @@ public class ConnectionBean extends AbstractConnectionBean implements Connection
         setTlsPort(-1);
         setCertSubject("");
         setColorModel(COLORMODEL.C24bit.nameString());
-        setPrefEncoding(RfbProto.EncodingTight);
+        setPrefEncoding(RfbCommunicator.EncodingTight);
         setScaleMode(ScaleType.MATRIX);
         setInputMode(inputMode);
         setUseDpadAsArrows(true);

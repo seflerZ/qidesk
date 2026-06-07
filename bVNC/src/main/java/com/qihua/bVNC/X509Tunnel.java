@@ -27,7 +27,7 @@ import android.util.Base64;
 import android.util.Log;
 
 import com.undatech.opaque.RemoteClientLibConstants;
-import com.undatech.opaque.RfbConnectable;
+import com.undatech.opaque.RemoteConnectable;
 
 import java.io.ByteArrayInputStream;
 import java.net.Socket;
@@ -49,10 +49,10 @@ public class X509Tunnel extends TLSTunnelBase {
 
     private static final String TAG = "X509Tunnel";
     Certificate cert;
-    RfbConnectable rfb;
+    RemoteConnectable rfb;
     Handler handler;
 
-    public X509Tunnel(Socket sock_, String certstr, Handler handler, RfbConnectable rfb)
+    public X509Tunnel(Socket sock_, String certstr, Handler handler, RemoteConnectable rfb)
             throws CertificateException {
         super(sock_);
 

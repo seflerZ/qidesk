@@ -27,7 +27,7 @@ import android.os.SystemClock;
 import android.view.KeyCharacterMap;
 import android.view.KeyEvent;
 
-import com.undatech.opaque.RfbConnectable;
+import com.undatech.opaque.RemoteConnectable;
 
 public abstract class RemoteKeyboard {
     public final static int SCAN_ESC = 1;
@@ -64,7 +64,7 @@ public abstract class RemoteKeyboard {
     private static final String TAG = "RemoteKeyboard";
     protected static int remoteKeyboardMetaState = 0;
     protected Handler handler;
-    protected RfbConnectable rfb;
+    protected RemoteConnectable rfb;
     protected Context context;
     protected KeyRepeater keyRepeater;
     // Variable holding the state of any pressed hardware meta keys (Ctrl, Alt...)
@@ -83,7 +83,7 @@ public abstract class RemoteKeyboard {
     // Use camera button as meta key for right mouse button
     boolean cameraButtonDown = false;
 
-    public RemoteKeyboard(RfbConnectable r, Context v, Handler h, boolean debugLogging) {
+    public RemoteKeyboard(RemoteConnectable r, Context v, Handler h, boolean debugLogging) {
         this.rfb = r;
         this.context = v;
         this.handler = h;

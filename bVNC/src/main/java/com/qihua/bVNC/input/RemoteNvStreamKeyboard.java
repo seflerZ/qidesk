@@ -3,15 +3,13 @@ package com.qihua.bVNC.input;
 import static com.undatech.opaque.util.GeneralUtils.debugLog;
 
 import android.os.Handler;
-import android.view.KeyCharacterMap;
 import android.view.KeyEvent;
 
 import com.limelight.binding.input.KeyboardTranslator;
 import com.qihua.bVNC.App;
 import com.qihua.bVNC.RemoteCanvas;
 import com.undatech.opaque.NvCommunicator;
-import com.undatech.opaque.RfbConnectable;
-import com.undatech.opaque.input.RdpKeyboardMapper;
+import com.undatech.opaque.RemoteConnectable;
 
 public class RemoteNvStreamKeyboard extends RemoteKeyboard {
     private final static String TAG = "RemoteNvStreamKeyboard";
@@ -19,7 +17,7 @@ public class RemoteNvStreamKeyboard extends RemoteKeyboard {
     protected RemoteCanvas canvas;
     private NvCommunicator nvcomm;
 
-    public RemoteNvStreamKeyboard(RfbConnectable r, RemoteCanvas v, Handler h, boolean debugLog) {
+    public RemoteNvStreamKeyboard(RemoteConnectable r, RemoteCanvas v, Handler h, boolean debugLog) {
         super(r, v.getContext(), h, debugLog);
         nvcomm = (NvCommunicator) r;
         canvas = v;

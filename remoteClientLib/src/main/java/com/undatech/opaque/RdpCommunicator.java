@@ -7,7 +7,6 @@ import android.os.Handler;
 import android.os.Message;
 import android.os.SystemClock;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.freerdp.freerdpcore.application.GlobalApp;
 import com.freerdp.freerdpcore.application.SessionState;
@@ -16,7 +15,6 @@ import com.freerdp.freerdpcore.domain.ManualBookmark;
 import com.freerdp.freerdpcore.services.LibFreeRDP;
 import com.undatech.opaque.input.RdpKeyboardMapper;
 import com.undatech.opaque.input.RemoteKeyboard;
-import com.undatech.opaque.input.RemotePointer;
 import com.undatech.opaque.util.GeneralUtils;
 
 import org.apache.commons.validator.routines.InetAddressValidator;
@@ -27,7 +25,7 @@ import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.HashMap;
 
-public class RdpCommunicator extends RfbConnectable implements RdpKeyboardMapper.KeyProcessingListener,
+public class RdpCommunicator extends RemoteConnectable implements RdpKeyboardMapper.KeyProcessingListener,
         LibFreeRDP.UIEventListener, LibFreeRDP.EventListener {
     static final String TAG = "RdpCommunicator";
 

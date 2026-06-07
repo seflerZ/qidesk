@@ -22,12 +22,11 @@ package com.qihua.bVNC;
 
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.widget.ImageView;
 
-import com.undatech.opaque.RfbConnectable;
+import com.undatech.opaque.RemoteConnectable;
 
 /**
  * Abstract interface between the VncCanvas and the bitmap and pixel data buffers that actually contain
@@ -43,7 +42,7 @@ abstract public class AbstractBitmapData {
     protected int framebufferheight;
     protected int bitmapwidth;
     protected int bitmapheight;
-    RfbConnectable rfb;
+    RemoteConnectable rfb;
     protected Bitmap mbitmap;
     protected int bitmapPixels[];
     protected Canvas memGraphics;
@@ -53,7 +52,7 @@ abstract public class AbstractBitmapData {
     int yoffset = 0;
     boolean drawCursor = true;
 
-    protected AbstractBitmapData(RfbConnectable p, RemoteCanvas c) {
+    protected AbstractBitmapData(RemoteConnectable p, RemoteCanvas c) {
         rfb = p;
         vncCanvas = c;
         framebufferwidth = rfb.framebufferWidth();

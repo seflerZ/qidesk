@@ -6,7 +6,6 @@ import com.limelight.nvstream.input.ControllerPacket;
 import com.limelight.nvstream.jni.MoonBridge;
 import com.qihua.bVNC.RemoteCanvas;
 import com.undatech.opaque.NvCommunicator;
-import com.undatech.opaque.RfbConnectable;
 import com.undatech.opaque.util.GeneralUtils;
 
 /**

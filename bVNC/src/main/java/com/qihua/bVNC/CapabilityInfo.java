@@ -23,7 +23,7 @@
 //
 package com.qihua.bVNC;
 
-class CapabilityInfo {
+public class CapabilityInfo {
 
     // Public methods
 

@@ -24,7 +24,7 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 
-import com.undatech.opaque.RfbConnectable;
+import com.undatech.opaque.RemoteConnectable;
 
 class CompactBitmapData extends AbstractBitmapData {
     /**
@@ -35,7 +35,7 @@ class CompactBitmapData extends AbstractBitmapData {
     private final static String TAG = "CompactBitmapData";
     Bitmap.Config cfg = Bitmap.Config.RGB_565;
 
-    CompactBitmapData(RfbConnectable rfb, RemoteCanvas c, boolean trueColor) {
+    CompactBitmapData(RemoteConnectable rfb, RemoteCanvas c, boolean trueColor) {
         super(rfb, c);
         bitmapwidth = framebufferwidth;
         bitmapheight = framebufferheight;

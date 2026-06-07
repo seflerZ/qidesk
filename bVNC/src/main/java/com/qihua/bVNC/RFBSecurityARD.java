@@ -17,6 +17,8 @@
 
 package com.qihua.bVNC;
 
+import com.qihua.bVNC.communicator.RfbCommunicator;
+
 import java.io.IOException;
 import java.math.BigInteger;
 import java.security.GeneralSecurityException;
@@ -81,7 +83,7 @@ public class RFBSecurityARD {
     ;
 
     public byte getType() {
-        return RfbProto.SecTypeArd;
+        return RfbCommunicator.SecTypeArd;
     }
 
     public String getTypeName() {
@@ -92,7 +94,7 @@ public class RFBSecurityARD {
      * Perform Mac (ARD) Authentication on the provided RFBStream using
      * the username and password provided in the constructor.
      */
-    public boolean perform(RfbProto rfb) throws IOException {
+    public boolean perform(RfbCommunicator rfb) throws IOException {
 
         // 1. read the Diffie-Hellman parameters from the server
 

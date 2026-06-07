@@ -23,8 +23,7 @@ package com.qihua.bVNC.input;
 import android.os.Handler;
 
 import com.qihua.bVNC.RemoteCanvas;
-import com.undatech.opaque.RfbConnectable;
-import com.undatech.opaque.util.GeneralUtils;
+import com.undatech.opaque.RemoteConnectable;
 
 public class RemoteSpicePointer extends RemotePointer {
     public static final int SPICE_MOUSE_BUTTON_MOVE = 0;
@@ -35,7 +34,7 @@ public class RemoteSpicePointer extends RemotePointer {
     public static final int SPICE_MOUSE_BUTTON_DOWN = 5;
     private static final String TAG = "RemoteSpicePointer";
 
-    public RemoteSpicePointer(RfbConnectable spicecomm, RemoteCanvas canvas, Handler handler,
+    public RemoteSpicePointer(RemoteConnectable spicecomm, RemoteCanvas canvas, Handler handler,
                               boolean debugLogging) {
         super(spicecomm, canvas, handler, debugLogging);
     }

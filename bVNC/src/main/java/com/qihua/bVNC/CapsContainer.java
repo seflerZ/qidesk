@@ -26,7 +26,7 @@ package com.qihua.bVNC;
 import java.util.Hashtable;
 import java.util.Vector;
 
-class CapsContainer {
+public class CapsContainer {
 
     // Public methods
 

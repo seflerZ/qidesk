@@ -3,8 +3,7 @@ package com.qihua.bVNC.input;
 import android.os.Handler;
 
 import com.qihua.bVNC.RemoteCanvas;
-import com.qihua.bVNC.input.RemotePointer;
-import com.undatech.opaque.RfbConnectable;
+import com.undatech.opaque.RemoteConnectable;
 
 /**
  * Phase 0: no-op pointer. SSH has no mouse cursor to drive; this exists
@@ -15,12 +14,12 @@ import com.undatech.opaque.RfbConnectable;
  */
 public class RemoteSshPointer extends RemotePointer {
 
-    public RemoteSshPointer(RfbConnectable protocomm, RemoteCanvas canvas, Handler handler, boolean debugLogging) {
+    public RemoteSshPointer(RemoteConnectable protocomm, RemoteCanvas canvas, Handler handler, boolean debugLogging) {
         super(protocomm, canvas, handler, debugLogging);
     }
 
     /** Phase 0: swap the underlying RfbConnectable after a fold/unfold. */
-    public void setProtocomm(RfbConnectable protocomm) {
+    public void setProtocomm(RemoteConnectable protocomm) {
         this.protocomm = protocomm;
     }
 

@@ -1,13 +1,9 @@
 package com.qihua.bVNC.input;
 
 import android.os.Handler;
-import android.os.SystemClock;
-
-import androidx.core.util.Pair;
 
 import com.qihua.bVNC.RemoteCanvas;
-import com.undatech.opaque.RfbConnectable;
-import com.undatech.opaque.util.GeneralUtils;
+import com.undatech.opaque.RemoteConnectable;
 
 public class RemoteRdpPointer extends RemotePointer {
     private static final String TAG = "RemoteRdpPointer";
@@ -36,9 +32,9 @@ public class RemoteRdpPointer extends RemotePointer {
     private static final int MOUSE_BUTTON_SCROLL_LEFT = PTRFLAGS_HWHEEL | 0x0078;
     private static final int MOUSE_BUTTON_SCROLL_RIGHT = PTRFLAGS_HWHEEL | PTRFLAGS_WHEEL_NEGATIVE | 0x0088;
 
-    public RemoteRdpPointer(RfbConnectable rfbConnectable, RemoteCanvas canvas, Handler handler,
+    public RemoteRdpPointer(RemoteConnectable remoteConnectable, RemoteCanvas canvas, Handler handler,
                             boolean debugLogging) {
-        super(rfbConnectable, canvas, handler, debugLogging);
+        super(remoteConnectable, canvas, handler, debugLogging);
     }
 
     // 添加触摸事件方法

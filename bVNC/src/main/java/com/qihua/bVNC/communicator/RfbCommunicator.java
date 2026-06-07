@@ -21,10 +21,22 @@
  * USA.
  */
 
-package com.qihua.bVNC;
+package com.qihua.bVNC.communicator;
 
 import android.util.Log;
 
+import com.qihua.bVNC.CapabilityInfo;
+import com.qihua.bVNC.CapsContainer;
+import com.qihua.bVNC.Constants;
+import com.qihua.bVNC.DH;
+import com.qihua.bVNC.Decoder;
+import com.qihua.bVNC.DesCipher;
+import com.qihua.bVNC.R;
+import com.qihua.bVNC.RFBSecurityARD;
+import com.qihua.bVNC.RemoteCanvas;
+import com.qihua.bVNC.SecureTunnel;
+import com.qihua.bVNC.TLSTunnel;
+import com.qihua.bVNC.X509Tunnel;
 import com.qihua.bVNC.input.RemoteVncKeyboard;
 import com.tigervnc.rdr.InStream;
 import com.tigervnc.rdr.OutStream;
@@ -32,10 +44,9 @@ import com.tigervnc.rdr.RawInStream;
 import com.tigervnc.rdr.RawOutStream;
 import com.tigervnc.rfb.AuthFailureException;
 import com.tigervnc.rfb.CSecurityRSAAES;
-import com.undatech.opaque.RfbConnectable;
+import com.undatech.opaque.RemoteConnectable;
 import com.undatech.opaque.input.RemoteKeyboard;
 import com.undatech.opaque.util.GeneralUtils;
-import com.qihua.bVNC.R;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -48,7 +59,7 @@ import javax.net.ssl.SSLSocket;
  * This class has no knowledge of the android-specific UI; it sees framebuffer updates
  * and input events as defined in the RFB protocol.
  */
-public class RfbProto extends RfbConnectable {
+public class RfbCommunicator extends RemoteConnectable {
 
     public static final int SecTypeRA2 = 5;
     public static final int SecTypeRA2ne = 6;
@@ -79,7 +90,7 @@ public class RfbProto extends RfbConnectable {
             TridiaVncVendor = "TRDV",
             TightVncVendor = "TGHT";
     // Security types
-    final static int
+    public final static int
             SecTypeInvalid = 0,
             SecTypeNone = 1,
             SecTypeVncAuth = 2,
@@ -98,7 +109,7 @@ public class RfbProto extends RfbConnectable {
     final static String
             SigNoTunneling = "NOTUNNEL";
     // Supported authentication types
-    final static int
+    public final static int
             AuthNone = 1,
             AuthVNC = 2,
             AuthUltra = 17,
@@ -121,14 +132,14 @@ public class RfbProto extends RfbConnectable {
             VncAuthTooMany = 2,
             PlainAuthFailed = 13;
     // Server-to-client messages
-    final static int
+    public final static int
             FramebufferUpdate = 0,
             SetColourMapEntries = 1,
             Bell = 2,
             ServerCutText = 3,
             TextChat = 11;
     // Client-to-server messages
-    final static int
+    public final static int
             SetPixelFormat = 0,
             FixColourMapEntries = 1,
             SetEncodings = 2,
@@ -137,7 +148,7 @@ public class RfbProto extends RfbConnectable {
             PointerEvent = 5,
             ClientCutText = 6;
     // Supported encodings and pseudo-encodings
-    final static int
+    public final static int
             EncodingRaw = 0,
             EncodingCopyRect = 1,
             EncodingRRE = 2,
@@ -185,15 +196,15 @@ public class RfbProto extends RfbConnectable {
             SigEncodingNewFBSize = "NEWFBSIZ";
     final static int MaxNormalEncoding = 255;
     // Contstants used in the Hextile decoder
-    final static int
+    public final static int
             HextileRaw = 1,
             HextileBackgroundSpecified = 2,
             HextileForegroundSpecified = 4,
             HextileAnySubrects = 8,
             HextileSubrectsColoured = 16;
     // Contstants used in the Tight decoder
-    final static int TightMinToCompress = 12;
-    final static int
+    public final static int TightMinToCompress = 12;
+    public final static int
             TightExplicitFilter = 0x04,
             TightFill = 0x08,
             TightJpeg = 0x09,
@@ -226,8 +237,8 @@ public class RfbProto extends RfbConnectable {
     // containing Zlib-, ZRLE- or Tight-encoded data.
     //boolean wereZlibUpdates = false;
     Socket sock;
-    InStream is;
-    OutStream os;
+    public InStream is;
+    public OutStream os;
 
     // Before starting to record each saved session, we set this field
     // to 0, and increment on each framebuffer update. We don't flush
@@ -277,7 +288,7 @@ public class RfbProto extends RfbConnectable {
     int redMax, greenMax, blueMax, redShift, greenShift, blueShift;
     int updateNRects;
     int updateRectX, updateRectY, updateRectW, updateRectH, updateRectEncoding;
-    int copyRectSrcX, copyRectSrcY;
+    public int copyRectSrcX, copyRectSrcY;
     byte[] framebufferUpdateRequest = new byte[10];
     byte[] eventBuf = new byte[72];
     int eventBufLen;
@@ -333,9 +344,9 @@ public class RfbProto extends RfbConnectable {
     //
     // Constructor
     //
-    RfbProto(Decoder decoder, RemoteCanvas canvas, int preferredEncoding,
-             boolean viewOnly, boolean sslTunneled, int hashAlgorithm,
-             String hash, String cert, boolean debugLogging) {
+    public RfbCommunicator(Decoder decoder, RemoteCanvas canvas, int preferredEncoding,
+                    boolean viewOnly, boolean sslTunneled, int hashAlgorithm,
+                    String hash, String cert, boolean debugLogging) {
         super(debugLogging, canvas.handler);
         this.sslTunneled = sslTunneled;
         this.decoder = decoder;
@@ -441,7 +452,7 @@ public class RfbProto extends RfbConnectable {
         return closed;
     }
 
-    void initializeAndAuthenticate(String host, int port, String us, String pw,
+    public void initializeAndAuthenticate(String host, int port, String us, String pw,
                                    boolean useRepeater, String repeaterID, int connType,
                                    String cert) throws Exception, AuthFailureException {
         this.host = host;
@@ -470,47 +481,47 @@ public class RfbProto extends RfbConnectable {
         Log.d(TAG, "userNameSupplied: " + userNameSupplied);
         int secType = negotiateSecurity(userNameSupplied, connType);
         int authType;
-        if (secType == RfbProto.SecTypeTight) {
+        if (secType == RfbCommunicator.SecTypeTight) {
             Log.i(TAG, "secType == RfbProto.SecTypeTight");
             initCapabilities();
             setupTunneling();
             authType = negotiateAuthenticationTight();
-        } else if (secType == RfbProto.SecTypeVeNCrypt) {
+        } else if (secType == RfbCommunicator.SecTypeVeNCrypt) {
             Log.i(TAG, "secType == RfbProto.SecTypeVeNCrypt");
             authType = authenticateVeNCrypt();
-        } else if (secType == RfbProto.SecTypeTLS) {
+        } else if (secType == RfbCommunicator.SecTypeTLS) {
             Log.i(TAG, "secType == RfbProto.SecTypeTLS");
             authenticateTLS();
             authType = negotiateSecurity(userNameSupplied, 0);
-        } else if (secType == RfbProto.SecTypeUltra34 ||
-                secType == RfbProto.SecTypeUltraVnc2) {
+        } else if (secType == RfbCommunicator.SecTypeUltra34 ||
+                secType == RfbCommunicator.SecTypeUltraVnc2) {
             Log.i(TAG, "secType == RfbProto.SecTypeUltra34 or SecTypeUltraVnc2");
-            authType = RfbProto.AuthUltra;
-        } else if (secType == RfbProto.SecTypeArd) {
+            authType = RfbCommunicator.AuthUltra;
+        } else if (secType == RfbCommunicator.SecTypeArd) {
             Log.i(TAG, "secType == RfbProto.SecTypeArd");
             RFBSecurityARD ardAuth = new RFBSecurityARD(us, pw);
             ardAuth.perform(this);
             readSecurityResult("ARD Authentication");
             return;
-        } else if (secType == RfbProto.SecTypeRA2) {
+        } else if (secType == RfbCommunicator.SecTypeRA2) {
             Log.i(TAG, "secType == RfbProto.SecTypeRA2");
             CSecurityRSAAES x = new CSecurityRSAAES(this, secType, 128, true);
             x.processMsg(us, pw);
             readSecurityResult("SecTypeRA2 Authentication");
             return;
-        } else if (secType == RfbProto.SecTypeRA2ne) {
+        } else if (secType == RfbCommunicator.SecTypeRA2ne) {
             Log.i(TAG, "secType == RfbProto.secTypeRA2ne");
             CSecurityRSAAES x = new CSecurityRSAAES(this, secType, 128, false);
             x.processMsg(us, pw);
             readSecurityResult("SecTypeRA2ne Authentication");
             return;
-        } else if (secType == RfbProto.SecTypeRA256) {
+        } else if (secType == RfbCommunicator.SecTypeRA256) {
             Log.i(TAG, "secType == RfbProto.SecTypeRA2");
             CSecurityRSAAES x = new CSecurityRSAAES(this, secType, 256, true);
             x.processMsg(us, pw);
             readSecurityResult("SecTypeRA256 Authentication");
             return;
-        } else if (secType == RfbProto.SecTypeRAne256) {
+        } else if (secType == RfbCommunicator.SecTypeRAne256) {
             Log.i(TAG, "secType == RfbProto.SecTypeRA2");
             CSecurityRSAAES x = new CSecurityRSAAES(this, secType, 256, false);
             x.processMsg(us, pw);
@@ -521,49 +532,49 @@ public class RfbProto extends RfbConnectable {
         }
 
         switch (authType) {
-            case RfbProto.AuthNone:
+            case RfbCommunicator.AuthNone:
                 Log.i(TAG, "authType == RfbProto.AuthNone, No authentication needed");
                 authenticateNone();
                 break;
-            case RfbProto.AuthPlain:
+            case RfbCommunicator.AuthPlain:
                 Log.i(TAG, "authType == RfbProto.AuthPlain, Plain authentication needed ");
                 authenticatePlain(us, pw);
                 break;
-            case RfbProto.AuthVNC:
+            case RfbCommunicator.AuthVNC:
                 Log.i(TAG, "authType == RfbProto.AuthVNC, VNC authentication needed");
                 authenticateVNC(pw);
                 break;
-            case RfbProto.AuthUltra:
+            case RfbCommunicator.AuthUltra:
                 Log.i(TAG, "authType == RfbProto.AuthUltra, UltraVNC authentication needed");
                 prepareDH();
                 authenticateDH(us, pw);
                 break;
-            case RfbProto.AuthTLSNone:
+            case RfbCommunicator.AuthTLSNone:
                 Log.i(TAG, "authType == RfbProto.AuthTLSNone, No authentication needed");
                 authenticateTLS();
                 authenticateNone();
                 break;
-            case RfbProto.AuthTLSPlain:
+            case RfbCommunicator.AuthTLSPlain:
                 Log.i(TAG, "authType == RfbProto.AuthTLSPlain, Plain authentication needed");
                 authenticateTLS();
                 authenticatePlain(us, pw);
                 break;
-            case RfbProto.AuthTLSVnc:
+            case RfbCommunicator.AuthTLSVnc:
                 Log.i(TAG, "authType == RfbProto.AuthTLSVnc, VNC authentication needed");
                 authenticateTLS();
                 authenticateVNC(pw);
                 break;
-            case RfbProto.AuthX509None:
+            case RfbCommunicator.AuthX509None:
                 Log.i(TAG, "authType == RfbProto.AuthX509None, No authentication needed");
                 authenticateX509(cert);
                 authenticateNone();
                 break;
-            case RfbProto.AuthX509Plain:
+            case RfbCommunicator.AuthX509Plain:
                 Log.i(TAG, "authType == RfbProto.AuthX509Plain, Plain authentication needed");
                 authenticateX509(cert);
                 authenticatePlain(us, pw);
                 break;
-            case RfbProto.AuthX509Vnc:
+            case RfbCommunicator.AuthX509Vnc:
                 Log.i(TAG, "authType == RfbProto.AuthX509Vnc,VNC authentication needed");
                 authenticateX509(cert);
                 authenticateVNC(pw);
@@ -1092,7 +1103,7 @@ public class RfbProto extends RfbConnectable {
     // Read the server message type
     //
 
-    void writeClientInit() throws IOException {
+    public void writeClientInit() throws IOException {
     /*- if (viewer.options.shareDesktop) {
       os.write(1);
     } else {
@@ -1108,7 +1119,7 @@ public class RfbProto extends RfbConnectable {
     // Read a FramebufferUpdate message
     //
 
-    void readServerInit() throws IOException {
+    public void readServerInit() throws IOException {
         android.util.Log.i(TAG, "Reading server init.");
         int framebufferWidth = is.readUnsignedShort();
         int framebufferHeight = is.readUnsignedShort();
@@ -1160,7 +1171,7 @@ public class RfbProto extends RfbConnectable {
      * @param width
      * @param height
      */
-    void setPreferredFramebufferSize(int width, int height) {
+    public void setPreferredFramebufferSize(int width, int height) {
         Log.d(TAG, "setPreferredFramebufferSize, wxh: " + width + "x" + height);
         preferredFramebufferWidth = width;
         preferredFramebufferHeight = height;
@@ -1260,7 +1271,7 @@ public class RfbProto extends RfbConnectable {
     // Read a ServerCutText message
     //
 
-    void readCopyRect() throws IOException {
+    public void readCopyRect() throws IOException {
         copyRectSrcX = is.readUnsignedShort();
         copyRectSrcY = is.readUnsignedShort();
 
@@ -1295,7 +1306,7 @@ public class RfbProto extends RfbConnectable {
     // Write a FramebufferUpdateRequest message
     //
 
-    int readCompactLen() throws IOException {
+    public int readCompactLen() throws IOException {
         int[] portion = new int[3];
         portion[0] = is.readUnsignedByte();
         //int byteCount = 1;
@@ -1835,21 +1846,21 @@ public class RfbProto extends RfbConnectable {
 
     public String getEncoding() {
         switch (preferredEncoding) {
-            case RfbProto.EncodingRaw:
+            case RfbCommunicator.EncodingRaw:
                 return "RAW";
-            case RfbProto.EncodingTight:
+            case RfbCommunicator.EncodingTight:
                 return "TIGHT";
-            case RfbProto.EncodingTightZstd:
+            case RfbCommunicator.EncodingTightZstd:
                 return "TIGHTZSTD";
-            case RfbProto.EncodingCoRRE:
+            case RfbCommunicator.EncodingCoRRE:
                 return "CoRRE";
-            case RfbProto.EncodingHextile:
+            case RfbCommunicator.EncodingHextile:
                 return "HEXTILE";
-            case RfbProto.EncodingRRE:
+            case RfbCommunicator.EncodingRRE:
                 return "RRE";
-            case RfbProto.EncodingZlib:
+            case RfbCommunicator.EncodingZlib:
                 return "ZLIB";
-            case RfbProto.EncodingZRLE:
+            case RfbCommunicator.EncodingZRLE:
                 return "ZRLE";
         }
         return "";
@@ -1863,25 +1874,25 @@ public class RfbProto extends RfbConnectable {
         int nEncodings = 0;
 
         encodings[nEncodings++] = preferredEncoding;
-        encodings[nEncodings++] = RfbProto.EncodingTight;
-        encodings[nEncodings++] = RfbProto.EncodingZRLE;
-        encodings[nEncodings++] = RfbProto.EncodingHextile;
-        encodings[nEncodings++] = RfbProto.EncodingZlib;
-        encodings[nEncodings++] = RfbProto.EncodingCoRRE;
-        encodings[nEncodings++] = RfbProto.EncodingRRE;
+        encodings[nEncodings++] = RfbCommunicator.EncodingTight;
+        encodings[nEncodings++] = RfbCommunicator.EncodingZRLE;
+        encodings[nEncodings++] = RfbCommunicator.EncodingHextile;
+        encodings[nEncodings++] = RfbCommunicator.EncodingZlib;
+        encodings[nEncodings++] = RfbCommunicator.EncodingCoRRE;
+        encodings[nEncodings++] = RfbCommunicator.EncodingRRE;
 
-        encodings[nEncodings++] = RfbProto.EncodingCopyRect;
+        encodings[nEncodings++] = RfbCommunicator.EncodingCopyRect;
 
-        encodings[nEncodings++] = RfbProto.EncodingCompressLevel0 + compressLevel;
-        encodings[nEncodings++] = RfbProto.EncodingQualityLevel0 + jpegQuality;
+        encodings[nEncodings++] = RfbCommunicator.EncodingCompressLevel0 + compressLevel;
+        encodings[nEncodings++] = RfbCommunicator.EncodingQualityLevel0 + jpegQuality;
 
-        encodings[nEncodings++] = RfbProto.EncodingXCursor;
-        encodings[nEncodings++] = RfbProto.EncodingRichCursor;
+        encodings[nEncodings++] = RfbCommunicator.EncodingXCursor;
+        encodings[nEncodings++] = RfbCommunicator.EncodingRichCursor;
 
-        encodings[nEncodings++] = RfbProto.EncodingPointerPos;
-        encodings[nEncodings++] = RfbProto.EncodingLastRect;
-        encodings[nEncodings++] = RfbProto.EncodingNewFBSize;
-        encodings[nEncodings++] = RfbProto.EncodingExtendedDesktopSize;
+        encodings[nEncodings++] = RfbCommunicator.EncodingPointerPos;
+        encodings[nEncodings++] = RfbCommunicator.EncodingLastRect;
+        encodings[nEncodings++] = RfbCommunicator.EncodingNewFBSize;
+        encodings[nEncodings++] = RfbCommunicator.EncodingExtendedDesktopSize;
 
         // TODO: Disabling ClientRedirect encoding for now because of
         // it being reserved for CursorWithAlpha by RealVNC and for
@@ -1936,60 +1947,60 @@ public class RfbProto extends RfbConnectable {
 
                 // Process the message depending on its type.
                 switch (msgType) {
-                    case RfbProto.FramebufferUpdate:
+                    case RfbCommunicator.FramebufferUpdate:
                         readFramebufferUpdate();
 
                         for (int i = 0; i < updateNRects; i++) {
                             readFramebufferUpdateRectHdr();
 
                             switch (updateRectEncoding) {
-                                case RfbProto.EncodingTight:
+                                case RfbCommunicator.EncodingTight:
                                     decoder.handleTightRect(this, updateRectX, updateRectY, updateRectW, updateRectH, false);
                                     break;
-                                case RfbProto.EncodingTightZstd:
+                                case RfbCommunicator.EncodingTightZstd:
                                     decoder.handleTightRect(this, updateRectX, updateRectY, updateRectW, updateRectH, true);
                                     break;
-                                case RfbProto.EncodingPointerPos:
+                                case RfbCommunicator.EncodingPointerPos:
                                     canvas.softCursorMove(updateRectX, updateRectY);
                                     break;
-                                case RfbProto.EncodingXCursor:
-                                case RfbProto.EncodingRichCursor:
+                                case RfbCommunicator.EncodingXCursor:
+                                case RfbCommunicator.EncodingRichCursor:
                                     decoder.handleCursorShapeUpdate(this, updateRectEncoding, updateRectX, updateRectY,
                                             updateRectW, updateRectH);
                                     break;
-                                case RfbProto.EncodingLastRect:
+                                case RfbCommunicator.EncodingLastRect:
                                     exitforloop = true;
                                     break;
-                                case RfbProto.EncodingCopyRect:
+                                case RfbCommunicator.EncodingCopyRect:
                                     decoder.handleCopyRect(this, updateRectX, updateRectY, updateRectW, updateRectH);
                                     break;
-                                case RfbProto.EncodingNewFBSize:
+                                case RfbCommunicator.EncodingNewFBSize:
                                     setFramebufferSize(updateRectW, updateRectH);
                                     canvas.updateFBSize();
                                     exitforloop = true;
                                     break;
-                                case RfbProto.EncodingRaw:
+                                case RfbCommunicator.EncodingRaw:
                                     decoder.handleRawRect(this, updateRectX, updateRectY, updateRectW, updateRectH);
                                     break;
-                                case RfbProto.EncodingRRE:
+                                case RfbCommunicator.EncodingRRE:
                                     decoder.handleRRERect(this, updateRectX, updateRectY, updateRectW, updateRectH);
                                     break;
-                                case RfbProto.EncodingCoRRE:
+                                case RfbCommunicator.EncodingCoRRE:
                                     decoder.handleCoRRERect(this, updateRectX, updateRectY, updateRectW, updateRectH);
                                     break;
-                                case RfbProto.EncodingHextile:
+                                case RfbCommunicator.EncodingHextile:
                                     decoder.handleHextileRect(this, updateRectX, updateRectY, updateRectW, updateRectH);
                                     break;
-                                case RfbProto.EncodingZRLE:
+                                case RfbCommunicator.EncodingZRLE:
                                     decoder.handleZRLERect(this, updateRectX, updateRectY, updateRectW, updateRectH);
                                     break;
-                                case RfbProto.EncodingZlib:
+                                case RfbCommunicator.EncodingZlib:
                                     decoder.handleZlibRect(this, updateRectX, updateRectY, updateRectW, updateRectH);
                                     break;
-                                case RfbProto.EncodingClientRedirect:
+                                case RfbCommunicator.EncodingClientRedirect:
                                     readClientRedirect(updateRectX, updateRectY, updateRectW, updateRectH);
                                     break;
-                                case RfbProto.EncodingExtendedDesktopSize:
+                                case RfbCommunicator.EncodingExtendedDesktopSize:
                                     Log.d(TAG, "EncodingExtendedDesktopSize, wxh: " + updateRectW + "x" + updateRectH);
                                     handleExtendedDesktopSize();
                                     break;
@@ -2014,18 +2025,18 @@ public class RfbProto extends RfbConnectable {
                         }
                         break;
 
-                    case RfbProto.SetColourMapEntries:
+                    case RfbCommunicator.SetColourMapEntries:
                         throw new Exception("Can't handle SetColourMapEntries message");
 
-                    case RfbProto.Bell:
+                    case RfbCommunicator.Bell:
                         canvas.displayShortToastMessage("VNC Beep");
                         break;
 
-                    case RfbProto.ServerCutText:
+                    case RfbCommunicator.ServerCutText:
                         remoteClipboardChanged(readServerCutText());
                         break;
 
-                    case RfbProto.TextChat:
+                    case RfbCommunicator.TextChat:
                         // UltraVNC extension
                         String msg = readTextChatMsg();
                         if (msg != null && msg.length() > 0) {

@@ -1,8 +1,8 @@
-package com.qihua.bVNC;
+package com.qihua.bVNC.communicator;
 
 import android.os.Handler;
 
-import com.undatech.opaque.RfbConnectable;
+import com.undatech.opaque.RemoteConnectable;
 
 /**
  * Phase 0: stub RfbConnectable for SSH. Fixed framebuffer 1280x720,
@@ -16,15 +16,15 @@ import com.undatech.opaque.RfbConnectable;
  * Phase 2 will replace the hardcoded dimensions with the actual
  * TermSession rows/cols, and trigger redraws on PTY output.
  */
-public class SshConnectable extends RfbConnectable {
+public class SshCommunicator extends RemoteConnectable {
 
     private final int framebufferWidth;
     private final int framebufferHeight;
     private boolean inNormalProtocol = false;
     private boolean certificateAccepted = false;
 
-    public SshConnectable(boolean debugLogging, Handler handler,
-                          int framebufferWidth, int framebufferHeight) {
+    public SshCommunicator(boolean debugLogging, Handler handler,
+                           int framebufferWidth, int framebufferHeight) {
         super(debugLogging, handler);
         this.framebufferWidth = framebufferWidth;
         this.framebufferHeight = framebufferHeight;

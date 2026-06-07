@@ -30,7 +30,6 @@
 
 package com.qihua.bVNC;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -50,9 +49,7 @@ import android.os.SystemClock;
 import android.text.ClipboardManager;
 import android.text.InputType;
 import android.util.AttributeSet;
-import android.util.DisplayMetrics;
 import android.util.Log;
-import android.view.Display;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -73,8 +70,9 @@ import com.limelight.binding.input.ControllerHandler;
 import com.limelight.nvstream.http.ComputerDetails;
 import com.limelight.nvstream.jni.MoonBridge;
 import com.limelight.preferences.PreferenceConfiguration;
-import com.qihua.bVNC.SshConnectable;
 import com.qihua.android.bc.BCFactory;
+import com.qihua.bVNC.communicator.RfbCommunicator;
+import com.qihua.bVNC.communicator.SshCommunicator;
 import com.qihua.bVNC.dialogs.GetTextFragment;
 import com.qihua.bVNC.exceptions.AnonCipherUnsupportedException;
 import com.qihua.bVNC.input.InputHandler;
@@ -100,7 +98,7 @@ import com.undatech.opaque.MessageDialogs;
 import com.undatech.opaque.NvCommunicator;
 import com.undatech.opaque.RdpCommunicator;
 import com.undatech.opaque.RemoteClientLibConstants;
-import com.undatech.opaque.RfbConnectable;
+import com.undatech.opaque.RemoteConnectable;
 import com.undatech.opaque.SpiceCommunicator;
 import com.undatech.opaque.Viewable;
 import com.undatech.opaque.proxmox.ProxmoxClient;
@@ -142,8 +140,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     public SSHConnection sshConnection = null;
 
     // The communicators for different protocols
-    public RfbConnectable rfbconn = null;
-    public RfbProto rfb = null;
+    public RemoteConnectable rfbconn = null;
+    public RfbCommunicator rfb = null;
     public SpiceCommunicator spicecomm = null;
     private RdpCommunicator rdpcomm = null;
     private NvCommunicator nvcomm = null;
@@ -193,7 +191,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     RemotePointer pointer;
     RemoteKeyboard keyboard;
     ControllerHandler controller;
-    boolean useFull = false;
+    public boolean useFull = false;
     boolean compact = false;
     // Used to set the contents of the clipboard.
     ClipboardManager clipboard;
@@ -827,7 +825,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         Log.i(TAG, "Initializing connection to: " + connection.getAddress() + ", port: " + connection.getPort());
         boolean sslTunneled = connection.getConnectionType() == Constants.CONN_TYPE_STUNNEL;
         decoder = new Decoder(this, connection.getUseLocalCursor() == Constants.CURSOR_FORCE_LOCAL);
-        rfb = new RfbProto(decoder, this, connection.getPrefEncoding(), connection.getViewOnly(),
+        rfb = new RfbCommunicator(decoder, this, connection.getPrefEncoding(), connection.getViewOnly(),
                 sslTunneled, connection.getIdHashAlgorithm(), connection.getIdHash(), connection.getX509KeySignature(),
                 App.debugLog);
 
@@ -844,7 +842,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
     /**
      * Initializes an SSH connection.
-     * Phase 0: stub — creates SshConnectable, no-op keyboard/pointer.
+     * Phase 0: stub — creates SshCommunicator, no-op keyboard/pointer.
      * Phase 2: will create a TermSession and wire SSHConnection's
      * Session.getStdout()/getStdin() to it.
      */
@@ -870,7 +868,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                   + " (displayRect " + w + "x" + h
                   + ", factor " + Constants.SSH_SMART_RESOLUTION_FACTOR + ")");
 
-        rfbconn = new SshConnectable(
+        rfbconn = new SshCommunicator(
             App.debugLog, handler, fbW, fbH);
         pointer = new RemoteSshPointer(rfbconn, this, handler, App.debugLog);
         keyboard = new RemoteSshKeyboard(rfbconn, getContext(), handler, App.debugLog);
@@ -895,11 +893,11 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                     sslCert);
         } catch (AnonCipherUnsupportedException e) {
             showFatalMessageAndQuit(getContext().getString(R.string.error_anon_dh_unsupported));
-        } catch (RfbProto.RfbPasswordAuthenticationException e) {
+        } catch (RfbCommunicator.RfbPasswordAuthenticationException e) {
             Log.e(TAG, "Authentication failed, will prompt user for password");
             handler.sendEmptyMessage(RemoteClientLibConstants.GET_VNC_PASSWORD);
             return;
-        } catch (RfbProto.RfbUsernameRequiredException e) {
+        } catch (RfbCommunicator.RfbUsernameRequiredException e) {
             Log.e(TAG, "Username required, will prompt user for username and password");
             handler.sendEmptyMessage(RemoteClientLibConstants.GET_VNC_CREDENTIALS);
             return;
@@ -932,7 +930,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
         try {
             rfb.processProtocol();
-        } catch (RfbProto.RfbUltraVncColorMapException e) {
+        } catch (RfbCommunicator.RfbUltraVncColorMapException e) {
             Log.e(TAG, "UltraVnc supports only 24bpp. Switching color mode and reconnecting.");
             connection.setColorModel(COLORMODEL.C24bit.nameString());
             connection.save(getContext());
@@ -2170,7 +2168,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
      * @param x
      * @param y
      */
-    synchronized void softCursorMove(int x, int y) {
+    public synchronized void softCursorMove(int x, int y) {
         if (bitmapData.isNotInitSoftCursor() && connection.getUseLocalCursor() != Constants.CURSOR_FORCE_DISABLE) {
             initializeSoftCursor();
         }
@@ -2583,7 +2581,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             int h = displayRect.height();
             int fbW = Math.max(1, (int) (w * Constants.SSH_SMART_RESOLUTION_FACTOR));
             int fbH = Math.max(1, (int) (h * Constants.SSH_SMART_RESOLUTION_FACTOR));
-            rfbconn = new SshConnectable(
+            rfbconn = new SshCommunicator(
                 App.debugLog, handler, fbW, fbH);
             if (pointer instanceof RemoteSshPointer) {
                 ((RemoteSshPointer) pointer).setProtocomm(rfbconn);

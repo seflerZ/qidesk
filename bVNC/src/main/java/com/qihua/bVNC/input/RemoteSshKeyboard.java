@@ -4,9 +4,7 @@ import android.content.Context;
 import android.os.Handler;
 import android.view.KeyEvent;
 
-import com.qihua.bVNC.input.MetaKeyBean;
-import com.qihua.bVNC.input.RemoteKeyboard;
-import com.undatech.opaque.RfbConnectable;
+import com.undatech.opaque.RemoteConnectable;
 
 /**
  * Phase 0: keyboard sends nothing. We don't have a TermSession yet.
@@ -18,12 +16,12 @@ import com.undatech.opaque.RfbConnectable;
  */
 public class RemoteSshKeyboard extends RemoteKeyboard {
 
-    public RemoteSshKeyboard(RfbConnectable r, Context v, Handler h, boolean debugLog) {
+    public RemoteSshKeyboard(RemoteConnectable r, Context v, Handler h, boolean debugLog) {
         super(r, v, h, debugLog);
     }
 
     /** Phase 0: swap the underlying RfbConnectable after a fold/unfold. */
-    public void setRfb(RfbConnectable rfb) {
+    public void setRfb(RemoteConnectable rfb) {
         this.rfb = rfb;
     }
 

@@ -31,7 +31,7 @@ import com.undatech.remoteClientLib.R;
 
 import java.security.cert.X509Certificate;
 
-public class NvCommunicator extends RfbConnectable implements NvConnectionListener, PerfOverlayListener {
+public class NvCommunicator extends RemoteConnectable implements NvConnectionListener, PerfOverlayListener {
     private PreferenceConfiguration prefConfig;
     private MediaCodecDecoderRenderer decoderRenderer;
     private NvConnection conn;

@@ -1,16 +1,12 @@
 package com.qihua.bVNC.input;
 
-import static com.undatech.opaque.util.InputUtils.isNoQwertyKbd;
-
 import android.content.Context;
-import android.os.Build;
 import android.os.Handler;
 import android.os.SystemClock;
-import android.view.InputDevice;
 import android.view.KeyEvent;
 
 import com.qihua.bVNC.RemoteCanvas;
-import com.undatech.opaque.RfbConnectable;
+import com.undatech.opaque.RemoteConnectable;
 
 public abstract class RemotePointer {
 
@@ -24,7 +20,7 @@ public abstract class RemotePointer {
     protected RemoteCanvas canvas;
     protected Context context;
     protected Handler handler;
-    protected RfbConnectable protocomm;
+    protected RemoteConnectable protocomm;
     /**
      * Indicates where the mouse pointer is located.
      */
@@ -36,7 +32,7 @@ public abstract class RemotePointer {
     protected boolean debugLogging = false;
     MouseScroller scroller;
 
-    public RemotePointer(RfbConnectable protocomm, RemoteCanvas canvas, Handler handler,
+    public RemotePointer(RemoteConnectable protocomm, RemoteCanvas canvas, Handler handler,
                          boolean debugLogging) {
         this.protocomm = protocomm;
         this.canvas = canvas;
