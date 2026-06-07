@@ -47,7 +47,7 @@ public class AbstractBitmapDrawable extends DrawableContainer {
     Paint _whitePaint;
     Paint _blackPaint;
 
-    AbstractBitmapDrawable(AbstractBitmapData data) {
+    public AbstractBitmapDrawable(AbstractBitmapData data) {
         this.data = data;
         cursorRect = new RectF();
         clipRect = new Rect();

@@ -72,7 +72,7 @@ class CompactBitmapData extends AbstractBitmapData {
      * @see com.qihua.bVNC.AbstractBitmapData#createDrawable()
      */
     @Override
-    AbstractBitmapDrawable createDrawable() {
+    protected AbstractBitmapDrawable createDrawable() {
         return new CompactBitmapDrawable();
     }
 
@@ -138,7 +138,7 @@ class CompactBitmapData extends AbstractBitmapData {
      * @see com.qihua.bVNC.AbstractBitmapData#drawRect(int, int, int, int, android.graphics.Paint)
      */
     @Override
-    void drawRect(int x, int y, int w, int h, Paint paint) {
+    protected void drawRect(int x, int y, int w, int h, Paint paint) {
         synchronized (mbitmap) {
             memGraphics.drawRect(x, y, x + w, y + h, paint);
         }
@@ -148,7 +148,7 @@ class CompactBitmapData extends AbstractBitmapData {
      * @see com.qihua.bVNC.AbstractBitmapData#scrollChanged(int, int)
      */
     @Override
-    void scrollChanged(int newx, int newy) {
+    protected void scrollChanged(int newx, int newy) {
         // Don't need to do anything here
     }
 
@@ -182,7 +182,7 @@ class CompactBitmapData extends AbstractBitmapData {
      * @see com.qihua.bVNC.AbstractBitmapData#syncScroll()
      */
     @Override
-    void syncScroll() {
+    protected void syncScroll() {
         // Don't need anything here either
     }
 

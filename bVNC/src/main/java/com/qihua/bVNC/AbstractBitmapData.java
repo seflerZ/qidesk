@@ -39,21 +39,21 @@ import com.undatech.opaque.RfbConnectable;
 abstract public class AbstractBitmapData {
     public AbstractBitmapDrawable drawable;
     public Paint paint;
-    int framebufferwidth;
-    int framebufferheight;
-    int bitmapwidth;
-    int bitmapheight;
+    protected int framebufferwidth;
+    protected int framebufferheight;
+    protected int bitmapwidth;
+    protected int bitmapheight;
     RfbConnectable rfb;
-    Bitmap mbitmap;
-    int bitmapPixels[];
-    Canvas memGraphics;
+    protected Bitmap mbitmap;
+    protected int bitmapPixels[];
+    protected Canvas memGraphics;
     boolean waitingForInput;
     RemoteCanvas vncCanvas;
     int xoffset = 0;
     int yoffset = 0;
     boolean drawCursor = true;
 
-    AbstractBitmapData(RfbConnectable p, RemoteCanvas c) {
+    protected AbstractBitmapData(RfbConnectable p, RemoteCanvas c) {
         rfb = p;
         vncCanvas = c;
         framebufferwidth = rfb.framebufferWidth();
@@ -173,7 +173,7 @@ abstract public class AbstractBitmapData {
      * Create drawable appropriate for this data
      * @return drawable
      */
-    abstract AbstractBitmapDrawable createDrawable();
+    protected abstract AbstractBitmapDrawable createDrawable();
 
     /**
      * Call in UI thread; tell ImageView we've changed
@@ -217,7 +217,7 @@ abstract public class AbstractBitmapData {
      * @param h height (pixels)
      * @param paint How to draw
      */
-    abstract void drawRect(int x, int y, int w, int h, Paint paint);
+    protected abstract void drawRect(int x, int y, int w, int h, Paint paint);
 
     /**
      * Scroll position has changed.
@@ -227,7 +227,7 @@ abstract public class AbstractBitmapData {
      * @param newx Position of left edge of visible part in full-frame coordinates
      * @param newy Position of top edge of visible part in full-frame coordinates
      */
-    abstract void scrollChanged(int newx, int newy);
+    protected abstract void scrollChanged(int newx, int newy);
 
     /**
      * Remote framebuffer size has changed.
@@ -240,7 +240,7 @@ abstract public class AbstractBitmapData {
     /**
      * Sync scroll -- called from network thread; copies scroll changes from UI to network state
      */
-    abstract void syncScroll();
+    protected abstract void syncScroll();
 
     /**
      * Release resources

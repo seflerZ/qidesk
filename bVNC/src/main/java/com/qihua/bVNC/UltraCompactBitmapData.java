@@ -66,7 +66,7 @@ class UltraCompactBitmapData extends AbstractBitmapData {
     }
 
     @Override
-    AbstractBitmapDrawable createDrawable() {
+    protected AbstractBitmapDrawable createDrawable() {
         return new UltraCompactBitmapDrawable();
     }
 
@@ -118,12 +118,12 @@ class UltraCompactBitmapData extends AbstractBitmapData {
     }
 
     @Override
-    void drawRect(int x, int y, int w, int h, Paint paint) {
+    protected void drawRect(int x, int y, int w, int h, Paint paint) {
 
     }
 
     @Override
-    void scrollChanged(int newx, int newy) {
+    protected void scrollChanged(int newx, int newy) {
         // Don't need to do anything here
     }
 
@@ -146,7 +146,7 @@ class UltraCompactBitmapData extends AbstractBitmapData {
     }
 
     @Override
-    void syncScroll() {
+    protected void syncScroll() {
         // Don't need anything here either
     }
 

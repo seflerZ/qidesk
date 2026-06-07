@@ -41,6 +41,23 @@ public class Constants {
 
     public static final int DEFAULT_SSH_PORT = 22;
     public static final int LOGCAT_MAX_LINES = 500;
+
+    /**
+     * Phase 0: SSH framebuffer size = displayRect × this factor.
+     * 1.0 = match screen (no letterbox). < 1.0 = bigger effective font on
+     * screen after AbstractScaling's fit-center. Phase 1 will surface
+     * this as a user-facing "font size" setting.
+     */
+    public static final float SSH_SMART_RESOLUTION_FACTOR = 1.0f;
+
+    /**
+     * Phase 0: SSH monospace text size, in density-independent pixels.
+     * Multiplying by the display's density gives the same physical glyph
+     * size on cover vs. main foldable displays (which have very different
+     * PPIs). Effective on-screen size is then further scaled by
+     * AbstractScaling's fit-center based on SSH_SMART_RESOLUTION_FACTOR.
+     */
+    public static final float SSH_FONT_SIZE_DP = 14f;
     // H_THRESH needs to be < than TOP_MARGIN to avoid pan following pointer unnecessarily.
     public static final int H_THRESH = 150;
     public static final int W_THRESH = 150;

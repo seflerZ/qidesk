@@ -332,6 +332,8 @@ public class Utils {
                 return "vnc";
             case 2:
                 return "nvstream";
+            case 99:
+                return "ssh";
             default:
                 return "unsupported";
         }
@@ -375,6 +377,8 @@ public class Utils {
                 return ConfigRDP.class;
             case "nvstream":
                 return ConfigNVStream.class;
+            case "ssh":
+                return ConfigSSH.class;
             default:
                 throw new UnsupportedOperationException("Unsupported connection type: " + type);
         }

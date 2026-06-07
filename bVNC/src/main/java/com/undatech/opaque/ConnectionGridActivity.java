@@ -462,10 +462,6 @@ public class ConnectionGridActivity extends AppCompatActivity implements GetText
      * Starts a new connection.
      */
     public void addNewConnection(String type) {
-        if (type.equals("ssh")) {
-            return;
-        }
-
         Intent intent = new Intent(ConnectionGridActivity.this,
                 Utils.getConnectionSetupClass(type));
         intent.putExtra("isNewConnection", true);

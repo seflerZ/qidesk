@@ -45,6 +45,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.text.ClipboardManager;
 import android.text.InputType;
@@ -72,6 +73,7 @@ import com.limelight.binding.input.ControllerHandler;
 import com.limelight.nvstream.http.ComputerDetails;
 import com.limelight.nvstream.jni.MoonBridge;
 import com.limelight.preferences.PreferenceConfiguration;
+import com.qihua.bVNC.SshConnectable;
 import com.qihua.android.bc.BCFactory;
 import com.qihua.bVNC.dialogs.GetTextFragment;
 import com.qihua.bVNC.exceptions.AnonCipherUnsupportedException;
@@ -86,6 +88,8 @@ import com.qihua.bVNC.input.RemoteRdpKeyboard;
 import com.qihua.bVNC.input.RemoteRdpPointer;
 import com.qihua.bVNC.input.RemoteSpiceKeyboard;
 import com.qihua.bVNC.input.RemoteSpicePointer;
+import com.qihua.bVNC.input.RemoteSshKeyboard;
+import com.qihua.bVNC.input.RemoteSshPointer;
 import com.qihua.bVNC.input.RemoteVncKeyboard;
 import com.qihua.bVNC.input.RemoteVncPointer;
 import com.qihua.bVNC.util.SmartResolutionUtils;
@@ -158,6 +162,23 @@ public class RemoteCanvas extends SurfaceView implements Viewable
      */
     public Handler handler;
 
+    /**
+     * Phase 0 SSH: heartbeat redraw. VNC/RDP/SPICE push DrawTasks when new
+     * frame data arrives; SSH has no decoder, so we drive redraws ourselves
+     * to mimic that continuous stream. Stopped in closeConnection().
+     */
+    private final Handler sshRedrawHandler = new Handler(Looper.getMainLooper());
+    private final Runnable sshRedrawRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (!isRunning || bitmapData == null || rfbconn == null) {
+                return;
+            }
+            reDraw(0, 0, rfbconn.framebufferWidth(), rfbconn.framebufferHeight());
+            sshRedrawHandler.postDelayed(this, 33); // ~30 FPS
+        }
+    };
+
     private DrawWorker drawWorker;
 
     private InputHandler inputHandler;
@@ -221,6 +242,11 @@ public class RemoteCanvas extends SurfaceView implements Viewable
      * This flag indicates whether this is the Opaque client.
      */
     boolean isOpaque = false;
+
+    /*
+     * This flag indicates whether this is the SSH client.
+     */
+    boolean isSsh = false;
     boolean sshTunneled = false;
     boolean userPanned = false;
     String vvFileName;
@@ -324,6 +350,14 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     public void surfaceCreated(@NonNull SurfaceHolder holder) {
         if (!outDisplay && touchpad) {
             drawTouchpadHint();
+        }
+        // Phase 0 SSH has no decoder/network to push DrawTasks, so push
+        // one whenever the surface is (re)created. This handles the
+        // case where startSshConnection ran before the surface was
+        // ready (its reDraw was silently dropped) and also covers
+        // surface re-creation on fold/unfold, screen rotation, etc.
+        if (isSsh && bitmapData != null) {
+            reDraw(0, 0, rfbconn.framebufferWidth(), rfbconn.framebufferHeight());
         }
     }
 
@@ -469,6 +503,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         isVnc = conn.getConnectionType() == Constants.CONN_TYPE_VNC;
         isRdp = conn.getConnectionType() == Constants.CONN_TYPE_RDP;
         isNvStream = conn.getConnectionType() == Constants.CONN_TYPE_NVSTREAM;
+        isSsh = conn.getConnectionType() == Constants.CONN_TYPE_SSH;
         isSpice = false;
 
         try {
@@ -480,6 +515,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                 initializeVncConnection();
             } else if (isNvStream) {
                 initializeNvStreamConnection();
+            } else if (isSsh) {
+                initializeSshConnection();
             } else {
                 throw new Exception("unknown connection type");
             }
@@ -696,12 +733,66 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                 startVncConnection();
             } else if (isNvStream) {
                 startNvStreamConnection(surfaceHolder);
+            } else if (isSsh) {
+                startSshConnection();
             } else {
                 throw new Exception("unknown connection type");
             }
         } catch (Throwable e) {
             handleUncaughtException(e);
         }
+    }
+
+    /**
+     * Phase 0: no real SSH. Just trigger a redraw so "Hello SSH" shows up
+     * on screen. Phase 2 will replace this with a real network thread.
+     */
+    private void startSshConnection() throws Exception {
+        Log.i(TAG, "startSshConnection: Phase 0 stub — no real SSH connection.");
+        waitUntilInflated();
+        reallocateDrawable(displayRect.width(), displayRect.height());
+        drawSshPlaceholderIntoBitmap();
+        onConnectionSuccess();
+        // Phase 0: no decoder/network pushes DrawTasks. Start a 30 FPS
+        // heartbeat redraw to mimic the continuous frame stream that
+        // VNC/RDP get from the network. The runnable self-terminates if
+        // isRunning/bitmapData/rfbconn go away, and is also removed in
+        // closeConnection().
+        sshRedrawHandler.removeCallbacks(sshRedrawRunnable);
+        sshRedrawHandler.post(sshRedrawRunnable);
+    }
+
+    /**
+     * Phase 0 only: paint a hardcoded "Hello SSH" frame into
+     * bitmapData.mbitmap. Phase 1+ will replace this with a TermSession
+     * renderer that draws live terminal state.
+     */
+    private void drawSshPlaceholderIntoBitmap() {
+        if (bitmapData == null || bitmapData.mbitmap == null) {
+            Log.w(TAG, "drawSshPlaceholderIntoBitmap: bitmapData or mbitmap is null");
+            return;
+        }
+        int w = bitmapData.mbitmap.getWidth();
+        int h = bitmapData.mbitmap.getHeight();
+        // Use a density-based text size so glyphs occupy the same physical
+        // size on cover (~430 PPI) and main (~340 PPI) foldable displays.
+        // Effective on-screen size still varies with SSH_SMART_RESOLUTION_FACTOR
+        // (fit-center scales the whole mbitmap up/down).
+        float density = getContext().getResources().getDisplayMetrics().density;
+        float textSize = Constants.SSH_FONT_SIZE_DP * density;
+        float margin = textSize * 0.8f;
+        float lineHeight = textSize * 1.4f;
+        Canvas c = new Canvas(bitmapData.mbitmap);
+        Paint bg = new Paint();
+        bg.setColor(0xFF002B36); // Solarized base03
+        c.drawRect(0, 0, w, h, bg);
+        Paint text = new Paint();
+        text.setColor(0xFF839496); // Solarized base0
+        text.setTextSize(textSize);
+        text.setAntiAlias(true);
+        text.setTypeface(Typeface.MONOSPACE);
+        c.drawText("Hello SSH", margin, margin + textSize, text);
+        c.drawText("Phase 0: minimal skeleton", margin, margin + textSize + lineHeight, text);
     }
 
     /**
@@ -749,6 +840,40 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
         // in order to support fractional sensitivity, we use the integer divide 10 to make it a float.
         pointer.setSensitivity(Utils.querySharedPreferenceInt(getContext(), Constants.touchpadCursorSpeed, 10) / 10);
+    }
+
+    /**
+     * Initializes an SSH connection.
+     * Phase 0: stub — creates SshConnectable, no-op keyboard/pointer.
+     * Phase 2: will create a TermSession and wire SSHConnection's
+     * Session.getStdout()/getStdin() to it.
+     */
+    private void initializeSshConnection() throws Exception {
+        Log.i(TAG, "initializeSshConnection: Initializing SSH connection (Phase 0 stub).");
+
+        // TODO Phase 1: handle foldable — when displayRect changes after
+        // a fold/unfold, rebuild mbitmap at the new size and redraw.
+        // For Phase 0 we read displayRect once at init.
+        float w = displayRect.width();
+        float h = displayRect.height();
+        if (w <= 0 || h <= 0) {
+            // displayRect not yet populated (initializeCanvas may run
+            // before the view is laid out). Fall back to screen metrics.
+            android.util.DisplayMetrics metrics =
+                getContext().getResources().getDisplayMetrics();
+            w = metrics.widthPixels;
+            h = metrics.heightPixels;
+        }
+        int fbW = Math.max(1, (int) (w * Constants.SSH_SMART_RESOLUTION_FACTOR));
+        int fbH = Math.max(1, (int) (h * Constants.SSH_SMART_RESOLUTION_FACTOR));
+        Log.i(TAG, "SSH framebuffer size = " + fbW + " x " + fbH
+                  + " (displayRect " + w + "x" + h
+                  + ", factor " + Constants.SSH_SMART_RESOLUTION_FACTOR + ")");
+
+        rfbconn = new SshConnectable(
+            App.debugLog, handler, fbW, fbH);
+        pointer = new RemoteSshPointer(rfbconn, this, handler, App.debugLog);
+        keyboard = new RemoteSshKeyboard(rfbconn, getContext(), handler, App.debugLog);
     }
 
     /**
@@ -1331,8 +1456,12 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             useFull = (connection.getForceFull() == BitmapImplHint.FULL);
         }
 
-        if (isRdp | isNvStream) {
-            bitmapData = new UltraCompactBitmapData(rfbconn, this, isSpice | isOpaque | isRdp | isNvStream);
+        if (isRdp | isNvStream | isSsh) {
+            // SSH Phase 0 reuses UltraCompactBitmapData: its drawable
+            // overrides Drawable.draw(Canvas), its constructor creates
+            // mbitmap, and the startSshConnection path then paints the
+            // hardcoded "Hello SSH" text into mbitmap once.
+            bitmapData = new UltraCompactBitmapData(rfbconn, this, isSpice | isOpaque | isRdp | isNvStream | isSsh);
             Log.i(TAG, "Using UltraCompactBufferBitmapData.");
         } else if (!useFull) {
             bitmapData = new LargeBitmapData(rfbconn, this, dx, dy, capacity);
@@ -1541,6 +1670,9 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         if (handler != null) {
             handler.removeCallbacksAndMessages(null);
         }
+
+        // Stop the Phase 0 SSH heartbeat redraw.
+        sshRedrawHandler.removeCallbacks(sshRedrawRunnable);
 
         // Close the SSH tunnel.
         if (sshConnection != null) {
@@ -2423,6 +2555,46 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     }
 
     public void setDisplayRect(Rect displayRect) {
+        Rect old = this.displayRect;
         this.displayRect = displayRect;
+        // SSH has no server to send a new framebuffer size, so the mbitmap
+        // would keep its old dimensions after fold/unfold and the new view
+        // would be letterboxed with black bars. Detect a meaningful rect
+        // change and rebuild rfbconn + bitmapData at the new size.
+        if (isSsh && rfbconn != null && old != null
+                && (old.width() != displayRect.width()
+                    || old.height() != displayRect.height())) {
+            Log.i(TAG, "setDisplayRect: SSH rect changed "
+                    + old.width() + "x" + old.height()
+                    + " -> " + displayRect.width() + "x" + displayRect.height()
+                    + ", rebuilding SSH framebuffer");
+            rebuildSshFramebuffer();
+        }
+    }
+
+    /**
+     * Recreate the SSH stub RfbConnectable and the mbitmap at the current
+     * displayRect's size, then redraw the placeholder. Used after a
+     * fold/unfold/rotation that changes the available view area.
+     */
+    private void rebuildSshFramebuffer() {
+        try {
+            int w = displayRect.width();
+            int h = displayRect.height();
+            int fbW = Math.max(1, (int) (w * Constants.SSH_SMART_RESOLUTION_FACTOR));
+            int fbH = Math.max(1, (int) (h * Constants.SSH_SMART_RESOLUTION_FACTOR));
+            rfbconn = new SshConnectable(
+                App.debugLog, handler, fbW, fbH);
+            if (pointer instanceof RemoteSshPointer) {
+                ((RemoteSshPointer) pointer).setProtocomm(rfbconn);
+            }
+            if (keyboard instanceof RemoteSshKeyboard) {
+                ((RemoteSshKeyboard) keyboard).setRfb(rfbconn);
+            }
+            reallocateDrawable(w, h);
+            drawSshPlaceholderIntoBitmap();
+        } catch (Throwable e) {
+            Log.e(TAG, "rebuildSshFramebuffer failed", e);
+        }
     }
 }

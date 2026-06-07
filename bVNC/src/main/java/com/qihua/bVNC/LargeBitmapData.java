@@ -80,7 +80,7 @@ class LargeBitmapData extends AbstractBitmapData {
     }
 
     @Override
-    AbstractBitmapDrawable createDrawable() {
+    protected AbstractBitmapDrawable createDrawable() {
         return new LargeBitmapDrawable();
     }
 
@@ -139,7 +139,7 @@ class LargeBitmapData extends AbstractBitmapData {
      * @see com.qihua.bVNC.AbstractBitmapData#drawRect(int, int, int, int, android.graphics.Paint)
      */
     @Override
-    void drawRect(int x, int y, int w, int h, Paint paint) {
+    protected void drawRect(int x, int y, int w, int h, Paint paint) {
         x -= xoffset;
         y -= yoffset;
         memGraphics.drawRect(x, y, x + w, y + h, paint);
@@ -157,7 +157,7 @@ class LargeBitmapData extends AbstractBitmapData {
      * @see com.qihua.bVNC.AbstractBitmapData#scrollChanged(int, int)
      */
     @Override
-    synchronized void scrollChanged(int newx, int newy) {
+    protected synchronized void scrollChanged(int newx, int newy) {
         //android.util.Log.i("LBM","scroll "+newx+" "+newy);
         int newScrolledToX = scrolledToX;
         int newScrolledToY = scrolledToY;
@@ -260,7 +260,7 @@ class LargeBitmapData extends AbstractBitmapData {
      * @see com.qihua.bVNC.AbstractBitmapData#syncScroll()
      */
     @Override
-    synchronized void syncScroll() {
+    protected synchronized void syncScroll() {
 
         int deltaX = xoffset - scrolledToX;
         int deltaY = yoffset - scrolledToY;

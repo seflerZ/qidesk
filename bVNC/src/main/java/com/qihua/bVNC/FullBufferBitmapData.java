@@ -95,7 +95,7 @@ class FullBufferBitmapData extends AbstractBitmapData {
      * @see com.qihua.bVNC.AbstractBitmapData#createDrawable()
      */
     @Override
-    AbstractBitmapDrawable createDrawable() {
+    protected AbstractBitmapDrawable createDrawable() {
         return new Drawable(this);
     }
 
@@ -103,7 +103,7 @@ class FullBufferBitmapData extends AbstractBitmapData {
      * @see com.qihua.bVNC.AbstractBitmapData#drawRect(int, int, int, int, android.graphics.Paint)
      */
     @Override
-    void drawRect(int x, int y, int w, int h, Paint paint) {
+    protected void drawRect(int x, int y, int w, int h, Paint paint) {
         int color = paint.getColor();
         int offset = offset(x, y);
         if (w > 10) {
@@ -131,7 +131,7 @@ class FullBufferBitmapData extends AbstractBitmapData {
      * @see com.qihua.bVNC.AbstractBitmapData#scrollChanged(int, int)
      */
     @Override
-    void scrollChanged(int newx, int newy) {
+    protected void scrollChanged(int newx, int newy) {
         xoffset = newx;
         yoffset = newy;
     }
@@ -162,7 +162,7 @@ class FullBufferBitmapData extends AbstractBitmapData {
      * @see com.qihua.bVNC.AbstractBitmapData#syncScroll()
      */
     @Override
-    void syncScroll() {
+    protected void syncScroll() {
         // Don't need to do anything here
     }
 
