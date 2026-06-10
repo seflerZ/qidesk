@@ -604,6 +604,47 @@ ls aRDP-app/build/outputs/apk/gplay/debug/
 - [x] 折叠→展开 / 展开→折叠: 字体物理大小不变,画面无黑边
 - [x] 不需要任何用户输入(SmartResolution / 字号 / 字体设置都不存在)
 
+### 8.17 后续重构: `RemoteCanvas` 拆出 `ConnectionInitializer` 策略类(2026-06)
+
+**动机**: Phase 0 把 SSH 塞进 `RemoteCanvas` 后, 这个类已经膨胀到 2598 行, 5 协议(VNC/RDP/SPICE/NVStream/SSH)各有 `initializeXxxConnection()` + `startXxxConnection()` + 散落的 `if (isXxx)` 22 处. 再加 Phase 1+ SSH 的真实 `TermSession` 驱动, 这个类会失控.
+
+**方案**: 抽象基类 `com.qihua.bVNC.connection.ConnectionInitializer` + 5 个具体实现 + 工厂. 模仿现有 `InputHandlerGamepad.initializeRemoteGamepad` 的协议分派模式.
+
+**接口**(`ConnectionInitializer.java`, 70 行):
+- `initialize(RemoteCanvas)` — 建 communicator/pointer/keyboard
+- `start(RemoteCanvas)` — 真正发起网络连接(`cThread` 里跑)
+- `teardown(RemoteCanvas)` — 默认 no-op, SSH 覆盖停心跳
+- `onSurfaceCreated(RemoteCanvas)` / `onDisplayRectChanged(RemoteCanvas, Rect, Rect)` — 默认 no-op, SSH 覆盖重画占位符 / 重建 mbitmap
+- `needsRedrawHeartbeat()` / `heartbeatIntervalMs()` — SSH 返回 true/33
+- `reinitialize(RemoteCanvas)` — 默认 = teardown + initialize, Opaque 走相同路径
+
+**5 个实现**(总计 ~990 行, 替换原 `RemoteCanvas` 中 ~750 行协议代码):
+- `SshConnectionInitializer.java`(205 行)— Phase 0 桩, 30 FPS 心跳, "Hello SSH" 占位符, 折叠/展开 mbitmap 重建
+- `VncConnectionInitializer.java`(154 行)— Decoder + RfbCommunicator + 握手 + 色深兜底 + `sendUnixAuth(canvas)` 助手
+- `RdpConnectionInitializer.java`(75 行)— RdpCommunicator(FreeRDP) + `setConnectionParameters`
+- `NvStreamConnectionInitializer.java`(128 行)— NvCommunicator + PreferenceConfiguration + 蜂窝降码率 + ControllerHandler
+- `SpiceConnectionInitializer.java`(430 行)— SpiceCommunicator + 直连 / oVirt / PVE / .vv 文件四条入口
+
+**工厂**(`ConnectionInitializerFactory.java`, 38 行): SPICE/Opaque 先看 app flavor(`Utils.isSpice(ctx)||Utils.isOpaque(ctx)`), 否则按 `conn.getConnectionType()` 分派. 加新协议 = 一个新类 + 一条工厂分支, 不动 `RemoteCanvas`.
+
+**`RemoteCanvas` 瘦身效果**:
+- 2598 → 1843 行 (-29%)
+- 删除 6 个 `isVnc/isRdp/isSpice/isNvStream/isOpaque/isSsh` boolean 字段, 改为 `currentInitializer instanceof XxxConnectionInitializer` 的访问器方法
+- `initializeCanvas` 5 路 `if/else` → 一行 `currentInitializer = ConnectionInitializerFactory.create(...); currentInitializer.initialize(this);`
+- `startConnection` 5 路 → 一行 `currentInitializer.start(this);`
+- `surfaceCreated` / `setDisplayRect` / `closeConnection` 协议特化 → 委托给 `currentInitializer.onSurfaceCreated / onDisplayRectChanged / teardown`
+
+**保留不动**: `sshTunneled`(VNC-over-SSH 运行时状态, 不是协议选择), `reallocateDrawable` 里的 `isRdp() | isNvStream() | isSsh()` 选 `UltraCompactBitmapData`(将来可能挪到 `initializer.preferredBitmapImpl()`, 暂时一行 `if` 不值得抽), `getRemoteProtocolPort` / `getAddress` / `isColorModel` 的琐碎条件继续留 canvas.
+
+**踩坑**:
+- `AbstractBitmapData.mbitmap` 原本 `protected`, SshConnectionInitializer 直接读, 需提升为 `public`
+- 子包跨包访问: `pointer/keyboard/handler/rfbconn/connection/spicecomm/rdpcomm/nvcomm/decoder/controller/activity/useFull/compact/displayRect/displayDensity/sshTunneled/surfaceHolder/vmNameToId/getAddress()/getRemoteProtocolPort/getRemoteWidth/getRemoteHeight/handleUncaughtException()` 都需要提升可见性给 initializer 用
+- Opaque flavor 的 `RemoteCanvas#init()` 入口和默认 `initializeCanvas()` 不同, 工厂返回值需 cast 成 `SpiceConnectionInitializer` 才能塞 `vvFileName`
+- 6 个布尔字段移除后, 9 处 `isXxx` 字段读必须改成 `isXxx()` 方法调; `RemoteCanvasActivity` 4 处 `canvas.isNvStream` 也得跟着改
+- 一切共享状态仍走 canvas 公开字段, 没引入新的耦合; initializer 是 stateful (有 `vvFileName`、SSH 的 `sshRedrawHandler` 等), 不能复用单例
+
+**验收**: gplayDebug / freeDebug / gplayRelease (AAB) 三种构建均通过. SSH / VNC / RDP / NVStream 端到端在 Honor 折叠屏上验证.
+
 ## 9. Phase 1+ 路线(预告)
 
 Phase 1 最小集: `emulatorview-release.aar` 集成, 真实 `TermSession` 驱动 `UltraCompactBitmapData.updateBitmap`, `ConfigSSH` 落盘设置, 字号/字体设置 UI.

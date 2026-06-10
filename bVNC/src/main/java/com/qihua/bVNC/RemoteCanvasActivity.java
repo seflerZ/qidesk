@@ -90,6 +90,7 @@ import com.limelight.computers.ComputerManagerService;
 import com.limelight.nvstream.http.ComputerDetails;
 import com.limelight.nvstream.http.PairingManager;
 import com.limelight.ui.GameGestures;
+import com.qihua.bVNC.connection.ProtocolType;
 import com.qihua.bVNC.dialogs.EnterTextDialog;
 import com.qihua.bVNC.dialogs.MetaKeyDialog;
 import com.qihua.bVNC.extrakeys.ExtraKeyButton;
@@ -161,7 +162,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
                     ((ComputerManagerService.ComputerManagerBinder)binder);
 
             // Only for NVStream connections
-            if (!canvas.isNvStream) {
+            if (canvas.getProtocolType() != ProtocolType.NVSTREAM) {
                 return;
             }
 
@@ -714,7 +715,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         touchpad.showProgessDialog();
 
         // NVStream connect on service bind event, not here
-        if (!canvas.isNvStream) {
+        if (canvas.getProtocolType() != ProtocolType.NVSTREAM) {
             handler.post(() -> {
                 canvas.startConnection();
             });
@@ -1585,7 +1586,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             newModeId = R.id.itemInputDirectTouch;
         } else if (currentModeId == R.id.itemInputDirectTouch) {
             // Only cycle to gamepad if NVStream supports it, otherwise go back to touchpad
-            newModeId = canvas.isNvStream ? R.id.itemInputGamepad : R.id.itemInputTouchpad;
+            newModeId = canvas.getProtocolType() == ProtocolType.NVSTREAM ? R.id.itemInputGamepad : R.id.itemInputTouchpad;
         } else {
             newModeId = R.id.itemInputTouchpad;
         }
@@ -1718,7 +1719,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 
         boolean consumed = false;
 
-        if (ControllerHandler.isGameControllerDevice(evt.getDevice()) && canvas.isNvStream) {
+        if (ControllerHandler.isGameControllerDevice(evt.getDevice()) && canvas.getProtocolType() == ProtocolType.NVSTREAM) {
             // Always try the controller handler first, unless it's an alphanumeric keyboard device.
             // Otherwise, controller handler will eat keyboard d-pad events.
             if (evt.getAction() == KeyEvent.ACTION_DOWN)

@@ -29,6 +29,7 @@ import com.qihua.bVNC.FpsCounter;
 import com.qihua.bVNC.R;
 import com.qihua.bVNC.RemoteCanvas;
 import com.qihua.bVNC.RemoteCanvasActivity;
+import com.qihua.bVNC.connection.ProtocolType;
 import com.qihua.bVNC.gamepad.GamepadOverlay;
 import com.undatech.opaque.util.GeneralUtils;
 
@@ -152,11 +153,12 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
      */
     private void initializeRemoteGamepad() {
         // Protocol detection happens ONLY here in the factory
-        if (canvas.isNvStream()) {
+        ProtocolType protocol = canvas.getProtocolType();
+        if (protocol == ProtocolType.NVSTREAM) {
             remoteGamepad = new NvStreamRemoteGamepad(touchpad, touchpad.getHandler(), debugLogging);
-        } else if (canvas.isRdp()) {
+        } else if (protocol == ProtocolType.RDP) {
             remoteGamepad = new RdpRemoteGamepad(touchpad, touchpad.getHandler(), debugLogging);
-        } else if (canvas.isVnc()) {
+        } else if (protocol == ProtocolType.VNC) {
             remoteGamepad = new VncRemoteGamepad(touchpad, touchpad.getHandler(), debugLogging);
         } else {
             // Throw exception for unsupported connection types

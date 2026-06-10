@@ -43,7 +43,7 @@ abstract public class AbstractBitmapData {
     protected int bitmapwidth;
     protected int bitmapheight;
     RemoteConnectable rfb;
-    protected Bitmap mbitmap;
+    public Bitmap mbitmap;
     protected int bitmapPixels[];
     protected Canvas memGraphics;
     boolean waitingForInput;

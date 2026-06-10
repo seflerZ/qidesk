@@ -44,7 +44,6 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Handler;
-import android.os.Looper;
 import android.os.SystemClock;
 import android.text.ClipboardManager;
 import android.text.InputType;
@@ -67,31 +66,21 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 
 import com.limelight.binding.input.ControllerHandler;
-import com.limelight.nvstream.http.ComputerDetails;
-import com.limelight.nvstream.jni.MoonBridge;
-import com.limelight.preferences.PreferenceConfiguration;
 import com.qihua.android.bc.BCFactory;
 import com.qihua.bVNC.communicator.RfbCommunicator;
-import com.qihua.bVNC.communicator.SshCommunicator;
+import com.qihua.bVNC.connection.ConnectionInitializer;
+import com.qihua.bVNC.connection.ConnectionInitializerFactory;
+import com.qihua.bVNC.connection.ProtocolType;
+import com.qihua.bVNC.connection.SpiceConnectionInitializer;
+import com.qihua.bVNC.draw.DrawWorker;
 import com.qihua.bVNC.dialogs.GetTextFragment;
-import com.qihua.bVNC.exceptions.AnonCipherUnsupportedException;
 import com.qihua.bVNC.input.InputHandler;
 import com.qihua.bVNC.input.InputHandlerTouchpad;
 import com.qihua.bVNC.input.RemoteCanvasHandler;
 import com.qihua.bVNC.input.RemoteKeyboard;
-import com.qihua.bVNC.input.RemoteNvStreamKeyboard;
-import com.qihua.bVNC.input.RemoteNvStreamPointer;
 import com.qihua.bVNC.input.RemotePointer;
-import com.qihua.bVNC.input.RemoteRdpKeyboard;
-import com.qihua.bVNC.input.RemoteRdpPointer;
-import com.qihua.bVNC.input.RemoteSpiceKeyboard;
 import com.qihua.bVNC.input.RemoteSpicePointer;
-import com.qihua.bVNC.input.RemoteSshKeyboard;
-import com.qihua.bVNC.input.RemoteSshPointer;
-import com.qihua.bVNC.input.RemoteVncKeyboard;
-import com.qihua.bVNC.input.RemoteVncPointer;
 import com.qihua.bVNC.util.SmartResolutionUtils;
-import com.tigervnc.rfb.AuthFailureException;
 import com.undatech.opaque.Connection;
 import com.undatech.opaque.DrawTask;
 import com.undatech.opaque.MessageDialogs;
@@ -101,39 +90,26 @@ import com.undatech.opaque.RemoteClientLibConstants;
 import com.undatech.opaque.RemoteConnectable;
 import com.undatech.opaque.SpiceCommunicator;
 import com.undatech.opaque.Viewable;
-import com.undatech.opaque.proxmox.ProxmoxClient;
-import com.undatech.opaque.proxmox.pojo.PveRealm;
-import com.undatech.opaque.proxmox.pojo.PveResource;
-import com.undatech.opaque.proxmox.pojo.SpiceDisplay;
-import com.undatech.opaque.proxmox.pojo.VmStatus;
-import com.undatech.opaque.util.FileUtils;
-
-import org.apache.http.HttpException;
-import org.json.JSONException;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Timer;
-import java.util.concurrent.LinkedBlockingQueue;
-
-import javax.security.auth.login.LoginException;
 
 public class RemoteCanvas extends SurfaceView implements Viewable
         , SurfaceHolder.Callback, GetTextFragment.OnFragmentDismissedListener {
     private final static String TAG = "RemoteCanvas";
 
-    private SurfaceHolder surfaceHolder;
+    public SurfaceHolder surfaceHolder;
 
     public AbstractScaling scaler;
 
     // Variable indicating that we are currently scrolling in simulated touchpad mode.
     public boolean cursorBeingMoved = false;
 
-    private Rect displayRect;
-    private float displayDensity;
+    public Rect displayRect;
+    public float displayDensity;
 
     // Connection parameters
     public Connection connection;
@@ -143,8 +119,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     public RemoteConnectable rfbconn = null;
     public RfbCommunicator rfb = null;
     public SpiceCommunicator spicecomm = null;
-    private RdpCommunicator rdpcomm = null;
-    private NvCommunicator nvcomm = null;
+    public RdpCommunicator rdpcomm = null;
+    public NvCommunicator nvcomm = null;
 
     public boolean maintainConnection = true;
     public AbstractBitmapData bitmapData;
@@ -161,21 +137,12 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     public Handler handler;
 
     /**
-     * Phase 0 SSH: heartbeat redraw. VNC/RDP/SPICE push DrawTasks when new
-     * frame data arrives; SSH has no decoder, so we drive redraws ourselves
-     * to mimic that continuous stream. Stopped in closeConnection().
+     * The ConnectionInitializer that owns protocol-specific lifecycle
+     * for the current connection. Set in initializeCanvas(); null until
+     * then. Per-protocol heartbeat, surface hooks, and teardown are
+     * delegated to it; the rest of RemoteCanvas is protocol-agnostic.
      */
-    private final Handler sshRedrawHandler = new Handler(Looper.getMainLooper());
-    private final Runnable sshRedrawRunnable = new Runnable() {
-        @Override
-        public void run() {
-            if (!isRunning || bitmapData == null || rfbconn == null) {
-                return;
-            }
-            reDraw(0, 0, rfbconn.framebufferWidth(), rfbconn.framebufferHeight());
-            sshRedrawHandler.postDelayed(this, 33); // ~30 FPS
-        }
-    };
+    public ConnectionInitializer currentInitializer;
 
     private DrawWorker drawWorker;
 
@@ -184,13 +151,13 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     private boolean outDisplay = false;
 
     Database database;
-    Map<String, String> vmNameToId = new HashMap<String, String>();
+    public Map<String, String> vmNameToId = new HashMap<String, String>();
     // RFB Decoder
-    Decoder decoder = null;
+    public Decoder decoder = null;
     // The remote pointer and keyboard
-    RemotePointer pointer;
-    RemoteKeyboard keyboard;
-    ControllerHandler controller;
+    public RemotePointer pointer;
+    public RemoteKeyboard keyboard;
+    public ControllerHandler controller;
     public boolean useFull = false;
     boolean compact = false;
     // Used to set the contents of the clipboard.
@@ -201,7 +168,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
      * Position of the top left portion of the <i>visible</i> part of the screen, in
      * full-frame coordinates
      */
-    int absoluteXPosition = 0, absoluteYPosition = 0;
+    public int absoluteXPosition = 0, absoluteYPosition = 0;
 
     /*
      * How much to shift coordinates over when converting from full to view coordinates.
@@ -215,37 +182,17 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     int visibleHeight = -1;
 
     /*
-     * This flag indicates whether this is the VNC client.
+     * Protocol identity. The boolean flags used to live here as
+     * fields, but they were a four-way `isXxx = ...` ladder kept in
+     * sync with the dispatch in initializeCanvas(). Now that each
+     * protocol's lifecycle is owned by a ConnectionInitializer
+     * strategy, the source of truth is `currentInitializer`; the
+     * accessors below delegate to `instanceof`.
      */
-    boolean isVnc = false;
 
-    /*
-     * This flag indicates whether this is the RDP client.
-     */
-    boolean isRdp = false;
+    public boolean isRunning = false;
 
-    /*
-     * This flag indicates whether this is the SPICE client.
-     */
-    boolean isSpice = false;
-
-    /*
-     * This flag indicates whether this is the NvStream(Sunshine) client.
-     */
-    boolean isNvStream = false;
-
-    boolean isRunning = false;
-
-    /*
-     * This flag indicates whether this is the Opaque client.
-     */
-    boolean isOpaque = false;
-
-    /*
-     * This flag indicates whether this is the SSH client.
-     */
-    boolean isSsh = false;
-    boolean sshTunneled = false;
+    public boolean sshTunneled = false;
     boolean userPanned = false;
     String vvFileName;
     /**
@@ -282,7 +229,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     };
 
     private boolean touchpad = false;
-    private RemoteCanvasActivity activity;
+    public RemoteCanvasActivity activity;
 
     /**
      * Constructor used by the inflation apparatus
@@ -302,7 +249,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         clipboard = (ClipboardManager) getContext().getSystemService(Context.CLIPBOARD_SERVICE);
 
         if (!isTouchpad()) {
-            drawWorker = new DrawWorker();
+            drawWorker = new DrawWorker(this);
         }
 
         surfaceHolder = getHolder();
@@ -349,13 +296,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         if (!outDisplay && touchpad) {
             drawTouchpadHint();
         }
-        // Phase 0 SSH has no decoder/network to push DrawTasks, so push
-        // one whenever the surface is (re)created. This handles the
-        // case where startSshConnection ran before the surface was
-        // ready (its reDraw was silently dropped) and also covers
-        // surface re-creation on fold/unfold, screen rotation, etc.
-        if (isSsh && bitmapData != null) {
-            reDraw(0, 0, rfbconn.framebufferWidth(), rfbconn.framebufferHeight());
+        if (currentInitializer != null) {
+            currentInitializer.onSurfaceCreated(this);
         }
     }
 
@@ -380,27 +322,18 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 
         checkNetworkConnectivity();
         initializeClipboardMonitor();
-        spicecomm = new SpiceCommunicator(getContext(), handler, this,
-                settings.isRequestingNewDisplayResolution() || settings.getRdpResType() == Constants.RDP_GEOM_SELECT_CUSTOM,
-                !Utils.isFree(getContext()) && settings.isUsbEnabled(), App.debugLog);
-        rfbconn = spicecomm;
-        pointer = new RemoteSpicePointer(spicecomm, this, handler, App.debugLog);
+
+        // SPICE / Opaque lifecycle now lives in SpiceConnectionInitializer.
+        // init() is only ever called from the Opaque flavor, so the
+        // factory always returns SpiceConnectionInitializer here.
+        currentInitializer = ConnectionInitializerFactory.create(settings, getContext());
+        SpiceConnectionInitializer spice = (SpiceConnectionInitializer) currentInitializer;
+        spice.vvFileName = vvFileName;
         try {
-            keyboard = new RemoteSpiceKeyboard(getResources(), spicecomm, this, handler,
-                    settings.getLayoutMap(), App.debugLog);
+            spice.initialize(this);
+            spice.start(this);
         } catch (Throwable e) {
             handleUncaughtException(e);
-        }
-        maintainConnection = true;
-        if (vvFileName == null) {
-            if (connection.getConnectionTypeString().equals(getResources().getString(R.string.connection_type_pve))) {
-                startPve();
-            } else {
-                connection.setAddress(Utils.getHostFromUriString(connection.getAddress()));
-                startOvirt();
-            }
-        } else {
-            startFromVvFile(vvFileName);
         }
     }
 
@@ -498,28 +431,27 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         sshTunneled = (connection.getConnectionType() == Constants.CONN_TYPE_SSH);
         handler = new RemoteCanvasHandler(getContext(), this, connection);
 
-        isVnc = conn.getConnectionType() == Constants.CONN_TYPE_VNC;
-        isRdp = conn.getConnectionType() == Constants.CONN_TYPE_RDP;
-        isNvStream = conn.getConnectionType() == Constants.CONN_TYPE_NVSTREAM;
-        isSsh = conn.getConnectionType() == Constants.CONN_TYPE_SSH;
-        isSpice = false;
-
-        try {
-            if (isSpice) {
-                initializeSpiceConnection();
-            } else if (isRdp) {
-                initializeRdpConnection();
-            } else if (isVnc) {
-                initializeVncConnection();
-            } else if (isNvStream) {
-                initializeNvStreamConnection();
-            } else if (isSsh) {
-                initializeSshConnection();
-            } else {
+        // Per-protocol lifecycle now lives in ConnectionInitializer strategies.
+        // The factory picks one based on the connection type (and SPICE
+        // app flavor). Protocol identity is exposed via the isXxx()
+        // accessors below, which delegate to `currentInitializer`.
+        currentInitializer = ConnectionInitializerFactory.create(conn, getContext());
+        if (currentInitializer == null) {
+            // No strategy for this connection. The non-Opaque entry
+            // points (VNC/RDP/NVStream/SSH) all have their own
+            // initializers; reaching this branch means the factory
+            // was unable to recognise the connection.
+            try {
                 throw new Exception("unknown connection type");
+            } catch (Throwable e) {
+                handleUncaughtException(e);
             }
-        } catch (Throwable e) {
-            handleUncaughtException(e);
+        } else {
+            try {
+                currentInitializer.initialize(this);
+            } catch (Throwable e) {
+                handleUncaughtException(e);
+            }
         }
 
         clipboardMonitor = new ClipboardMonitor(getContext(), this);
@@ -532,7 +464,26 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         return pointer;
     }
 
-    private void handleUncaughtException(Throwable e) {
+    public void startConnection() {
+        if (currentInitializer == null) {
+            // No strategy matched. With every protocol's initializer in
+            // place the factory always returns one; this branch is a
+            // defensive net for unknown connection types.
+            try {
+                throw new Exception("unknown connection type");
+            } catch (Throwable e) {
+                handleUncaughtException(e);
+            }
+        } else {
+            try {
+                currentInitializer.start(this);
+            } catch (Throwable e) {
+                handleUncaughtException(e);
+            }
+        }
+    }
+
+    public void handleUncaughtException(Throwable e) {
         if (maintainConnection) {
             Log.e(TAG, e.toString());
 //            e.printStackTrace();
@@ -589,699 +540,11 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         return h;
     }
 
-    /**
-     * Initializes a SPICE connection.
-     */
-    private void initializeSpiceConnection() throws Exception {
-        spicecomm = new SpiceCommunicator(getContext(), handler, this, true,
-                !Utils.isFree(getContext()) && connection.isUsbEnabled(),
-                App.debugLog);
-        rfbconn = spicecomm;
-        pointer = new RemoteSpicePointer(rfbconn, RemoteCanvas.this, handler, App.debugLog);
-        keyboard = new RemoteSpiceKeyboard(getResources(), spicecomm, RemoteCanvas.this,
-                handler, connection.getLayoutMap(), App.debugLog);
-        //spicecomm.setUIEventListener(RemoteCanvas.this);
-        spicecomm.setHandler(handler);
-    }
-
-    /**
-     * Starts a SPICE connection using libspice.
-     */
-    private void startSpiceConnection() throws Exception {
-        // Get the address and port (based on whether an SSH tunnel is being established or not).
-        String address = getAddress();
-        // To prevent an SSH tunnel being created when port or TLS port is not set, we only
-        // getPort when port/tport are positive.
-        int port = connection.getPort();
-        if (port > 0) {
-            port = getRemoteProtocolPort(port);
-        }
-
-        int tport = connection.getTlsPort();
-        if (tport > 0) {
-            tport = getRemoteProtocolPort(tport);
-        }
-
-        spicecomm.connectSpice(address, Integer.toString(port), Integer.toString(tport), connection.getPassword(),
-                connection.getCaCertPath(), null, // TODO: Can send connection.getCaCert() here instead
-                connection.getCertSubject(), connection.getEnableSound());
-    }
-
-
-    private void initializeNvStreamConnection() throws Exception {
-        Log.i(TAG, "initializeRdpConnection: Initializing NvStream connection.");
-
-        nvcomm = new NvCommunicator(activity, this, handler);
-        rfbconn = nvcomm;
-
-        pointer = new RemoteNvStreamPointer(nvcomm, RemoteCanvas.this, handler, App.debugLog);
-        keyboard = new RemoteNvStreamKeyboard(nvcomm, RemoteCanvas.this, handler, App.debugLog);
-
-        // in order to support fractional sensitivity, we use the integer divide 10 to make it a float.
-        pointer.setSensitivity(Utils.querySharedPreferenceInt(getContext(), Constants.touchpadCursorSpeed, 10) / 10);
-    }
-
-    private void startNvStreamConnection(SurfaceHolder surfaceHolder) throws Exception {
-        Log.i(TAG, "startNvStreamConnection: Starting NvStream connection.");
-
-        // We reuse the SSH server as the UUID of the computer
-        String uuid = connection.getSshServer();
-        ComputerDetails computerDetails = activity.getComputerDetail(uuid);
-        if (computerDetails == null) {
-            throw new IllegalStateException("computer not found, UUID: " + uuid);
-        }
-
-        String appName = connection.getUserName();
-        int appId = Integer.parseInt(connection.getPassword());
-
-        int remoteWidth = getRemoteWidth(displayRect.width(), displayRect.height());
-        int remoteHeight = getRemoteHeight(displayRect.width(), displayRect.height());
-
-        // defined here now, can be configured in later versions
-        PreferenceConfiguration prefConfig = new PreferenceConfiguration();
-        prefConfig.absoluteMouseMode = true;
-        prefConfig.enableAudioFx = false;
-        prefConfig.fps = 60;
-        prefConfig.enableSops = true;
-        prefConfig.bindAllUsb = true;
-        prefConfig.audioConfiguration = MoonBridge.AUDIO_CONFIGURATION_STEREO;
-        prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_MIN_LATENCY;
-        prefConfig.multiController = false;
-        prefConfig.disableWarnings = true;
-        prefConfig.enablePip = false;
-        prefConfig.width = remoteWidth;
-        prefConfig.height = remoteHeight;
-        prefConfig.enableHdr = false;
-        prefConfig.bitrate = 18000 * (remoteWidth / 1920);
-        prefConfig.disableWarnings = true;
-        prefConfig.incomingFrameQueueSize = 2;
-        prefConfig.videoFormat = PreferenceConfiguration.FormatOption.AUTO;
-        prefConfig.enableLatencyToast = false;
-        prefConfig.enablePerfOverlay = Utils.querySharedPreferenceBoolean(activity, Constants.enableDebugInfo, false);
-//        prefConfig.videoFormat = PreferenceConfiguration.FormatOption.FORCE_H264;
-
-        // reduce bitrate if on cellular connection
-        if (!computerDetails.activeAddress.address.equals(computerDetails.localAddress.address)) {
-            prefConfig.bitrate = 10000 * (remoteWidth / 1920);
-            prefConfig.framePacing = PreferenceConfiguration.FRAME_PACING_BALANCED;
-            prefConfig.incomingFrameQueueSize = 3;
-            prefConfig.fps = 60;
-
-            activity.runOnUiThread(() -> Toast.makeText(activity.getApplicationContext()
-                    , R.string.cellular_connection_warning, Toast.LENGTH_SHORT).show());
-        }
-
-        nvcomm.setConnectionParameters(computerDetails.activeAddress.address,
-                computerDetails.activeAddress.port,
-                computerDetails.httpsPort, remoteWidth, remoteHeight,
-                activity.getUniqueId(), appName,
-                appId, computerDetails.serverCert,
-                prefConfig);
-
-        nvcomm.connect(surfaceHolder);
-
-        controller = new ControllerHandler(activity, nvcomm.getConnection(), activity, nvcomm.getPrefConfig());
-    }
-
-    /**
-     * Initializes an RDP connection.
-     */
-    private void initializeRdpConnection() throws Exception {
-        Log.i(TAG, "initializeRdpConnection: Initializing RDP connection.");
-
-        rdpcomm = new RdpCommunicator(getContext(), handler, this,
-                connection.getUserName(), connection.getRdpDomain(), connection.getPassword(),
-                App.debugLog);
-        rfbconn = rdpcomm;
-        pointer = new RemoteRdpPointer(rfbconn, this, handler, App.debugLog);
-        keyboard = new RemoteRdpKeyboard(rdpcomm, this, handler, App.debugLog,
-                false);
-
-        // in order to support fractional sensitivity, we use the integer divide 10 to make it a float.
-        pointer.setSensitivity(Utils.querySharedPreferenceInt(getContext(), Constants.touchpadCursorSpeed, 10) / 10);
-    }
-
-    public void startConnection() {
-        try {
-            if (isSpice) {
-                startSpiceConnection();
-            } else if (isRdp) {
-                startRdpConnection();
-            } else if (isVnc) {
-                startVncConnection();
-            } else if (isNvStream) {
-                startNvStreamConnection(surfaceHolder);
-            } else if (isSsh) {
-                startSshConnection();
-            } else {
-                throw new Exception("unknown connection type");
-            }
-        } catch (Throwable e) {
-            handleUncaughtException(e);
-        }
-    }
-
-    /**
-     * Phase 0: no real SSH. Just trigger a redraw so "Hello SSH" shows up
-     * on screen. Phase 2 will replace this with a real network thread.
-     */
-    private void startSshConnection() throws Exception {
-        Log.i(TAG, "startSshConnection: Phase 0 stub — no real SSH connection.");
-        waitUntilInflated();
-        reallocateDrawable(displayRect.width(), displayRect.height());
-        drawSshPlaceholderIntoBitmap();
-        onConnectionSuccess();
-        // Phase 0: no decoder/network pushes DrawTasks. Start a 30 FPS
-        // heartbeat redraw to mimic the continuous frame stream that
-        // VNC/RDP get from the network. The runnable self-terminates if
-        // isRunning/bitmapData/rfbconn go away, and is also removed in
-        // closeConnection().
-        sshRedrawHandler.removeCallbacks(sshRedrawRunnable);
-        sshRedrawHandler.post(sshRedrawRunnable);
-    }
-
-    /**
-     * Phase 0 only: paint a hardcoded "Hello SSH" frame into
-     * bitmapData.mbitmap. Phase 1+ will replace this with a TermSession
-     * renderer that draws live terminal state.
-     */
-    private void drawSshPlaceholderIntoBitmap() {
-        if (bitmapData == null || bitmapData.mbitmap == null) {
-            Log.w(TAG, "drawSshPlaceholderIntoBitmap: bitmapData or mbitmap is null");
-            return;
-        }
-        int w = bitmapData.mbitmap.getWidth();
-        int h = bitmapData.mbitmap.getHeight();
-        // Use a density-based text size so glyphs occupy the same physical
-        // size on cover (~430 PPI) and main (~340 PPI) foldable displays.
-        // Effective on-screen size still varies with SSH_SMART_RESOLUTION_FACTOR
-        // (fit-center scales the whole mbitmap up/down).
-        float density = getContext().getResources().getDisplayMetrics().density;
-        float textSize = Constants.SSH_FONT_SIZE_DP * density;
-        float margin = textSize * 0.8f;
-        float lineHeight = textSize * 1.4f;
-        Canvas c = new Canvas(bitmapData.mbitmap);
-        Paint bg = new Paint();
-        bg.setColor(0xFF002B36); // Solarized base03
-        c.drawRect(0, 0, w, h, bg);
-        Paint text = new Paint();
-        text.setColor(0xFF839496); // Solarized base0
-        text.setTextSize(textSize);
-        text.setAntiAlias(true);
-        text.setTypeface(Typeface.MONOSPACE);
-        c.drawText("Hello SSH", margin, margin + textSize, text);
-        c.drawText("Phase 0: minimal skeleton", margin, margin + textSize + lineHeight, text);
-    }
-
-    /**
-     * Starts an RDP connection using the FreeRDP library.
-     */
-    private void startRdpConnection() throws Exception {
-        Log.i(TAG, "startRdpConnection: Starting RDP connection.");
-
-        // Get the address and port (based on whether an SSH tunnel is being established or not).
-        String address = getAddress();
-        int rdpPort = getRemoteProtocolPort(connection.getPort());
-        waitUntilInflated();
-        int remoteWidth = getRemoteWidth(displayRect.width(), displayRect.height());
-        int remoteHeight = getRemoteHeight(displayRect.width(), displayRect.height());
-
-        rdpcomm.setConnectionParameters(address, rdpPort, connection.getNickname(), remoteWidth,
-                // currently we don't support customize performance flags
-                remoteHeight, true, true,
-                false, false,
-                false, true,
-                connection.getRedirectSdCard(), connection.getConsoleMode(),
-                connection.getRemoteSoundType(), connection.getEnableRecording(),
-                connection.getRemoteFx(), connection.getEnableGfx(), connection.getEnableGfxH264(),
-                connection.getRdpColor(), connection.getZoomLevel());
-        rdpcomm.connect();
-    }
-
-    /**
-     * Initializes a VNC connection.
-     */
-    private void initializeVncConnection() throws Exception {
-        Log.i(TAG, "Initializing connection to: " + connection.getAddress() + ", port: " + connection.getPort());
-        boolean sslTunneled = connection.getConnectionType() == Constants.CONN_TYPE_STUNNEL;
-        decoder = new Decoder(this, connection.getUseLocalCursor() == Constants.CURSOR_FORCE_LOCAL);
-        rfb = new RfbCommunicator(decoder, this, connection.getPrefEncoding(), connection.getViewOnly(),
-                sslTunneled, connection.getIdHashAlgorithm(), connection.getIdHash(), connection.getX509KeySignature(),
-                App.debugLog);
-
-        rfbconn = rfb;
-        pointer = new RemoteVncPointer(rfbconn, RemoteCanvas.this, handler, App.debugLog);
-        boolean rAltAsIsoL3Shift = Utils.querySharedPreferenceBoolean(this.getContext(),
-                Constants.rAltAsIsoL3ShiftTag);
-        keyboard = new RemoteVncKeyboard(rfbconn, RemoteCanvas.this, handler,
-                rAltAsIsoL3Shift, App.debugLog);
-
-        // in order to support fractional sensitivity, we use the integer divide 10 to make it a float.
-        pointer.setSensitivity(Utils.querySharedPreferenceInt(getContext(), Constants.touchpadCursorSpeed, 10) / 10);
-    }
-
-    /**
-     * Initializes an SSH connection.
-     * Phase 0: stub — creates SshCommunicator, no-op keyboard/pointer.
-     * Phase 2: will create a TermSession and wire SSHConnection's
-     * Session.getStdout()/getStdin() to it.
-     */
-    private void initializeSshConnection() throws Exception {
-        Log.i(TAG, "initializeSshConnection: Initializing SSH connection (Phase 0 stub).");
-
-        // TODO Phase 1: handle foldable — when displayRect changes after
-        // a fold/unfold, rebuild mbitmap at the new size and redraw.
-        // For Phase 0 we read displayRect once at init.
-        float w = displayRect.width();
-        float h = displayRect.height();
-        if (w <= 0 || h <= 0) {
-            // displayRect not yet populated (initializeCanvas may run
-            // before the view is laid out). Fall back to screen metrics.
-            android.util.DisplayMetrics metrics =
-                getContext().getResources().getDisplayMetrics();
-            w = metrics.widthPixels;
-            h = metrics.heightPixels;
-        }
-        int fbW = Math.max(1, (int) (w * Constants.SSH_SMART_RESOLUTION_FACTOR));
-        int fbH = Math.max(1, (int) (h * Constants.SSH_SMART_RESOLUTION_FACTOR));
-        Log.i(TAG, "SSH framebuffer size = " + fbW + " x " + fbH
-                  + " (displayRect " + w + "x" + h
-                  + ", factor " + Constants.SSH_SMART_RESOLUTION_FACTOR + ")");
-
-        rfbconn = new SshCommunicator(
-            App.debugLog, handler, fbW, fbH);
-        pointer = new RemoteSshPointer(rfbconn, this, handler, App.debugLog);
-        keyboard = new RemoteSshKeyboard(rfbconn, getContext(), handler, App.debugLog);
-    }
-
-    /**
-     * Starts a VNC connection using the TightVNC backend.
-     */
-    private void startVncConnection() throws Exception {
-
-        try {
-            String address = getAddress();
-            int vncPort = getRemoteProtocolPort(connection.getPort());
-            Log.i(TAG, "Establishing VNC session to: " + address + ", port: " + vncPort);
-            // TODO: VNC Server cert is not set when the connection is SSH tunneled because there at
-            // TODO: present it is assumed the connection is either SSH tunneled or x509 encrypted,
-            // TODO: and when both are the case, there is no way to save the x509 cert.
-            String sslCert = connection.getX509KeySignature();
-            rfb.initializeAndAuthenticate(address, vncPort, connection.getUserName(),
-                    connection.getPassword(), connection.getUseRepeater(),
-                    connection.getRepeaterId(), connection.getConnectionType(),
-                    sslCert);
-        } catch (AnonCipherUnsupportedException e) {
-            showFatalMessageAndQuit(getContext().getString(R.string.error_anon_dh_unsupported));
-        } catch (RfbCommunicator.RfbPasswordAuthenticationException e) {
-            Log.e(TAG, "Authentication failed, will prompt user for password");
-            handler.sendEmptyMessage(RemoteClientLibConstants.GET_VNC_PASSWORD);
-            return;
-        } catch (RfbCommunicator.RfbUsernameRequiredException e) {
-            Log.e(TAG, "Username required, will prompt user for username and password");
-            handler.sendEmptyMessage(RemoteClientLibConstants.GET_VNC_CREDENTIALS);
-            return;
-        } catch (AuthFailureException e) {
-            Log.e(TAG, "TigerVNC AuthFailureException: " + e.getLocalizedMessage());
-            handler.sendEmptyMessage(RemoteClientLibConstants.GET_VNC_CREDENTIALS);
-            return;
-        } catch (Exception e) {
-            throw new Exception(getContext().getString(R.string.error_vnc_unable_to_connect) +
-                    Utils.messageAndStackTraceAsString(e));
-        }
-
-        rfb.writeClientInit();
-        rfb.readServerInit();
-
-        // Is custom resolution enabled?
-        if (connection.getRdpResType() != Constants.VNC_GEOM_SELECT_DISABLED) {
-            waitUntilInflated();
-            rfb.setPreferredFramebufferSize(getRemoteWidth(displayRect.width(), displayRect.height()),
-                    getRemoteHeight(displayRect.width(), displayRect.height()));
-        }
-
-        reallocateDrawable(displayRect.width(), displayRect.height());
-        decoder.setPixelFormat(rfb);
-
-        handler.post(() ->
-                progressDialog.setMessage(getContext().getString(R.string.info_progress_dialog_downloading)));
-
-        sendUnixAuth();
-
-        try {
-            rfb.processProtocol();
-        } catch (RfbCommunicator.RfbUltraVncColorMapException e) {
-            Log.e(TAG, "UltraVnc supports only 24bpp. Switching color mode and reconnecting.");
-            connection.setColorModel(COLORMODEL.C24bit.nameString());
-            connection.save(getContext());
-            handler.sendEmptyMessage(RemoteClientLibConstants.REINIT_SESSION);
-        }
-    }
-
-    /**
-     * Initialize the canvas to show the remote desktop
-     */
-    void startOvirt() {
-//        if (!pd.isShowing())
-//            pd.show();
-
-        Thread cThread = new Thread() {
-            @Override
-            public void run() {
-                try {
-                    // Obtain user's password if necessary.
-                    if (connection.getPassword().equals("")) {
-                        Log.i(TAG, "Displaying a dialog to obtain user's password.");
-                        handler.sendEmptyMessage(RemoteClientLibConstants.GET_PASSWORD);
-                        synchronized (spicecomm) {
-                            spicecomm.wait();
-                        }
-                    }
-
-                    String ovirtCaFile = null;
-                    if (connection.isUsingCustomOvirtCa()) {
-                        ovirtCaFile = connection.getOvirtCaFile();
-                    } else {
-                        ovirtCaFile = new File(getContext().getFilesDir(), "ssl/certs/ca-certificates.crt").getPath();
-                    }
-
-                    // If not VM name is specified, then get a list of VMs and let the user pick one.
-                    if (connection.getVmname().equals("")) {
-                        int success = spicecomm.fetchOvirtVmNames(connection.getHostname(), connection.getUserName(),
-                                connection.getPassword(), ovirtCaFile,
-                                connection.isSslStrict());
-                        // VM retrieval was unsuccessful we do not continue.
-                        ArrayList<String> vmNames = spicecomm.getVmNames();
-                        if (success != 0 || vmNames.isEmpty()) {
-                            return;
-                        } else {
-                            // If there is just one VM, pick it and skip the dialog.
-                            if (vmNames.size() == 1) {
-                                connection.setVmname(vmNames.get(0));
-                                connection.save(getContext());
-                            } else {
-                                while (connection.getVmname().equals("")) {
-                                    Log.i(TAG, "Displaying a dialog with VMs to the user.");
-                                    // Populate the data structure that is used to convert VM names to IDs.
-                                    for (String s : vmNames) {
-                                        vmNameToId.put(s, s);
-                                    }
-                                    handler.sendMessage(RemoteCanvasHandler.getMessageStringList(RemoteClientLibConstants.DIALOG_DISPLAY_VMS,
-                                            "vms", vmNames));
-                                    synchronized (spicecomm) {
-                                        spicecomm.wait();
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    spicecomm.setHandler(handler);
-                    spicecomm.connectOvirt(connection.getHostname(),
-                            connection.getVmname(),
-                            connection.getUserName(),
-                            connection.getPassword(),
-                            ovirtCaFile,
-                            connection.isAudioPlaybackEnabled(), connection.isSslStrict());
-
-                    try {
-                        synchronized (spicecomm) {
-                            spicecomm.wait(35000);
-                        }
-                    } catch (InterruptedException e) {
-                    }
-
-                    if (!spiceUpdateReceived && maintainConnection) {
-                        handler.sendEmptyMessage(RemoteClientLibConstants.OVIRT_TIMEOUT);
-                    }
-
-                } catch (Throwable e) {
-                    handleUncaughtException(e);
-                }
-            }
-        };
-        cThread.start();
-    }
-
-    /**
-     * Initialize the canvas to show the remote desktop
-     *
-     * @return
-     */
-    // TODO: Switch away from writing out a file to initiating a connection directly.
-    String retrieveVvFileFromPve(final String hostname, final ProxmoxClient api, final String vmId,
-                                 final String node, final String virt) {
-        Log.i(TAG, String.format("Trying to connect to PVE host: " + hostname));
-        final String tempVvFile = getContext().getFilesDir() + "/tempfile.vv";
-        FileUtils.deleteFile(tempVvFile);
-
-        Thread cThread = new Thread() {
-            @Override
-            public void run() {
-                try {
-                    VmStatus status = api.getCurrentStatus(node, virt, Integer.parseInt(vmId));
-                    if (status.getStatus().equals(VmStatus.STOPPED)) {
-                        api.startVm(node, virt, Integer.parseInt(vmId));
-                        while (!status.getStatus().equals(VmStatus.RUNNING)) {
-                            status = api.getCurrentStatus(node, virt, Integer.parseInt(vmId));
-                            SystemClock.sleep(500);
-                        }
-                    }
-                    SpiceDisplay spiceData = api.spiceVm(node, virt, Integer.parseInt(vmId));
-                    if (spiceData != null) {
-                        spiceData.outputToFile(tempVvFile, hostname);
-                    } else {
-                        Log.e(TAG, "PVE returned null data for display.");
-                        handler.sendEmptyMessage(RemoteClientLibConstants.PVE_NULL_DATA);
-                    }
-                } catch (LoginException e) {
-                    Log.e(TAG, "Failed to login to PVE.");
-                    handler.sendEmptyMessage(RemoteClientLibConstants.PVE_FAILED_TO_AUTHENTICATE);
-                } catch (JSONException e) {
-                    Log.e(TAG, "Failed to parse json from PVE.");
-                    handler.sendEmptyMessage(RemoteClientLibConstants.PVE_FAILED_TO_PARSE_JSON);
-                } catch (NumberFormatException e) {
-                    Log.e(TAG, "Error converting PVE ID to integer.");
-                    handler.sendEmptyMessage(RemoteClientLibConstants.PVE_VMID_NOT_NUMERIC);
-                } catch (IOException e) {
-                    Log.e(TAG, "IO Error communicating with PVE API: " + e.getMessage());
-                    handler.sendMessage(RemoteCanvasHandler.getMessageString(RemoteClientLibConstants.PVE_API_IO_ERROR,
-                            "error", e.getMessage()));
-                    e.printStackTrace();
-                } catch (HttpException e) {
-                    Log.e(TAG, "PVE API returned error code: " + e.getMessage());
-                    handler.sendMessage(RemoteCanvasHandler.getMessageString(RemoteClientLibConstants.PVE_API_UNEXPECTED_CODE,
-                            "error", e.getMessage()));
-                }
-                // At this stage we have either retrieved display data or failed, so permit the UI thread to continue.
-                synchronized (tempVvFile) {
-                    tempVvFile.notify();
-                }
-            }
-        };
-        cThread.start();
-
-        // Wait until a timeout or until we are notified the worker thread trying to retrieve display data is done.
-        synchronized (tempVvFile) {
-            try {
-                tempVvFile.wait();
-            } catch (InterruptedException e) {
-                handler.sendEmptyMessage(RemoteClientLibConstants.PVE_TIMEOUT_COMMUNICATING);
-                e.printStackTrace();
-            }
-        }
-
-        File checkFile = new File(tempVvFile);
-        if (!checkFile.exists() || checkFile.length() == 0) {
-            return null;
-        }
-        return tempVvFile;
-    }
-
-    /**
-     * Initialize the canvas to show the remote desktop
-     */
-    void startFromVvFile(final String vvFileName) {
-        Thread cThread = new Thread() {
-            @Override
-            public void run() {
-                try {
-                    spicecomm.startSessionFromVvFile(vvFileName, connection.isAudioPlaybackEnabled());
-                } catch (Throwable e) {
-                    handleUncaughtException(e);
-                }
-            }
-        };
-        cThread.start();
-    }
-
-    /**
-     * Initialize the canvas to show the remote desktop
-     */
-    void startPve() {
-//        if (!pd.isShowing())
-//            pd.show();
-
-        Thread cThread = new Thread() {
-            @Override
-            public void run() {
-                try {
-                    // Obtain user's password if necessary.
-                    if (connection.getPassword().equals("")) {
-                        Log.i(TAG, "Displaying a dialog to obtain user's password.");
-                        handler.sendEmptyMessage(RemoteClientLibConstants.GET_PASSWORD);
-                        synchronized (spicecomm) {
-                            spicecomm.wait();
-                        }
-                    }
-
-                    String user = connection.getUserName();
-                    String realm = RemoteClientLibConstants.PVE_DEFAULT_REALM;
-
-                    // Try to parse realm from user entered
-                    int indexOfAt = connection.getUserName().indexOf('@');
-                    if (indexOfAt != -1) {
-                        realm = user.substring(indexOfAt + 1);
-                        user = user.substring(0, indexOfAt);
-                    }
-
-                    // Connect to the API and obtain available realms
-                    String uriToParse = connection.getHostname();
-                    if (!uriToParse.startsWith("http://") && !uriToParse.startsWith("https://")) {
-                        uriToParse = String.format("%s%s", "https://", uriToParse);
-                    }
-                    Uri uri = Uri.parse(uriToParse);
-                    String protocol = uri.getScheme();
-                    String host = uri.getHost();
-                    int port = uri.getPort();
-                    if (port < 0) {
-                        port = 8006;
-                    }
-                    String pveUri = String.format("%s://%s:%d", protocol, host, port);
-
-                    ProxmoxClient api = new ProxmoxClient(pveUri, connection, handler);
-                    HashMap<String, PveRealm> realms = api.getAvailableRealms();
-
-                    // If selected realm has TFA enabled, then ask for the code
-                    if (realms.get(realm).getTfa() != null) {
-                        Log.i(TAG, "Displaying a dialog to obtain OTP/TFA.");
-                        handler.sendEmptyMessage(RemoteClientLibConstants.GET_OTP_CODE);
-                        synchronized (spicecomm) {
-                            spicecomm.wait();
-                        }
-                    }
-
-                    // Login with provided credentials
-                    api.login(user, realm, connection.getPassword(), connection.getOtpCode());
-
-                    // Get map of user parseable names to resources
-                    Map<String, PveResource> nameToResources = api.getResources();
-
-                    if (nameToResources.isEmpty()) {
-                        Log.e(TAG, "No available VMs found for user in PVE cluster");
-                        disconnectAndShowMessage(R.string.error_no_vm_found_for_user, R.string.error_dialog_title);
-                        return;
-                    }
-
-                    String vmId = connection.getVmname();
-                    if (vmId.matches("/")) {
-                        vmId = connection.getVmname().replaceAll(".*/", "");
-                        connection.setVmname(vmId);
-                        connection.save(getContext());
-                    }
-
-                    String node = null;
-                    String virt = null;
-
-                    // If there is just one VM, pick it and ignore what is saved in settings.
-                    if (nameToResources.size() == 1) {
-                        Log.e(TAG, "A single VM was found, so picking it.");
-                        String key = (String) nameToResources.keySet().toArray()[0];
-                        PveResource a = nameToResources.get(key);
-                        node = a.getNode();
-                        virt = a.getType();
-                        connection.setVmname(a.getVmid());
-                        connection.save(getContext());
-                    } else {
-                        while (connection.getVmname().isEmpty()) {
-                            Log.i(TAG, "PVE: Displaying a dialog with VMs to the user.");
-                            // Populate the data structure that is used to convert VM names to IDs.
-                            for (String s : nameToResources.keySet()) {
-                                vmNameToId.put(nameToResources.get(s).getName() + " (" + s + ")", s);
-                            }
-                            // Get the user parseable names and display them
-                            ArrayList<String> vms = new ArrayList<String>(vmNameToId.keySet());
-                            handler.sendMessage(RemoteCanvasHandler.getMessageStringList(
-                                    RemoteClientLibConstants.DIALOG_DISPLAY_VMS, "vms", vms));
-                            synchronized (spicecomm) {
-                                spicecomm.wait();
-                            }
-                        }
-
-                        // At this point, either the user selected a VM or there was an ID saved.
-                        if (nameToResources.get(connection.getVmname()) != null) {
-                            node = nameToResources.get(connection.getVmname()).getNode();
-                            virt = nameToResources.get(connection.getVmname()).getType();
-                        } else {
-                            Log.e(TAG, "No VM with the following ID was found: " + connection.getVmname());
-                            disconnectAndShowMessage(R.string.error_no_such_vm_found_for_user, R.string.error_dialog_title);
-                            return;
-                        }
-                    }
-
-                    vmId = connection.getVmname();
-                    // Only if we managed to obtain a VM name we try to get a .vv file for the display.
-                    if (!vmId.isEmpty()) {
-                        String vvFileName = retrieveVvFileFromPve(host, api, vmId, node, virt);
-                        if (vvFileName != null) {
-                            startFromVvFile(vvFileName);
-                        }
-                    }
-                } catch (LoginException e) {
-                    Log.e(TAG, "Failed to login to PVE.");
-                    handler.sendEmptyMessage(RemoteClientLibConstants.PVE_FAILED_TO_AUTHENTICATE);
-                } catch (JSONException e) {
-                    Log.e(TAG, "Failed to parse json from PVE.");
-                    handler.sendEmptyMessage(RemoteClientLibConstants.PVE_FAILED_TO_PARSE_JSON);
-                } catch (IOException e) {
-                    Log.e(TAG, "IO Error communicating with PVE API: " + e.getMessage());
-                    handler.sendMessage(RemoteCanvasHandler.getMessageString(RemoteClientLibConstants.PVE_API_IO_ERROR,
-                            "error", e.getMessage()));
-                    e.printStackTrace();
-                } catch (HttpException e) {
-                    Log.e(TAG, "PVE API returned error code: " + e.getMessage());
-                    handler.sendMessage(RemoteCanvasHandler.getMessageString(RemoteClientLibConstants.PVE_API_UNEXPECTED_CODE,
-                            "error", e.getMessage()));
-                } catch (Throwable e) {
-                    handleUncaughtException(e);
-                }
-            }
-        };
-        cThread.start();
-    }
-
-    /**
-     * Sends over the unix username and password if this is VNC over SSH connectio and automatic sending of
-     * UNIX credentials is enabled for AutoX (for x11vnc's "-unixpw" option).
-     */
-    void sendUnixAuth() {
-        // If the type of connection is ssh-tunneled and we are told to send the unix credentials, then do so.
-        if (sshTunneled && connection.getAutoXUnixAuth()) {
-            keyboard.keyEvent(KeyEvent.KEYCODE_UNKNOWN, new KeyEvent(SystemClock.uptimeMillis(),
-                    connection.getSshUser(), 0, 0));
-            keyboard.keyEvent(KeyEvent.KEYCODE_ENTER, new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER));
-            keyboard.keyEvent(KeyEvent.KEYCODE_ENTER, new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
-
-            keyboard.keyEvent(KeyEvent.KEYCODE_UNKNOWN, new KeyEvent(SystemClock.uptimeMillis(),
-                    connection.getSshPassword(), 0, 0));
-            keyboard.keyEvent(KeyEvent.KEYCODE_ENTER, new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER));
-            keyboard.keyEvent(KeyEvent.KEYCODE_ENTER, new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
-        }
-    }
 
     /**
      * Retreives the requested remote width.
      */
-    private int getRemoteWidth(int viewWidth, int viewHeight) {
+    public int getRemoteWidth(int viewWidth, int viewHeight) {
         int remoteWidth = 0;
         int reqWidth = connection.getRdpWidth();
         int reqHeight = connection.getRdpHeight();
@@ -1308,7 +571,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     /**
      * Retreives the requested remote height.
      */
-    private int getRemoteHeight(int viewWidth, int viewHeight) {
+    public int getRemoteHeight(int viewWidth, int viewHeight) {
         int remoteHeight = 0;
         int reqWidth = connection.getRdpWidth();
         int reqHeight = connection.getRdpHeight();
@@ -1394,7 +657,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
      *
      * @return
      */
-    int getRemoteProtocolPort(int port) throws Exception {
+    public int getRemoteProtocolPort(int port) throws Exception {
         int result = 0;
 
         if (sshTunneled) {
@@ -1404,7 +667,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                 port = newPort;
             result = sshConnection.createLocalPortForward(port);
         } else {
-            if (isVnc && port <= 20) {
+            if (getProtocolType() == ProtocolType.VNC && port <= 20) {
                 result = Constants.DEFAULT_VNC_PORT + port;
             } else {
                 result = port;
@@ -1418,7 +681,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
      *
      * @return
      */
-    String getAddress() {
+    public String getAddress() {
         if (sshTunneled) {
             return new String("127.0.0.1");
         } else
@@ -1454,12 +717,17 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             useFull = (connection.getForceFull() == BitmapImplHint.FULL);
         }
 
-        if (isRdp | isNvStream | isSsh) {
+        ProtocolType protocol = getProtocolType();
+        boolean isPushlessProtocol = protocol == ProtocolType.RDP
+                || protocol == ProtocolType.NVSTREAM
+                || protocol == ProtocolType.SSH;
+        boolean isUltraCompactProtocol = isPushlessProtocol || protocol == ProtocolType.SPICE;
+        if (isPushlessProtocol) {
             // SSH Phase 0 reuses UltraCompactBitmapData: its drawable
             // overrides Drawable.draw(Canvas), its constructor creates
-            // mbitmap, and the startSshConnection path then paints the
-            // hardcoded "Hello SSH" text into mbitmap once.
-            bitmapData = new UltraCompactBitmapData(rfbconn, this, isSpice | isOpaque | isRdp | isNvStream | isSsh);
+            // mbitmap, and the SshConnectionInitializer.start path then
+            // paints the hardcoded "Hello SSH" text into mbitmap once.
+            bitmapData = new UltraCompactBitmapData(rfbconn, this, isUltraCompactProtocol);
             Log.i(TAG, "Using UltraCompactBufferBitmapData.");
         } else if (!useFull) {
             bitmapData = new LargeBitmapData(rfbconn, this, dx, dy, capacity);
@@ -1472,7 +740,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                     bitmapData = new FullBufferBitmapData(rfbconn, this, capacity);
                     Log.i(TAG, "Using FullBufferBitmapData.");
                 } else {
-                    bitmapData = new CompactBitmapData(rfbconn, this, isSpice | isOpaque);
+                    bitmapData = new CompactBitmapData(rfbconn, this, protocol == ProtocolType.SPICE);
                     Log.i(TAG, "Using CompactBufferBitmapData.");
                 }
             } catch (Throwable e) { // If despite our efforts we fail to allocate memory, use LBBM.
@@ -1505,7 +773,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
      * Determines if the app should show a local cursor or not
      */
     private boolean needsLocalCursor() {
-        boolean isRdpSpiceOrOpaque = isRdp || isSpice || isOpaque;
+        ProtocolType protocol = getProtocolType();
+        boolean isRdpSpiceOrOpaque = protocol == ProtocolType.RDP || protocol == ProtocolType.SPICE;
         boolean localCursorNotForceDisabled =
                 connection.getUseLocalCursor() != Constants.CURSOR_FORCE_DISABLE;
         boolean localCursorForceEnabled =
@@ -1669,8 +938,10 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             handler.removeCallbacksAndMessages(null);
         }
 
-        // Stop the Phase 0 SSH heartbeat redraw.
-        sshRedrawHandler.removeCallbacks(sshRedrawRunnable);
+        // Stop per-protocol background work (e.g. SSH 30 FPS heartbeat).
+        if (currentInitializer != null) {
+            currentInitializer.teardown(this);
+        }
 
         // Close the SSH tunnel.
         if (sshConnection != null) {
@@ -1698,6 +969,10 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         Log.v(TAG, "Cleaning up resources");
 
         removeCallbacksAndMessages();
+        if (drawWorker != null) {
+            drawWorker.stop();
+            drawWorker = null;
+        }
         if (clipboardMonitorTimer != null) {
             clipboardMonitorTimer.cancel();
             // Occasionally causes a NullPointerException
@@ -1968,99 +1243,6 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         bitmapData.setDrawCursor(false);
     }
 
-    private class DrawWorker implements Runnable {
-        private long lastDraw;
-        private Thread thread;
-        private LinkedBlockingQueue<DrawTask> queue = new LinkedBlockingQueue<DrawTask>();
-        private boolean showFps = false;
-
-        public DrawWorker() {
-            showFps = Utils.querySharedPreferenceBoolean(getContext(),
-                    Constants.enableDebugInfo, false);
-
-            thread = new Thread(this, "DrawWorker");
-            thread.start();
-        }
-
-        public void count() {
-            if (fpsCounter != null) {
-                fpsCounter.count();
-            }
-        }
-
-        public void addTask(DrawTask task) {
-            DrawTask lastTask = queue.peek();
-            if (lastTask != null
-                    && System.currentTimeMillis() - lastTask.getInTimeMs() < 10) {
-                return;
-            }
-
-            queue.add(task);
-        }
-
-        @Override
-        public void run() {
-            // use the highest priority to draw the frame to avoid micro stutter
-            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
-
-            while (true) {
-                Canvas canvas = null;
-                try {
-                    DrawTask task = queue.take();
-
-                    if (isShowFps() && task.isCount()) {
-                        fpsCounter.count();
-                    }
-
-                    // prevent the pointer refresh event goes too fast
-                    if (task.getInTimeMs() - lastDraw < 13) {
-                        continue;
-                    }
-
-                    // when isCount is true, it means the update event comes from the real image update
-                    if (System.currentTimeMillis() - task.getInTimeMs() > 16 && task.isCount()) {
-                        // drop frame, lagging
-                        fpsCounter.finish(task.getInTimeMs());
-                        fpsCounter.frameDrop();
-                    }
-
-                    canvas = surfaceHolder.lockHardwareCanvas();
-                    canvas.setMatrix(scaler.getMatrix());
-                    canvas.translate((-absoluteXPosition), (-absoluteYPosition));
-
-                    canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
-
-                    bitmapData.drawable.draw(canvas);
-
-                    if (fpsCounter != null && task != null) {
-                        fpsCounter.finish(task.getInTimeMs());
-
-                        if (showFps) {
-                            fpsCounter.drawFps(canvas);
-                            fpsCounter.drawDebugMsg(canvas, task.getDebugMsg());
-                        }
-                    }
-
-                    lastDraw = System.currentTimeMillis();
-                } catch (Exception e) {
-
-                } finally {
-                    if (canvas != null) {
-                        surfaceHolder.unlockCanvasAndPost(canvas);
-                    }
-                }
-            }
-        }
-
-        public long getLastDraw() {
-            return lastDraw;
-        }
-
-        public boolean isShowFps() {
-            return fpsCounter != null;
-        }
-    }
-
     /**
      * Causes a redraw of the myDrawable to happen at the indicated coordinates.
      */
@@ -2123,7 +1305,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
      */
     public void invalidateMousePosition() {
         // NVStream is not using local cursor at present
-        if (bitmapData != null && !isNvStream) {
+        if (bitmapData != null && getProtocolType() != ProtocolType.NVSTREAM) {
             // add little offset for the cursor image
             bitmapData.moveCursorRect(pointer.getX() - pointer.getHotspotX(), pointer.getY() - pointer.getHotspotY());
             RectF r = bitmapData.getCursorRect();
@@ -2314,7 +1496,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     }
 
     public boolean isColorModel(COLORMODEL cm) {
-        if (isVnc && decoder != null) {
+        if (getProtocolType() == ProtocolType.VNC && decoder != null) {
             return (decoder.getColorModel() != null) && decoder.getColorModel().equals(cm);
         } else {
             return false;
@@ -2322,7 +1504,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     }
 
     public void setColorModel(COLORMODEL cm) {
-        if (isVnc && decoder != null) {
+        if (getProtocolType() == ProtocolType.VNC && decoder != null) {
             decoder.setColorModel(cm);
         }
     }
@@ -2540,59 +1722,19 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         return drawWorker.getLastDraw();
     }
 
-    public boolean isNvStream() {
-        return isNvStream;
-    }
-
-    public boolean isVnc() {
-        return isVnc;
-    }
-
-    public boolean isRdp() {
-        return isRdp;
+    /**
+     * Which protocol is currently driving this canvas, or null before
+     * initializeCanvas() runs. Prefer this over per-protocol booleans.
+     */
+    public ProtocolType getProtocolType() {
+        return currentInitializer != null ? currentInitializer.getType() : null;
     }
 
     public void setDisplayRect(Rect displayRect) {
         Rect old = this.displayRect;
         this.displayRect = displayRect;
-        // SSH has no server to send a new framebuffer size, so the mbitmap
-        // would keep its old dimensions after fold/unfold and the new view
-        // would be letterboxed with black bars. Detect a meaningful rect
-        // change and rebuild rfbconn + bitmapData at the new size.
-        if (isSsh && rfbconn != null && old != null
-                && (old.width() != displayRect.width()
-                    || old.height() != displayRect.height())) {
-            Log.i(TAG, "setDisplayRect: SSH rect changed "
-                    + old.width() + "x" + old.height()
-                    + " -> " + displayRect.width() + "x" + displayRect.height()
-                    + ", rebuilding SSH framebuffer");
-            rebuildSshFramebuffer();
-        }
-    }
-
-    /**
-     * Recreate the SSH stub RfbConnectable and the mbitmap at the current
-     * displayRect's size, then redraw the placeholder. Used after a
-     * fold/unfold/rotation that changes the available view area.
-     */
-    private void rebuildSshFramebuffer() {
-        try {
-            int w = displayRect.width();
-            int h = displayRect.height();
-            int fbW = Math.max(1, (int) (w * Constants.SSH_SMART_RESOLUTION_FACTOR));
-            int fbH = Math.max(1, (int) (h * Constants.SSH_SMART_RESOLUTION_FACTOR));
-            rfbconn = new SshCommunicator(
-                App.debugLog, handler, fbW, fbH);
-            if (pointer instanceof RemoteSshPointer) {
-                ((RemoteSshPointer) pointer).setProtocomm(rfbconn);
-            }
-            if (keyboard instanceof RemoteSshKeyboard) {
-                ((RemoteSshKeyboard) keyboard).setRfb(rfbconn);
-            }
-            reallocateDrawable(w, h);
-            drawSshPlaceholderIntoBitmap();
-        } catch (Throwable e) {
-            Log.e(TAG, "rebuildSshFramebuffer failed", e);
+        if (currentInitializer != null) {
+            currentInitializer.onDisplayRectChanged(this, old, displayRect);
         }
     }
 }
