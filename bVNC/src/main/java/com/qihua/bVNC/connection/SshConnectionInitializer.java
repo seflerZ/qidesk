@@ -1,12 +1,7 @@
 package com.qihua.bVNC.connection;
 
 import android.content.Context;
-import android.graphics.Canvas;
-import android.graphics.Paint;
 import android.graphics.Rect;
-import android.graphics.Typeface;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.DisplayMetrics;
 import android.util.Log;
 
@@ -16,17 +11,21 @@ import com.qihua.bVNC.RemoteCanvas;
 import com.qihua.bVNC.communicator.SshCommunicator;
 import com.qihua.bVNC.input.RemoteSshKeyboard;
 import com.qihua.bVNC.input.RemoteSshPointer;
+import com.qihua.bVNC.ssh.SshTerminalRenderer;
 import com.undatech.opaque.Connection;
+
+import jackpal.androidterm.emulatorview.TermSession;
 
 /**
  * SSH lifecycle owner. Moved out of RemoteCanvas so that adding a 6th
  * protocol doesn't touch the host.
  *
- * Phase 0: stub. Builds a SshCommunicator with a fixed framebuffer,
- * paints a "Hello SSH" placeholder, and runs a 30 FPS redraw heartbeat
- * because there's no decoder/network to push DrawTasks.
- *
- * Phase 1+ will swap the placeholder for a TermSession-backed renderer.
+ * Phase 1: wires a SshTerminalRenderer (TermSession + fake-shell loopback)
+ * into the canvas. Paints are driven entirely by TermSession's UpdateCallback
+ * (fired on every screen mutation: user keystrokes, echo, cursor moves). The
+ * AAR's emulator has no auto-blink, so an idle terminal legitimately has no
+ * repaint work to do. fold/unfold tears down the renderer and rebuilds it
+ * at the new size — Phase 1 accepts that the screen contents are reset.
  */
 public class SshConnectionInitializer extends ConnectionInitializer {
     private static final String TAG = "SshConnectionInitializer";
@@ -35,23 +34,23 @@ public class SshConnectionInitializer extends ConnectionInitializer {
     private final Context ctx;
 
     /**
-     * 30 FPS redraw heartbeat. VNC/RDP/SPICE get DrawTasks pushed by
-     * the network thread; SSH Phase 0 has neither, so we drive the
-     * pipeline ourselves. Stopped in teardown().
+     * UpdateCallback fired by TermSession whenever the screen mutates
+     * (user typed something, echo arrived, etc). The only paint driver
+     * in Phase 1.
      */
-    private final Handler sshRedrawHandler = new Handler(Looper.getMainLooper());
-    private final Runnable sshRedrawRunnable = new Runnable() {
+    private final Runnable sshUpdateRunnable = new Runnable() {
         @Override
         public void run() {
             if (!canvas.isRunning || canvas.bitmapData == null || canvas.rfbconn == null) {
                 return;
             }
-            canvas.reDraw(0, 0, canvas.rfbconn.framebufferWidth(), canvas.rfbconn.framebufferHeight());
-            sshRedrawHandler.postDelayed(this, heartbeatIntervalMs());
+            paintAndRedraw();
         }
     };
 
     private RemoteCanvas canvas;
+    private SshTerminalRenderer renderer;
+    private float density;
 
     public SshConnectionInitializer(Connection conn, Context ctx) {
         this.conn = conn;
@@ -71,64 +70,67 @@ public class SshConnectionInitializer extends ConnectionInitializer {
     @Override
     public void initialize(RemoteCanvas canvas) throws Exception {
         this.canvas = canvas;
-        Log.i(TAG, "initialize: Phase 0 stub.");
+        this.density = ctx.getResources().getDisplayMetrics().density;
+        Log.i(TAG, "initialize: Phase 1 — TermSession + fake shell.");
 
-        float w = canvas.displayRect != null ? canvas.displayRect.width() : 0;
-        float h = canvas.displayRect != null ? canvas.displayRect.height() : 0;
-        if (w <= 0 || h <= 0) {
-            // displayRect not yet populated (initializeCanvas may run
-            // before the view is laid out). Fall back to screen metrics.
-            DisplayMetrics metrics = ctx.getResources().getDisplayMetrics();
-            w = metrics.widthPixels;
-            h = metrics.heightPixels;
-        }
-        int fbW = Math.max(1, (int) (w * Constants.SSH_SMART_RESOLUTION_FACTOR));
-        int fbH = Math.max(1, (int) (h * Constants.SSH_SMART_RESOLUTION_FACTOR));
+        int fbW = computeFbW();
+        int fbH = computeFbH();
         Log.i(TAG, "SSH framebuffer size = " + fbW + " x " + fbH
-                + " (displayRect " + w + "x" + h
+                + " (displayRect " + canvas.displayRect.width() + "x" + canvas.displayRect.height()
                 + ", factor " + Constants.SSH_SMART_RESOLUTION_FACTOR + ")");
 
         canvas.rfbconn = new SshCommunicator(App.debugLog, canvas.handler, fbW, fbH);
         canvas.pointer = new RemoteSshPointer(canvas.rfbconn, canvas, canvas.handler, App.debugLog);
         canvas.keyboard = new RemoteSshKeyboard(canvas.rfbconn, ctx, canvas.handler, App.debugLog);
+
+        // Build the renderer; it owns its own TermSession + FakeShellLoopback.
+        // We hand the session to the keyboard so processLocalKeyEvent has
+        // somewhere to write bytes.
+        renderer = new SshTerminalRenderer(density);
+        TermSession termSession = renderer.getTermSession();
+        ((RemoteSshKeyboard) canvas.keyboard).setTermSession(termSession);
     }
 
     @Override
     public void start(RemoteCanvas canvas) throws Exception {
-        Log.i(TAG, "start: Phase 0 stub — no real SSH connection.");
+        Log.i(TAG, "start: Phase 1 — opening terminal.");
         canvas.waitUntilInflated();
         canvas.reallocateDrawable(canvas.displayRect.width(), canvas.displayRect.height());
-        drawPlaceholder();
+        openRenderer();
         canvas.onConnectionSuccess();
-        // No decoder/network pushes DrawTasks. Start heartbeat.
-        sshRedrawHandler.removeCallbacks(sshRedrawRunnable);
-        sshRedrawHandler.post(sshRedrawRunnable);
     }
 
-    @Override
+    /**
+     * Tear down the TermSession / loopback. Called by
+     * RemoteCanvas.closeConnection(). SSH-specific hook; lives on this
+     * subclass (not the abstract base) because no other protocol needs
+     * a teardown callback today.
+     */
     public void teardown(RemoteCanvas canvas) {
-        sshRedrawHandler.removeCallbacks(sshRedrawRunnable);
+        closeRenderer();
     }
 
-    @Override
+    /**
+     * Surface recreated (background→foreground, fold/unfold, rotation).
+     * UpdateCallback doesn't fire on surface recreate alone, so paint the
+     * current TermSession state explicitly here.
+     */
     public void onSurfaceCreated(RemoteCanvas canvas) {
-        // Phase 0 SSH has no decoder/network to push DrawTasks, so push
-        // one whenever the surface is (re)created. This handles the
-        // case where start ran before the surface was ready (its
-        // reDraw was silently dropped) and also covers surface
-        // re-creation on fold/unfold, screen rotation, etc.
         if (canvas.bitmapData != null && canvas.rfbconn != null) {
-            canvas.reDraw(0, 0, canvas.rfbconn.framebufferWidth(), canvas.rfbconn.framebufferHeight());
+            paintAndRedraw();
         }
     }
 
-    @Override
+    /**
+     * displayRect changed (foldable fold/unfold, rotation). Rebuild the
+     * framebuffer, mbitmap, and renderer at the new size.
+     */
     public void onDisplayRectChanged(RemoteCanvas canvas, Rect oldRect, Rect newRect) {
         // SSH has no server to send a new framebuffer size, so the
         // mbitmap would keep its old dimensions after fold/unfold and
         // the new view would be letterboxed with black bars. Detect a
-        // meaningful rect change and rebuild rfbconn + bitmapData at
-        // the new size.
+        // meaningful rect change and rebuild rfbconn + bitmapData +
+        // renderer at the new size.
         if (canvas.rfbconn != null && oldRect != null
                 && (oldRect.width() != newRect.width()
                     || oldRect.height() != newRect.height())) {
@@ -140,53 +142,68 @@ public class SshConnectionInitializer extends ConnectionInitializer {
         }
     }
 
-    @Override
-    public boolean needsRedrawHeartbeat() {
-        return true;
-    }
-
-    @Override
-    public int heartbeatIntervalMs() {
-        return 33;
-    }
-
     /**
-     * Paint a hardcoded "Hello SSH" frame into bitmapData.mbitmap.
-     * Phase 1+ will replace this with a TermSession renderer that
-     * draws live terminal state.
+     * Open the TermSession at the current mbitmap size and paint the first
+     * frame. The UpdateCallback becomes the paint driver for all subsequent
+     * screen mutations; this call IS the first-frame trigger that replaces
+     * the removed heartbeat — paintInto+reDraw here so the surface shows
+     * the (currently empty) grid immediately, then the WELCOME bytes
+     * arriving through the pipe will fire UpdateCallback and repaint with
+     * the banner.
      */
-    private void drawPlaceholder() {
+    private void openRenderer() {
         if (canvas.bitmapData == null || canvas.bitmapData.mbitmap == null) {
-            Log.w(TAG, "drawPlaceholder: bitmapData or mbitmap is null");
+            Log.w(TAG, "openRenderer: bitmapData or mbitmap is null");
             return;
         }
         int w = canvas.bitmapData.mbitmap.getWidth();
         int h = canvas.bitmapData.mbitmap.getHeight();
-        // Use a density-based text size so glyphs occupy the same physical
-        // size on cover (~430 PPI) and main (~340 PPI) foldable displays.
-        // Effective on-screen size still varies with SSH_SMART_RESOLUTION_FACTOR
-        // (fit-center scales the whole mbitmap up/down).
-        float density = ctx.getResources().getDisplayMetrics().density;
-        float textSize = Constants.SSH_FONT_SIZE_DP * density;
-        float margin = textSize * 0.8f;
-        float lineHeight = textSize * 1.4f;
-        Canvas c = new Canvas(canvas.bitmapData.mbitmap);
-        Paint bg = new Paint();
-        bg.setColor(0xFF002B36); // Solarized base03
-        c.drawRect(0, 0, w, h, bg);
-        Paint text = new Paint();
-        text.setColor(0xFF839496); // Solarized base0
-        text.setTextSize(textSize);
-        text.setAntiAlias(true);
-        text.setTypeface(Typeface.MONOSPACE);
-        c.drawText("Hello SSH", margin, margin + textSize, text);
-        c.drawText("Phase 0: minimal skeleton", margin, margin + textSize + lineHeight, text);
+        renderer.open(w, h, sshUpdateRunnable);
+        paintAndRedraw();
     }
 
     /**
-     * Recreate the SSH stub RemoteConnectable and the mbitmap at the
-     * current displayRect's size, then redraw the placeholder. Used
-     * after a fold/unfold/rotation that changes the available view area.
+     * Paint the current TermSession grid into mbitmap and post a reDraw.
+     * Called by the UpdateCallback (every screen mutation) and by
+     * onSurfaceCreated.
+     */
+    private void paintAndRedraw() {
+        if (renderer == null) return;
+        renderer.renderInto(canvas.bitmapData.mbitmap);
+        canvas.reDraw(0, 0, canvas.rfbconn.framebufferWidth(), canvas.rfbconn.framebufferHeight());
+    }
+
+    private void closeRenderer() {
+        if (renderer == null) return;
+        try {
+            renderer.close();
+        } catch (Throwable t) {
+            Log.w(TAG, "renderer.close failed", t);
+        }
+        renderer = null;
+    }
+
+    private int computeFbW() {
+        float w = canvas.displayRect != null ? canvas.displayRect.width() : 0;
+        if (w <= 0) {
+            w = ctx.getResources().getDisplayMetrics().widthPixels;
+        }
+        return Math.max(1, (int) (w * Constants.SSH_SMART_RESOLUTION_FACTOR));
+    }
+
+    private int computeFbH() {
+        float h = canvas.displayRect != null ? canvas.displayRect.height() : 0;
+        if (h <= 0) {
+            h = ctx.getResources().getDisplayMetrics().heightPixels;
+        }
+        return Math.max(1, (int) (h * Constants.SSH_SMART_RESOLUTION_FACTOR));
+    }
+
+    /**
+     * Recreate the SSH RemoteConnectable, the mbitmap, and the renderer at
+     * the current displayRect's size, then swap the new TermSession into the
+     * keyboard. Used after a fold/unfold/rotation that changes the available
+     * view area. Phase 1 accepts that the visible grid is reset.
      */
     private void rebuildFramebuffer() {
         try {
@@ -198,11 +215,17 @@ public class SshConnectionInitializer extends ConnectionInitializer {
             if (canvas.pointer instanceof RemoteSshPointer) {
                 ((RemoteSshPointer) canvas.pointer).setProtocomm(canvas.rfbconn);
             }
+            canvas.reallocateDrawable(w, h);
+
+            // Tear down the old renderer (which finishes the old TermSession +
+            // closes the old pipe) and build a new one at the new size.
+            closeRenderer();
+            renderer = new SshTerminalRenderer(density);
             if (canvas.keyboard instanceof RemoteSshKeyboard) {
                 ((RemoteSshKeyboard) canvas.keyboard).setRfb(canvas.rfbconn);
+                ((RemoteSshKeyboard) canvas.keyboard).setTermSession(renderer.getTermSession());
             }
-            canvas.reallocateDrawable(w, h);
-            drawPlaceholder();
+            openRenderer();
         } catch (Throwable e) {
             Log.e(TAG, "rebuildFramebuffer failed", e);
         }

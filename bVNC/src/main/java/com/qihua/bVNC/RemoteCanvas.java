@@ -72,6 +72,7 @@ import com.qihua.bVNC.connection.ConnectionInitializer;
 import com.qihua.bVNC.connection.ConnectionInitializerFactory;
 import com.qihua.bVNC.connection.ProtocolType;
 import com.qihua.bVNC.connection.SpiceConnectionInitializer;
+import com.qihua.bVNC.connection.SshConnectionInitializer;
 import com.qihua.bVNC.draw.DrawWorker;
 import com.qihua.bVNC.dialogs.GetTextFragment;
 import com.qihua.bVNC.input.InputHandler;
@@ -296,8 +297,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         if (!outDisplay && touchpad) {
             drawTouchpadHint();
         }
-        if (currentInitializer != null) {
-            currentInitializer.onSurfaceCreated(this);
+        if (currentInitializer instanceof SshConnectionInitializer) {
+            ((SshConnectionInitializer) currentInitializer).onSurfaceCreated(this);
         }
     }
 
@@ -939,8 +940,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         }
 
         // Stop per-protocol background work (e.g. SSH 30 FPS heartbeat).
-        if (currentInitializer != null) {
-            currentInitializer.teardown(this);
+        if (currentInitializer instanceof SshConnectionInitializer) {
+            ((SshConnectionInitializer) currentInitializer).teardown(this);
         }
 
         // Close the SSH tunnel.
@@ -1733,8 +1734,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     public void setDisplayRect(Rect displayRect) {
         Rect old = this.displayRect;
         this.displayRect = displayRect;
-        if (currentInitializer != null) {
-            currentInitializer.onDisplayRectChanged(this, old, displayRect);
+        if (currentInitializer instanceof SshConnectionInitializer) {
+            ((SshConnectionInitializer) currentInitializer).onDisplayRectChanged(this, old, displayRect);
         }
     }
 }

@@ -61,4 +61,9 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     implementation group: 'commons-validator', name: 'commons-validator', version: '1.7'
     implementation 'androidx.appcompat:appcompat:1.4.1'
+
+    // Android-Terminal-Emulator AAR. `api` so bVNC's SshTerminalRenderer and
+    // RemoteSshKeyboard can reach TermSession without re-declaring the dep.
+    // The package-mate helper TermRenderHelper in this module does the same.
+    api(name: 'emulatorview-release', ext: 'aar')
 }

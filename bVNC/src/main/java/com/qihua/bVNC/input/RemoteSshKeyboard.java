@@ -6,15 +6,24 @@ import android.view.KeyEvent;
 
 import com.undatech.opaque.RemoteConnectable;
 
+import jackpal.androidterm.emulatorview.TermSession;
+
 /**
- * Phase 0: keyboard sends nothing. We don't have a TermSession yet.
- * The on-screen IME / hardware keys will work but produce no output.
+ * Phase 1: translates Android KeyEvent -> ANSI byte -> TermSession.
  *
- * Phase 1 will translate Android KeyEvent -> ANSI byte -> TermSession.getTermIn().
+ * The session is set after construction by SshConnectionInitializer (the
+ * initializer owns the TermSession lifecycle — keyboard just gets a
+ * reference). fold/unfold swap the session via setTermSession(), which
+ * mirrors the existing setRfb() pattern.
+ *
  * Phase 2 will additionally plumb TermSession.getTermOut() into the SSH
- * channel for real network I/O.
+ * channel for real network I/O; processLocalKeyEvent stays unchanged.
  */
 public class RemoteSshKeyboard extends RemoteKeyboard {
+
+    private static final String TAG = "RemoteSshKeyboard";
+
+    private TermSession termSession;
 
     public RemoteSshKeyboard(RemoteConnectable r, Context v, Handler h, boolean debugLog) {
         super(r, v, h, debugLog);
@@ -25,12 +34,47 @@ public class RemoteSshKeyboard extends RemoteKeyboard {
         this.rfb = rfb;
     }
 
+    /** Phase 1: swap the TermSession that processLocalKeyEvent writes into. */
+    public void setTermSession(TermSession termSession) {
+        this.termSession = termSession;
+    }
+
     @Override
     public boolean processLocalKeyEvent(int keyCode, KeyEvent evt, int additionalMetaState) {
-        return false;
+        if (termSession == null) return false;
+        // Phase 1 consumes both DOWN and UP so the host (Android IME) doesn't
+        // try to interpret the event. We only act on ACTION_DOWN.
+        if (evt.getAction() != KeyEvent.ACTION_DOWN) {
+            return true;
+        }
+        switch (keyCode) {
+            case KeyEvent.KEYCODE_ENTER:
+                termSession.write('\r');
+                return true;
+            case KeyEvent.KEYCODE_DEL:
+                termSession.write(0x7f); // ASCII DEL — the canonical "backspace" in TTY land
+                return true;
+            case KeyEvent.KEYCODE_TAB:
+                termSession.write('\t');
+                return true;
+            case KeyEvent.KEYCODE_ESCAPE:
+                termSession.write(0x1b);
+                return true;
+        }
+        int metaState = evt.getMetaState() | additionalMetaState;
+        int codePoint = evt.getUnicodeChar(metaState);
+        if (codePoint == 0) {
+            // Non-printable, no special handling — let the host keep it.
+            return false;
+        }
+        termSession.write(codePoint);
+        return true;
     }
 
     @Override
     public void sendMetaKey(MetaKeyBean meta) {
+        // Phase 1: no extra-keys bar wiring yet. Real SSH shell apps use
+        // Ctrl-C / Ctrl-D etc.; those flow through processLocalKeyEvent via
+        // the soft keyboard's meta toggles, not this hook.
     }
 }
