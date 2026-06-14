@@ -1,6 +1,13 @@
 docker/.env
 .settings
 .idea/
+
+# Vendored Android-Terminal-Emulator source (used to rebuild emulatorview-release.aar).
+# Track the source; ignore its build output and per-machine SDK pin.
+remoteClientLib/Android-Terminal-Emulator/build/
+remoteClientLib/Android-Terminal-Emulator/*/build/
+remoteClientLib/Android-Terminal-Emulator/.gradle/
+remoteClientLib/Android-Terminal-Emulator/local.properties
 bin
 gen
 dist
