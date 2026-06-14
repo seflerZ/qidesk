@@ -1723,4 +1723,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     public void setDisplayRect(Rect displayRect) {
         this.displayRect = displayRect;
     }
+
+    public Rect getDisplayRect() {
+        return this.displayRect;
+    }
 }

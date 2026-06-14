@@ -80,7 +80,7 @@ public class RdpConnectionInitializer extends ConnectionInitializer {
     }
 
     @Override
-    public void onDisplayRectChanged(RemoteCanvas canvas, Display display) {
+    public void onDisplayRectChanged(Display display) {
 
     }
 }

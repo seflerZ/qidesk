@@ -1,7 +1,6 @@
 package com.qihua.bVNC.connection;
 
 import android.content.Context;
-import android.graphics.Rect;
 import android.view.Display;
 
 import com.qihua.bVNC.RemoteCanvas;
@@ -38,5 +37,5 @@ public abstract class ConnectionInitializer {
     /** Phase 2: actually start the network. Mutates canvas; runs in cThread. */
     public abstract void start(RemoteCanvas canvas) throws Exception;
 
-    public abstract void onDisplayRectChanged(RemoteCanvas canvas, Display display);
+    public abstract void onDisplayRectChanged(Display display);
 }

@@ -127,7 +127,7 @@ public class SshConnectionInitializer extends ConnectionInitializer {
      * framebuffer, mbitmap, and renderer at the new size.
      */
     @Override
-    public void onDisplayRectChanged(RemoteCanvas canvas, Display display) {
+    public void onDisplayRectChanged(Display display) {
         if (canvas.rfbconn == null) {
             return;
         }
@@ -138,8 +138,7 @@ public class SshConnectionInitializer extends ConnectionInitializer {
         Rect newRect = new Rect();
         display.getRectSize(newRect);
 
-        Rect oldRect = new Rect();
-        canvas.getDisplay().getRectSize(oldRect);
+        Rect oldRect = canvas.getDisplayRect();
 
         if (oldRect.equals(newRect)) {
             return;
@@ -153,7 +152,9 @@ public class SshConnectionInitializer extends ConnectionInitializer {
                 + " -> " + newRect.width() + "x" + newRect.height()
                 + ", rebuilding SSH framebuffer");
 
-        rebuildFramebuffer();
+        rebuildSSHFramebuffer();
+
+        canvas.bitmapData.frameBufferSizeChanged();
     }
 
     /**
@@ -170,6 +171,7 @@ public class SshConnectionInitializer extends ConnectionInitializer {
             Log.w(TAG, "openRenderer: bitmapData or mbitmap is null");
             return;
         }
+
         int w = canvas.bitmapData.mbitmap.getWidth();
         int h = canvas.bitmapData.mbitmap.getHeight();
         renderer.open(w, h, sshUpdateRunnable);
@@ -219,7 +221,7 @@ public class SshConnectionInitializer extends ConnectionInitializer {
      * keyboard. Used after a fold/unfold/rotation that changes the available
      * view area. Phase 1 accepts that the visible grid is reset.
      */
-    private void rebuildFramebuffer() {
+    private void rebuildSSHFramebuffer() {
         try {
             int w = canvas.displayRect.width();
             int h = canvas.displayRect.height();

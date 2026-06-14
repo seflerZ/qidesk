@@ -90,9 +90,7 @@ import com.limelight.computers.ComputerManagerService;
 import com.limelight.nvstream.http.ComputerDetails;
 import com.limelight.nvstream.http.PairingManager;
 import com.limelight.ui.GameGestures;
-import com.qihua.bVNC.connection.ConnectionInitializer;
 import com.qihua.bVNC.connection.ProtocolType;
-import com.qihua.bVNC.connection.SshConnectionInitializer;
 import com.qihua.bVNC.dialogs.EnterTextDialog;
 import com.qihua.bVNC.dialogs.MetaKeyDialog;
 import com.qihua.bVNC.extrakeys.ExtraKeyButton;
@@ -115,6 +113,7 @@ import com.qihua.util.UriIntentParser;
 import com.qihua.bVNC.util.SmartResolutionUtils;
 import com.undatech.opaque.Connection;
 import com.undatech.opaque.ConnectionSettings;
+import com.undatech.opaque.DrawTask;
 import com.undatech.opaque.MessageDialogs;
 import com.undatech.opaque.RemoteClientLibConstants;
 import com.undatech.opaque.util.FileUtils;
@@ -1313,21 +1312,21 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         try {
             setExtraKeysVisibility(View.GONE, false);
 
-            // Handle gamepad overlay screen size change
-            if (inputHandler instanceof InputHandlerGamepad) {
-                InputHandlerGamepad gamepadHandler = (InputHandlerGamepad) inputHandler;
-                gamepadHandler.handleScreenSizeChange();
-            }
-
             // Correct a few times just in case. There is no visual effect.
             handler.postDelayed(this::correctAfterRotation, 300);
-        } catch (NullPointerException e) {
+        } catch (Exception ignored) {
         }
     }
 
     private void correctAfterRotation() {
         Log.d(TAG, "correctAfterRotation");
         canvas.waitUntilInflated();
+
+        // Handle gamepad overlay screen size change
+        if (inputHandler instanceof InputHandlerGamepad) {
+            InputHandlerGamepad gamepadHandler = (InputHandlerGamepad) inputHandler;
+            gamepadHandler.handleScreenSizeChange();
+        }
 
         if (canvas.scaler == null || canvas.isTouchpad()) {
             return;
@@ -1364,10 +1363,14 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 
         // update display rect if necessary, depending on the connection type itself
         Display display = getDisplayFromCanvas(canvas);
-        canvas.connInitializer.onDisplayRectChanged(canvas, display);
+        canvas.connInitializer.onDisplayRectChanged(display);
 
         // Auto change extra keys to horizontal or vertical mode
         recreateExtraKeys(touchpad.getWidth() > touchpad.getHeight());
+
+        handler.postDelayed(() -> {
+            canvas.reDraw(0, 0, canvas.getWidth(), canvas.getHeight());
+        }, 200);
     }
 
 
