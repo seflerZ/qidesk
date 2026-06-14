@@ -2,6 +2,7 @@ package com.qihua.bVNC.connection;
 
 import android.content.Context;
 import android.util.Log;
+import android.view.Display;
 import android.view.KeyEvent;
 import android.os.SystemClock;
 
@@ -136,6 +137,11 @@ public class VncConnectionInitializer extends ConnectionInitializer {
             canvas.connection.save(ctx);
             canvas.handler.sendEmptyMessage(RemoteClientLibConstants.REINIT_SESSION);
         }
+    }
+
+    @Override
+    public void onDisplayRectChanged(RemoteCanvas canvas, Display display) {
+
     }
 
     /**

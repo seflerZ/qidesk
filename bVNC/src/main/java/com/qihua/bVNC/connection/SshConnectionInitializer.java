@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Rect;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.Display;
 
 import com.qihua.bVNC.App;
 import com.qihua.bVNC.Constants;
@@ -125,21 +126,34 @@ public class SshConnectionInitializer extends ConnectionInitializer {
      * displayRect changed (foldable fold/unfold, rotation). Rebuild the
      * framebuffer, mbitmap, and renderer at the new size.
      */
-    public void onDisplayRectChanged(RemoteCanvas canvas, Rect oldRect, Rect newRect) {
-        // SSH has no server to send a new framebuffer size, so the
-        // mbitmap would keep its old dimensions after fold/unfold and
-        // the new view would be letterboxed with black bars. Detect a
-        // meaningful rect change and rebuild rfbconn + bitmapData +
-        // renderer at the new size.
-        if (canvas.rfbconn != null && oldRect != null
-                && (oldRect.width() != newRect.width()
-                    || oldRect.height() != newRect.height())) {
-            Log.i(TAG, "displayRect changed "
-                    + oldRect.width() + "x" + oldRect.height()
-                    + " -> " + newRect.width() + "x" + newRect.height()
-                    + ", rebuilding SSH framebuffer");
-            rebuildFramebuffer();
+    @Override
+    public void onDisplayRectChanged(RemoteCanvas canvas, Display display) {
+        if (canvas.rfbconn == null) {
+            return;
         }
+
+        DisplayMetrics metrics = new DisplayMetrics();
+        display.getMetrics(metrics);
+
+        Rect newRect = new Rect();
+        display.getRectSize(newRect);
+
+        Rect oldRect = new Rect();
+        canvas.getDisplay().getRectSize(oldRect);
+
+        if (oldRect.equals(newRect)) {
+            return;
+        }
+
+        canvas.setDisplayRect(newRect);
+        canvas.setDisplayDensity(metrics.density);
+
+        Log.i(TAG, "displayRect changed "
+                + oldRect.width() + "x" + oldRect.height()
+                + " -> " + newRect.width() + "x" + newRect.height()
+                + ", rebuilding SSH framebuffer");
+
+        rebuildFramebuffer();
     }
 
     /**
@@ -211,22 +225,20 @@ public class SshConnectionInitializer extends ConnectionInitializer {
             int h = canvas.displayRect.height();
             int fbW = Math.max(1, (int) (w * Constants.SSH_SMART_RESOLUTION_FACTOR));
             int fbH = Math.max(1, (int) (h * Constants.SSH_SMART_RESOLUTION_FACTOR));
+
             canvas.rfbconn = new SshCommunicator(App.debugLog, canvas.handler, fbW, fbH);
-            if (canvas.pointer instanceof RemoteSshPointer) {
-                ((RemoteSshPointer) canvas.pointer).setProtocomm(canvas.rfbconn);
-            }
             canvas.reallocateDrawable(w, h);
+
+            ((RemoteSshPointer) canvas.pointer).setProtocomm(canvas.rfbconn);
+            ((RemoteSshKeyboard) canvas.keyboard).setRfb(canvas.rfbconn);
+            ((RemoteSshKeyboard) canvas.keyboard).setTermSession(renderer.getTermSession());
 
             // Tear down the old renderer (which finishes the old TermSession +
             // closes the old pipe) and build a new one at the new size.
             closeRenderer();
             renderer = new SshTerminalRenderer(density);
-            if (canvas.keyboard instanceof RemoteSshKeyboard) {
-                ((RemoteSshKeyboard) canvas.keyboard).setRfb(canvas.rfbconn);
-                ((RemoteSshKeyboard) canvas.keyboard).setTermSession(renderer.getTermSession());
-            }
             openRenderer();
-        } catch (Throwable e) {
+        } catch (Exception e) {
             Log.e(TAG, "rebuildFramebuffer failed", e);
         }
     }

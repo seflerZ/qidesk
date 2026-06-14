@@ -42,11 +42,8 @@ import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.net.Uri;
 import android.os.Handler;
-import android.os.SystemClock;
 import android.text.ClipboardManager;
-import android.text.InputType;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -56,9 +53,6 @@ import android.view.PointerIcon;
 import android.view.View;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import android.view.inputmethod.BaseInputConnection;
-import android.view.inputmethod.EditorInfo;
-import android.view.inputmethod.InputConnection;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -72,7 +66,6 @@ import com.qihua.bVNC.connection.ConnectionInitializer;
 import com.qihua.bVNC.connection.ConnectionInitializerFactory;
 import com.qihua.bVNC.connection.ProtocolType;
 import com.qihua.bVNC.connection.SpiceConnectionInitializer;
-import com.qihua.bVNC.connection.SshConnectionInitializer;
 import com.qihua.bVNC.draw.DrawWorker;
 import com.qihua.bVNC.dialogs.GetTextFragment;
 import com.qihua.bVNC.input.InputHandler;
@@ -80,9 +73,7 @@ import com.qihua.bVNC.input.InputHandlerTouchpad;
 import com.qihua.bVNC.input.RemoteCanvasHandler;
 import com.qihua.bVNC.input.RemoteKeyboard;
 import com.qihua.bVNC.input.RemotePointer;
-import com.qihua.bVNC.input.RemoteSpicePointer;
 import com.qihua.bVNC.input.RemoteSshKeyboard;
-import com.qihua.bVNC.input.SshInputConnection;
 import com.qihua.bVNC.util.SmartResolutionUtils;
 import com.undatech.opaque.Connection;
 import com.undatech.opaque.DrawTask;
@@ -94,7 +85,6 @@ import com.undatech.opaque.RemoteConnectable;
 import com.undatech.opaque.SpiceCommunicator;
 import com.undatech.opaque.Viewable;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -145,7 +135,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
      * then. Per-protocol heartbeat, surface hooks, and teardown are
      * delegated to it; the rest of RemoteCanvas is protocol-agnostic.
      */
-    public ConnectionInitializer currentInitializer;
+    public ConnectionInitializer connInitializer;
 
     private DrawWorker drawWorker;
 
@@ -299,9 +289,6 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         if (!outDisplay && touchpad) {
             drawTouchpadHint();
         }
-        if (currentInitializer instanceof SshConnectionInitializer) {
-            ((SshConnectionInitializer) currentInitializer).onSurfaceCreated(this);
-        }
     }
 
     @Override
@@ -365,8 +352,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         // SPICE / Opaque lifecycle now lives in SpiceConnectionInitializer.
         // init() is only ever called from the Opaque flavor, so the
         // factory always returns SpiceConnectionInitializer here.
-        currentInitializer = ConnectionInitializerFactory.create(settings, getContext());
-        SpiceConnectionInitializer spice = (SpiceConnectionInitializer) currentInitializer;
+        connInitializer = ConnectionInitializerFactory.create(settings, getContext());
+        SpiceConnectionInitializer spice = (SpiceConnectionInitializer) connInitializer;
         spice.vvFileName = vvFileName;
         try {
             spice.initialize(this);
@@ -474,8 +461,8 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         // The factory picks one based on the connection type (and SPICE
         // app flavor). Protocol identity is exposed via the isXxx()
         // accessors below, which delegate to `currentInitializer`.
-        currentInitializer = ConnectionInitializerFactory.create(conn, getContext());
-        if (currentInitializer == null) {
+        connInitializer = ConnectionInitializerFactory.create(conn, getContext());
+        if (connInitializer == null) {
             // No strategy for this connection. The non-Opaque entry
             // points (VNC/RDP/NVStream/SSH) all have their own
             // initializers; reaching this branch means the factory
@@ -487,7 +474,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             }
         } else {
             try {
-                currentInitializer.initialize(this);
+                connInitializer.initialize(this);
             } catch (Throwable e) {
                 handleUncaughtException(e);
             }
@@ -504,7 +491,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     }
 
     public void startConnection() {
-        if (currentInitializer == null) {
+        if (connInitializer == null) {
             // No strategy matched. With every protocol's initializer in
             // place the factory always returns one; this branch is a
             // defensive net for unknown connection types.
@@ -515,7 +502,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             }
         } else {
             try {
-                currentInitializer.start(this);
+                connInitializer.start(this);
             } catch (Throwable e) {
                 handleUncaughtException(e);
             }
@@ -977,11 +964,6 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             handler.removeCallbacksAndMessages(null);
         }
 
-        // Stop per-protocol background work (e.g. SSH 30 FPS heartbeat).
-        if (currentInitializer instanceof SshConnectionInitializer) {
-            ((SshConnectionInitializer) currentInitializer).teardown(this);
-        }
-
         // Close the SSH tunnel.
         if (sshConnection != null) {
             sshConnection.terminateSSHTunnel();
@@ -1429,44 +1411,6 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         pointer.setHotspotY(yPos);
     }
 
-    @Override
-    public InputConnection onCreateInputConnection(EditorInfo outAttrs) {
-        // ★★★ 核心2：创建输入法连接，配置输入法的工作模式（解决退格延迟的核心配置）
-        if (outAttrs == null) {
-            return null;
-        }
-        // 关键配置：和之前EditText的inputType="textUri|textNoSuggestions" 等效！
-        // 禁用联想+强制输入法走【原始按键模式】，让搜狗输入法实时下发退格/字母按键事件
-        outAttrs.inputType = InputType.TYPE_TEXT_VARIATION_URI | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS;
-        outAttrs.imeOptions = EditorInfo.IME_FLAG_NO_EXTRACT_UI; // 隐藏输入法的全屏模式，可选优化
-
-        boolean sshReady = currentInitializer instanceof SshConnectionInitializer
-                && keyboard instanceof RemoteSshKeyboard
-                && ((RemoteSshKeyboard) keyboard).getTermSession() != null;
-        if (sshReady) {
-            return new SshInputConnection(this);
-        }
-
-        // 创建基础的输入法连接对象，无缓冲、实时转发事件
-        BaseInputConnection inputConnection = new BaseInputConnection(this, false);
-        return inputConnection;
-    }
-
-    private int getKeyboardVariation() {
-        String keyboardVariationStr = Utils.querySharedPreferenceString(
-                getContext(),
-                Constants.softwareKeyboardType,
-                getContext().getString(R.string.pref_keyboard_type_TYPE_NULL_value)
-        );
-        int keyboardVariation = 0;
-        try {
-            keyboardVariation = Integer.parseInt(keyboardVariationStr);
-        } catch (NumberFormatException e) {
-            Log.e(TAG, e.toString());
-        }
-        return keyboardVariation;
-    }
-
     public RemotePointer getPointer() {
         return pointer;
     }
@@ -1773,14 +1717,10 @@ public class RemoteCanvas extends SurfaceView implements Viewable
      * initializeCanvas() runs. Prefer this over per-protocol booleans.
      */
     public ProtocolType getProtocolType() {
-        return currentInitializer != null ? currentInitializer.getType() : null;
+        return connInitializer != null ? connInitializer.getType() : null;
     }
 
     public void setDisplayRect(Rect displayRect) {
-        Rect old = this.displayRect;
         this.displayRect = displayRect;
-        if (currentInitializer instanceof SshConnectionInitializer) {
-            ((SshConnectionInitializer) currentInitializer).onDisplayRectChanged(this, old, displayRect);
-        }
     }
 }

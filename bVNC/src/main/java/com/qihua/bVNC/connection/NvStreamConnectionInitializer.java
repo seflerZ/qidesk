@@ -2,6 +2,7 @@ package com.qihua.bVNC.connection;
 
 import android.content.Context;
 import android.util.Log;
+import android.view.Display;
 import android.view.SurfaceHolder;
 import android.widget.Toast;
 
@@ -68,6 +69,11 @@ public class NvStreamConnectionInitializer extends ConnectionInitializer {
     public void start(RemoteCanvas canvas) throws Exception {
         Log.i(TAG, "start: Starting NvStream connection.");
         startWithSurface(canvas, canvas.surfaceHolder);
+    }
+
+    @Override
+    public void onDisplayRectChanged(RemoteCanvas canvas, Display display) {
+
     }
 
     private void startWithSurface(RemoteCanvas canvas, SurfaceHolder surfaceHolder) throws Exception {

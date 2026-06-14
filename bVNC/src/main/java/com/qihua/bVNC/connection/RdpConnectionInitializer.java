@@ -2,6 +2,7 @@ package com.qihua.bVNC.connection;
 
 import android.content.Context;
 import android.util.Log;
+import android.view.Display;
 
 import com.qihua.bVNC.App;
 import com.qihua.bVNC.Constants;
@@ -76,5 +77,10 @@ public class RdpConnectionInitializer extends ConnectionInitializer {
                 canvas.connection.getEnableGfxH264(),
                 canvas.connection.getRdpColor(), canvas.connection.getZoomLevel());
         canvas.rdpcomm.connect();
+    }
+
+    @Override
+    public void onDisplayRectChanged(RemoteCanvas canvas, Display display) {
+
     }
 }

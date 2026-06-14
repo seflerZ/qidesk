@@ -414,10 +414,23 @@ public class RemoteSshKeyboard extends RemoteKeyboard {
 
     public void setTermSession(TermSession ts) { this.termSession = ts; }
     public void setRfb(RemoteConnectable rfb) { this.rfb = rfb; }  // 沿用 §8.15.2
+    public TermSession getTermSession()      { return termSession; }   // §10.14 引用,供 fold/unfold 后回查
 
     @Override
     public boolean processLocalKeyEvent(int keyCode, KeyEvent evt, int additionalMetaState) {
         if (termSession == null) return false;
+        // Unicode-text delivery:CJK / 中文 IME 路径。IME 在 ACTION_DOWN 或 ACTION_MULTIPLE
+        // 两种 action 上都走这一条(只判 keyCode==0 && chars!=null,不挑 action)。
+        String chars = evt.getCharacters();
+        if (keyCode == 0 && chars != null && chars.length() > 0) {
+            int len = chars.length();
+            for (int i = 0; i < len; ) {
+                int cp = chars.codePointAt(i);
+                termSession.write(cp);
+                i += Character.charCount(cp);
+            }
+            return true;
+        }
         if (evt.getAction() != KeyEvent.ACTION_DOWN) return true;  // 吞掉 UP
         switch (keyCode) {
             case KeyEvent.KEYCODE_ENTER:   termSession.write('\r');  return true;
@@ -785,13 +798,14 @@ ls aRDP-app/build/outputs/apk/gplay/debug/
 **接口**(`ConnectionInitializer.java`, 70 行):
 - `initialize(RemoteCanvas)` — 建 communicator/pointer/keyboard
 - `start(RemoteCanvas)` — 真正发起网络连接(`cThread` 里跑)
-- `teardown(RemoteCanvas)` — 默认 no-op, SSH 覆盖停心跳
-- `onSurfaceCreated(RemoteCanvas)` / `onDisplayRectChanged(RemoteCanvas, Rect, Rect)` — 默认 no-op, SSH 覆盖重画占位符 / 重建 mbitmap
-- `needsRedrawHeartbeat()` / `heartbeatIntervalMs()` — SSH 返回 true/33
+- `teardown(RemoteCanvas)` — 默认 no-op, SSH 覆盖关 TermSession + loopback
+- `onSurfaceCreated(RemoteCanvas)` / `onDisplayRectChanged(RemoteCanvas, Rect, Rect)` — 默认 no-op, SSH 覆盖重画当前 grid / 重建 mbitmap
 - `reinitialize(RemoteCanvas)` — 默认 = teardown + initialize, Opaque 走相同路径
 
+> **2026-06-14 修订**:早版接口里 `needsRedrawHeartbeat()` / `heartbeatIntervalMs()` 已被删除。SSH 改用 `TermSession.setUpdateCallback` 单一重绘路径(见 §10.6),不再需要 heartbeat 钩子。Phase 0 早期 heartbeat + 占位符实现早已移除。
+
 **5 个实现**(总计 ~990 行, 替换原 `RemoteCanvas` 中 ~750 行协议代码):
-- `SshConnectionInitializer.java`(205 行)— Phase 0 桩, 30 FPS 心跳, "Hello SSH" 占位符, 折叠/展开 mbitmap 重建
+- `SshConnectionInitializer.java`(233 行)— Phase 1 实装, TermSession 驱动 + UpdateCallback 单路径, fold/unfold 重建 TermSession
 - `VncConnectionInitializer.java`(154 行)— Decoder + RfbCommunicator + 握手 + 色深兜底 + `sendUnixAuth(canvas)` 助手
 - `RdpConnectionInitializer.java`(75 行)— RdpCommunicator(FreeRDP) + `setConnectionParameters`
 - `NvStreamConnectionInitializer.java`(128 行)— NvCommunicator + PreferenceConfiguration + 蜂窝降码率 + ControllerHandler
@@ -1030,50 +1044,37 @@ ls -la aRDP-app/build/outputs/apk/gplay/debug/
 
 Phase 1 验收 = 上面 9 条全过。
 
-### 10.14 Unicode / 中文 IME 输入(★ Phase 1.1 补充,2026-06-12 重写)
+### 10.14 中文 IME 输入路径(2026-06-14 现状)
 
-**关键认知(2026-06-12 修订)**:Android 中文 IME 在大多数现代 ROM 上走的是 **`InputConnection.commitText` / `setComposingText` / `finishComposingText`** —— IME 内部做拼音 composition,候选窗里选中一个字后,IME 调 `commitText("你好")`(也可能走 `setComposingText("你好")` + `finishComposingText()`)。`KeyEvent.ACTION_MULTIPLE` 这条路只是少数老 IME 的退化路径,搜狗 / Google Pinyin 走 InputConnection。**所以光在 `processLocalKeyEvent` 加 `ACTION_MULTIPLE` 分支接不到这些 IME 投来的中文**;要接中文必须给 SSH 一个**专门的 `InputConnection` 子类**,把 `commitText` / `setComposingText` / `finishComposingText` 这几条直接转发到 `TermSession`。
+**最终路径(单条)**:所有 IME 输入 —— 包括中文 / CJK 候选 —— 走 `RemoteSshKeyboard.processLocalKeyEvent`(`bVNC/.../input/RemoteSshKeyboard.java:50-102`)。`RemoteCanvas.onCreateInputConnection` **没有 SSH 分支**,所有协议都用默认 `BaseInputConnection`(即"丢 InputConnection 文本,只走 KeyEvent")。
 
-**为什么默认 `BaseInputConnection` 失败**:`commitText` 父类实现是 `mEditable.append(text)`,但 `mEditable` 是 `new SpannableStringBuilder()`(我们用 `new BaseInputConnection(this, false)`),没有任何 reader —— IME 投来的中文字符就躺在那个没人读的 buffer 里被丢掉。`sendKeyEvent` 父类返回 `false`,framework 派给 `View.onKeyDown`,那条路对裸按键(字母 / 退格)够用,但 IME 走 InputConnection 投的中文根本不过 `sendKeyEvent`,所以也接不到。
+中文能投到 TermSession 的关键代码在 `processLocalKeyEvent` 顶部:
 
-**修法(2026-06-12 Phase 1.1)**:
-- 新增 `bVNC/src/main/java/com/qihua/bVNC/input/SshInputConnection.java`,继承 `BaseInputConnection`,只覆盖 4 个方法,不做 composing-region 渲染 / 候选窗 / extracted-text 状态机:
-  - **`setComposingText(text, cursor)` → "live composition"**:擦除上次 composing 留下的字节(`ts.write(0x7f) × composing 的 codepoint 数`),然后把新 `text` 的 codepoint 逐个 `termSession.write(cp)`,再 `composing = text`。
-    - 选 live 而不是 silent(只在 commit/finish 才写)的理由:有些 IME 在用户选完候选后只 `setComposingText(final)` 而不调 `commitText` / `finishComposingText`,silent 模式会吞掉这些 IME 的所有中文。live 模式保证用户随时能看到 IME 给的最新内容,代价是拼音中间态("n" / "ni" / "nih")也会在终端里 echo(配合 fake shell 的 echo 还会再翻一倍)。Phase 1 接受这个噪音;Phase 2 换真 SSH channel 时 fake shell 消失,噪音减半。
-  - `commitText(text, cursor)` → 同样先擦除 composing,再写 `text`,`composing = null`。
-  - `finishComposingText()` → 不再写(`setComposingText` 已经写过了),只 `composing = null`。
-  - `deleteSurroundingText(before, after)` → 每个 before 写一个 `0x7f`(ASCII DEL);after 这一侧 Phase 1 不追踪文本位置,先扔掉。
-  - `super(canvas, false)`(`fullEditor=false`),`mEditable` 是空的 `SpannableStringBuilder`,没人读,无所谓。
-  - **`TermSession` 走动态查表**:构造时只持 `RemoteCanvas`,每次回调通过 `canvas.keyboard.getTermSession()` 现取 —— 这样 fold/unfold 重建 TermSession 后,旧的 `SshInputConnection` 不会向已关闭的 session 静默 write。Log 在 `termSession()` 返回 null 时打 `Log.w`。
-  - 入口日志:构造 + 4 个回调都 `Log.i`,方便从 logcat 看 IME 实际走哪条路。
-- `RemoteCanvas.onCreateInputConnection` 维持 `URI | NO_SUGGESTIONS` 不变,但**多一个 SSH 分支**:`currentInitializer instanceof SshConnectionInitializer && keyboard instanceof RemoteSshKeyboard && getTermSession() != null` 时返回 `new SshInputConnection(this)`。其他协议走默认 `BaseInputConnection`(VNC / RDP / SPICE / NVStream 远端自有 IME,Android 侧裸按键路径够用,不需要 SSH 这套)。同时 `Log.i` 打了 `sshReady` + initializer / keyboard 状态,确认分支选择。
-- `RemoteSshKeyboard` 加 `public TermSession getTermSession()`,让 `onCreateInputConnection` 能拿到 session 喂给 `SshInputConnection`,也让 `SshInputConnection` 每次回调能拿现役的 session。保留 `ACTION_MULTIPLE` 分支(`processLocalKeyEvent` 第 2 步),作为少数老 IME 的退化路径。`processLocalKeyEvent` 入口也加 `Log.i`。
-- `processLocalKeyEvent` 顺序:
-  1. `termSession == null` → false(早退)
-  2. `ACTION_MULTIPLE` → 遍历 `evt.getCharacters()` 写 termSession,return true(老 IME 退化路径)
-  3. `ACTION_DOWN` 以外(`ACTION_UP`) → return true(吞掉,不让 IME/host 重处理)
-  4. 特殊 keycode(Enter/Del/Tab/Esc) → 写 termSession
-  5. 普通 keycode → `getUnicodeChar` 写 termSession
-  6. `codePoint == 0` → return false(非可打印,放行)
+```java
+if (keyCode == 0 && chars != null && chars.length() > 0) {
+    int len = chars.length();
+    for (int i = 0; i < len; ) {
+        int cp = chars.codePointAt(i);
+        termSession.write(cp);
+        i += Character.charCount(cp);
+    }
+    return true;
+}
+```
 
-**为什么 VNC / RDP 不需要这套**:
-- VNC/RDP 远端桌面自有 IME,服务端负责 composition(§10.5)。Android 侧只走裸 KeyEvent(Enter/Del/字母 → X11 KeySym 翻译),没有 "候选字" 这种东西要走 InputConnection —— 所以 VNC/RDP 走默认 `BaseInputConnection` 是正确的(默认就是"丢 InputConnection,只走 KeyEvent")。
-- SSH 是反过来:Android IME 投中文到 app,app(我们)负责把它投到远端 shell。所以我们要接 InputConnection 那一头。
+- `keyCode == 0` 的 KeyEvent 由 IME 用作"unicode 文本投递"通道(部分 IME 在 `ACTION_DOWN`、部分在 `ACTION_MULTIPLE`);两种 action 都走这个分支
+- 后续 `switch` 处理 `KEYCODE_ENTER/DEL/TAB/ESCAPE` 映射到 ANSI 字节,普通按键走 `evt.getUnicodeChar(metaState)`
+- 这一条路径在 Honor 折叠屏上验证过中英文 + 软硬键盘均能进入 TermSession
 
-**已知副作用(Phase 1 遗留,Phase 2 真 SSH 就消失)**:
-- 用户通过 IME 输入的中文会经过 fake shell 的 echo 被多打一次(终端 emulator 显一次 + fake shell 回显一次)。可以接受,等 Phase 2 替换为真 SSH channel 时自动消失。
-- 拼音中间态("n" / "ni" / "nih")在 live composition 下会进终端,被 fake shell 翻倍 echo 出 "nninihniha..." 之类的噪音;最终候选的 "你好" 也被翻倍 echo 成 "你好你好"。可以接受,等 Phase 2 替换为真 SSH channel 时 fake shell 消失,噪音减半。
-- `deleteSurroundingText` 的 `afterLength` 暂时丢;Phase 1 不追踪 termSession 内部的"光标前/光标后"概念,等 Phase 2 换真 SSH 再补。
+**历史**:
+- 2026-06-12 `7e4be761 CJK input supported` 曾新增 `bVNC/.../input/SshInputConnection.java`,通过覆盖 `BaseInputConnection` 的 `commitText` / `setComposingText` / `finishComposingText` 三个回调把 IME 文本转发到 TermSession
+- 2026-06-14 `1c9ce769 remove the so call SSH input connection` 删除了 `SshInputConnection.java` 与 `RemoteCanvas.onCreateInputConnection` 里的 SSH 分支。理由:IME 投中文的另一种形式(`KeyEvent` with `keyCode=0` + `getCharacters()="你好"`)被 `processLocalKeyEvent` 的 `if (keyCode == 0 && chars != null && chars.length() > 0)` 分支自然接住,不需要专门的 InputConnection 子类
+- 保留:`RemoteSshKeyboard` 仍提供 `setTermSession(TermSession)` / `getTermSession()`,供 `SshConnectionInitializer` 在 fold/unfold 时换绑当前活跃的 TermSession
 
-**文件**:
-- 新增 `bVNC/src/main/java/com/qihua/bVNC/input/SshInputConnection.java`(4 个 InputConnection 回调,live composition + 动态 session)
-- 改 `bVNC/src/main/java/com/qihua/bVNC/input/RemoteSshKeyboard.java`:`+ getTermSession()` 访问器,`+ import android.util.Log`,processLocalKeyEvent 入口 `Log.i`
-- 改 `bVNC/src/main/java/com/qihua/bVNC/RemoteCanvas.java`:`onCreateInputConnection` 加 SSH 分支(返回 `new SshInputConnection(this)`)并 `Log.i` sshReady / initializer / keyboard 类型
-- `SshConnectionInitializer` / `SshTerminalRenderer` / `RemoteCanvas.onCreateInputConnection` 的 inputType / imeOptions —— 不动,继续 `URI | NO_SUGGESTIONS`
+**副作用**:走 `KeyEvent` 通道意味着 IME 投的中文不会经过 fake shell 的 echo 翻倍(`commitText` 那条路径会),但 IME 自身的"pinyin 中间态"(`n` / `ni` / `nih`)也不会进终端 —— 在终端里看到的就是 IME 给的最终文本。等 Phase 2 换真 SSH channel 时行为不变。
 
-**验收**(在 §10.13 之外补一条):
-- [ ] 切到搜狗/Google Pinyin,输入 "nihao" 候选窗选 "你好":终端最终显 "你好" 或 "你好你好"(Phase 1 fake shell echo,见上文)
-- [ ] 折叠 → 展开,再输一次中文:终端仍能正常显(确认 SshInputConnection 在 fold/unfold 重建后仍指向新 session)
-- [ ] 看 logcat:应当看到 `RemoteCanvas onCreateInputConnection: sshReady=true ...` 之后 `SshInputConnection commitText: '你好' ...` 一行,说明 IME 走的是 commitText 路径;若只看到 `setComposingText` 而没 `commitText`,说明 IME 在 `setComposingText("你好")` 后没调 commit/finish,live composition 仍能保证字符被写入
-- [ ] VNC/RDP 真实连接仍走默认 `BaseInputConnection`,中文 IME 走 SSH 分支 InputConnection,跟 SSH 一样自然工作(无副作用)
+**文件**(2026-06-14 状态):
+- `bVNC/.../input/RemoteSshKeyboard.java` — 含 `processLocalKeyEvent` 的 `keyCode == 0` unicode 分支,`+ setTermSession/getTermSession`(给 initializer 换绑用),无 `Log.i`
+- `bVNC/.../RemoteCanvas.java` — `onCreateInputConnection` 维持 `URI | NO_SUGGESTIONS`,无 SSH 分支
+- (已删)`bVNC/.../input/SshInputConnection.java` — `1c9ce769` 删除
 

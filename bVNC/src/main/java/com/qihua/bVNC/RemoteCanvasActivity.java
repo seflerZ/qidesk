@@ -90,7 +90,9 @@ import com.limelight.computers.ComputerManagerService;
 import com.limelight.nvstream.http.ComputerDetails;
 import com.limelight.nvstream.http.PairingManager;
 import com.limelight.ui.GameGestures;
+import com.qihua.bVNC.connection.ConnectionInitializer;
 import com.qihua.bVNC.connection.ProtocolType;
+import com.qihua.bVNC.connection.SshConnectionInitializer;
 import com.qihua.bVNC.dialogs.EnterTextDialog;
 import com.qihua.bVNC.dialogs.MetaKeyDialog;
 import com.qihua.bVNC.extrakeys.ExtraKeyButton;
@@ -113,7 +115,6 @@ import com.qihua.util.UriIntentParser;
 import com.qihua.bVNC.util.SmartResolutionUtils;
 import com.undatech.opaque.Connection;
 import com.undatech.opaque.ConnectionSettings;
-import com.undatech.opaque.DrawTask;
 import com.undatech.opaque.MessageDialogs;
 import com.undatech.opaque.RemoteClientLibConstants;
 import com.undatech.opaque.util.FileUtils;
@@ -260,7 +261,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         Rect rect = new Rect();
         display.getRectSize(rect);
         
-        canvas.updateDisplayRect(rect);
+        canvas.setDisplayRect(rect);
         canvas.setDisplayDensity(metrics.density);
     }
 
@@ -1332,12 +1333,6 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             return;
         }
 
-        // SSH connection is not fixed screen size, there it's display rect needs to be updated
-        Display display = getDisplayFromCanvas(canvas);
-        Rect rect = new Rect();
-        display.getRectSize(rect);
-        canvas.updateDisplayRect(rect);
-
         // displayRect was already updated in onConfigurationChanged (so SSH
         // and other scaler-less protocols see the new size immediately).
         // Here we just run the scaler-dependent bookkeeping.
@@ -1367,9 +1362,14 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 //            canvas.spicecomm.requestResolution(canvas.getWidth(), canvas.getHeight());
 //        }
 
+        // update display rect if necessary, depending on the connection type itself
+        Display display = getDisplayFromCanvas(canvas);
+        canvas.connInitializer.onDisplayRectChanged(canvas, display);
+
         // Auto change extra keys to horizontal or vertical mode
         recreateExtraKeys(touchpad.getWidth() > touchpad.getHeight());
     }
+
 
     @Override
     protected void onStart() {

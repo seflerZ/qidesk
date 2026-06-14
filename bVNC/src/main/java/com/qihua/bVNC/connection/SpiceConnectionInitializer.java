@@ -4,6 +4,7 @@ import android.content.Context;
 import android.net.Uri;
 import android.os.SystemClock;
 import android.util.Log;
+import android.view.Display;
 
 import com.qihua.bVNC.App;
 import com.qihua.bVNC.Constants;
@@ -104,6 +105,11 @@ public class SpiceConnectionInitializer extends ConnectionInitializer {
         } else {
             startFromVvFile(canvas, vvFileName);
         }
+    }
+
+    @Override
+    public void onDisplayRectChanged(RemoteCanvas canvas, Display display) {
+
     }
 
     /**
