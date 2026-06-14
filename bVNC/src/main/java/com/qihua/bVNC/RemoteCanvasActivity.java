@@ -113,6 +113,7 @@ import com.qihua.util.UriIntentParser;
 import com.qihua.bVNC.util.SmartResolutionUtils;
 import com.undatech.opaque.Connection;
 import com.undatech.opaque.ConnectionSettings;
+import com.undatech.opaque.DrawTask;
 import com.undatech.opaque.MessageDialogs;
 import com.undatech.opaque.RemoteClientLibConstants;
 import com.undatech.opaque.util.FileUtils;
@@ -259,7 +260,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         Rect rect = new Rect();
         display.getRectSize(rect);
         
-        canvas.setDisplayRect(rect);
+        canvas.updateDisplayRect(rect);
         canvas.setDisplayDensity(metrics.density);
     }
 
@@ -1311,22 +1312,6 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         try {
             setExtraKeysVisibility(View.GONE, false);
 
-            // Update the canvas's displayRect FIRST, before the scaler-
-            // dependent correctAfterRotation runs. SSH (and any other
-            // protocol that doesn't use a scaler) needs the new rect now
-            // so that SshConnectionInitializer.onDisplayRectChanged can
-            // rebuild the framebuffer at the new size. Without this,
-            // foldable unfold would leave the terminal at the old size
-            // because correctAfterRotation's `if (scaler == null) return`
-            // would skip the setDisplayRect call.
-            if (canvas != null) {
-                canvas.waitUntilInflated();
-                Display display = getDisplayFromCanvas(canvas);
-                Rect rect = new Rect();
-                display.getRectSize(rect);
-                canvas.setDisplayRect(rect);
-            }
-
             // Handle gamepad overlay screen size change
             if (inputHandler instanceof InputHandlerGamepad) {
                 InputHandlerGamepad gamepadHandler = (InputHandlerGamepad) inputHandler;
@@ -1347,11 +1332,17 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             return;
         }
 
+        // SSH connection is not fixed screen size, there it's display rect needs to be updated
+        Display display = getDisplayFromCanvas(canvas);
+        Rect rect = new Rect();
+        display.getRectSize(rect);
+        canvas.updateDisplayRect(rect);
+
         // displayRect was already updated in onConfigurationChanged (so SSH
         // and other scaler-less protocols see the new size immediately).
         // Here we just run the scaler-dependent bookkeeping.
 
-        // Its quite common to see NullPointerExceptions here when this function is called
+        // It's quite common to see NullPointerExceptions here when this function is called
         // at the point of disconnection. Hence, we catch and ignore the error.
 //        float oldScale = canvas.canvasZoomer.getZoomFactor();
 //        int x = canvas.absoluteXPosition;
