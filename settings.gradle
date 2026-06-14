@@ -6,3 +6,5 @@ include ':aRDP-app'
 include ':remoteClientLib'
 include ':native-clients-libs'
 include ':common'
+include ':emulatorview'
+project(':emulatorview').projectDir = new File(rootDir, 'remoteClientLib/jni/libs/deps/Android-Terminal-Emulator/emulatorview/')
