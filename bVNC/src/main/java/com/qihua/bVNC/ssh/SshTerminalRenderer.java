@@ -42,6 +42,7 @@ public class SshTerminalRenderer {
 
     private int currentCols = -1;
     private int currentRows = -1;
+    private boolean open;
     private boolean closed;
 
     public SshTerminalRenderer(float density) throws IOException {
@@ -69,6 +70,12 @@ public class SshTerminalRenderer {
         int rows = TermRenderHelper.computeRows(emptyCanvasOf(initialPxH), helper.charHeight, pad);
         currentCols = cols;
         currentRows = rows;
+        // UTF-8 on from boot. TermSession's mDefaultUTF8Mode defaults to
+        // false, so the emulator interprets input as Latin-1. With UTF-8
+        // off, write(0x4F60) for 你 writes the bytes [E4 BD A0] which
+        // display as 3 separate Latin-1 glyphs. Setting this before
+        // updateSize() so initializeEmulator() picks it up.
+        termSession.setDefaultUTF8Mode(true);
         termSession.updateSize(cols, rows); // also initializes the emulator
         if (onUpdate != null) {
             termSession.setUpdateCallback(new UpdateCallback() {
@@ -76,6 +83,7 @@ public class SshTerminalRenderer {
             });
         }
         loopback.start();
+        open = true;
         Log.i(TAG, "open: " + cols + " cols x " + rows + " rows, charW="
                 + helper.charWidth + " charH=" + helper.charHeight
                 + " pad=" + pad + "px");
@@ -103,6 +111,7 @@ public class SshTerminalRenderer {
     public void close() {
         if (closed) return;
         closed = true;
+        open = false;
         try {
             termSession.finish();
         } catch (Throwable t) {

@@ -21,8 +21,6 @@ import jackpal.androidterm.emulatorview.TermSession;
  */
 public class RemoteSshKeyboard extends RemoteKeyboard {
 
-    private static final String TAG = "RemoteSshKeyboard";
-
     private TermSession termSession;
 
     public RemoteSshKeyboard(RemoteConnectable r, Context v, Handler h, boolean debugLog) {
@@ -39,9 +37,41 @@ public class RemoteSshKeyboard extends RemoteKeyboard {
         this.termSession = termSession;
     }
 
+    /**
+     * Phase 1.1: hand the TermSession to {@link SshInputConnection} so the
+     * IME's commitText / setComposingText path can write into the same
+     * terminal that the keyboard path does.
+     */
+    public TermSession getTermSession() {
+        return termSession;
+    }
+
     @Override
     public boolean processLocalKeyEvent(int keyCode, KeyEvent evt, int additionalMetaState) {
+        String chars = evt.getCharacters();
         if (termSession == null) return false;
+        // Unicode-text delivery. The IME dispatches the final candidate
+        // text (e.g. "你好") as a KeyEvent with no keycode but with the
+        // text in getCharacters(). Two flavors are seen in the wild:
+        //
+        //   (a) ACTION_DOWN + keyCode=0 (KEYCODE_UNKNOWN) + getCharacters()
+        //       — the most common Chinese IME path; goes through
+        //       OnKeyListener.onKey (which only fires for ACTION_DOWN) and
+        //       then inputHandler.onKeyDown → keyboard.keyEvent.
+        //   (b) ACTION_MULTIPLE + getCharacters() — older / less common
+        //       IMEs; handled here too for completeness.
+        //
+        // Mirrors RemoteRdpKeyboard.processLocalKeyEvent at line 65, which
+        // is why RDP's Chinese IME input has always worked.
+        if (keyCode == 0 && chars != null && chars.length() > 0) {
+            int len = chars.length();
+            for (int i = 0; i < len; ) {
+                int cp = chars.codePointAt(i);
+                termSession.write(cp);
+                i += Character.charCount(cp);
+            }
+            return true;
+        }
         // Phase 1 consumes both DOWN and UP so the host (Android IME) doesn't
         // try to interpret the event. We only act on ACTION_DOWN.
         if (evt.getAction() != KeyEvent.ACTION_DOWN) {

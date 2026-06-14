@@ -9,7 +9,7 @@ import android.graphics.Canvas;
  * class — all of which are package-private and otherwise unreachable from
  * com.qihua.*.
  *
- * One instance per TermSession. Caches the PaintRenderer so the heartbeat
+ * <p>One instance per TermSession. Caches the PaintRenderer so the heartbeat
  * doesn't reallocate every frame; call rebuild() to refresh after the font
  * size changes.
  */
@@ -34,13 +34,6 @@ public final class TermRenderHelper {
      * Assumes {@code session.initializeEmulator(cols, rows)} has already
      * been called (caller guarantees this — initializer + renderer wire it
      * up at startup).
-     *
-     * @param session       the TermSession whose grid to draw
-     * @param canvas        target canvas (typically wrapping mbitmap)
-     * @param fontSizePx    monospace text size in pixels
-     * @param paddingPx     inset on all four sides, in pixels. The grid is
-     *                      drawn inside the rect (paddingPx, paddingPx)
-     *                      .. (W-paddingPx, H-paddingPx).
      */
     public void render(TermSession session, Canvas canvas, int fontSizePx, int paddingPx) {
         TerminalEmulator emu = session.getEmulator();

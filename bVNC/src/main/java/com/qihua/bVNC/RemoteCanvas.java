@@ -81,6 +81,8 @@ import com.qihua.bVNC.input.RemoteCanvasHandler;
 import com.qihua.bVNC.input.RemoteKeyboard;
 import com.qihua.bVNC.input.RemotePointer;
 import com.qihua.bVNC.input.RemoteSpicePointer;
+import com.qihua.bVNC.input.RemoteSshKeyboard;
+import com.qihua.bVNC.input.SshInputConnection;
 import com.qihua.bVNC.util.SmartResolutionUtils;
 import com.undatech.opaque.Connection;
 import com.undatech.opaque.DrawTask;
@@ -307,6 +309,42 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         if (!outDisplay && touchpad) {
             drawTouchpadHint(width, height);
         }
+    }
+
+    /**
+     * Catch {@code ACTION_MULTIPLE} events at the view level.
+     *
+     * The activity uses {@code View.OnKeyListener} to forward key events to
+     * the input handler, but {@code OnKeyListener.onKey} is only invoked
+     * for {@code ACTION_DOWN}. For {@code ACTION_MULTIPLE} (the IME's
+     * "here's a chunk of unicode text" flavor on some IMEs) the default
+     * {@code View.onKeyMultiple} returns {@code false} and the event
+     * bubbles up the tree unhandled — it never reaches
+     * {@link RemoteSshKeyboard#processLocalKeyEvent}.
+     *
+     * For SSH we forward {@code ACTION_MULTIPLE} directly to the keyboard
+     * so the existing {@code processLocalKeyEvent} ACTION_MULTIPLE branch
+     * can run. Other protocols ignore this and fall through to the default
+     * behavior.
+     */
+    @Override
+    public boolean onKeyMultiple(int keyCode, int repeatCount, KeyEvent event) {
+        if (event.getAction() == KeyEvent.ACTION_MULTIPLE
+                && keyboard != null
+                && getProtocolType() == ProtocolType.SSH) {
+            return keyboard.keyEvent(keyCode, event);
+        }
+        return super.onKeyMultiple(keyCode, repeatCount, event);
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        return super.onKeyDown(keyCode, event);
+    }
+
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        return super.dispatchKeyEvent(event);
     }
 
     @Override
@@ -1401,6 +1439,13 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         // 禁用联想+强制输入法走【原始按键模式】，让搜狗输入法实时下发退格/字母按键事件
         outAttrs.inputType = InputType.TYPE_TEXT_VARIATION_URI | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS;
         outAttrs.imeOptions = EditorInfo.IME_FLAG_NO_EXTRACT_UI; // 隐藏输入法的全屏模式，可选优化
+
+        boolean sshReady = currentInitializer instanceof SshConnectionInitializer
+                && keyboard instanceof RemoteSshKeyboard
+                && ((RemoteSshKeyboard) keyboard).getTermSession() != null;
+        if (sshReady) {
+            return new SshInputConnection(this);
+        }
 
         // 创建基础的输入法连接对象，无缓冲、实时转发事件
         BaseInputConnection inputConnection = new BaseInputConnection(this, false);
