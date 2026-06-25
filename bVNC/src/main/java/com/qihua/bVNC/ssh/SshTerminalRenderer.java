@@ -14,8 +14,9 @@ import jackpal.androidterm.emulatorview.TermSession;
 import jackpal.androidterm.emulatorview.UpdateCallback;
 
 /**
- * Phase 1 SSH terminal renderer. Owns the TermSession + the fake-shell
- * loopback that feeds it. Each renderInto(Bitmap) pass:
+ * SSH terminal renderer. Owns the TermSession + a transport channel
+ * (Phase 1: a local fake-shell loopback; Phase 2: a real trilead-backed
+ * {@link SshShellChannel}). Each renderInto(Bitmap) pass:
  *
  *   1. Recomputes char cell metrics via TermRenderHelper.probe (cheap).
  *   2. If cols/rows changed, calls TermSession.updateSize.
@@ -24,7 +25,7 @@ import jackpal.androidterm.emulatorview.UpdateCallback;
  *
  * Lifecycle: caller creates -> open() -> renderInto* -> close().
  * close() finishes the TermSession (which joins its reader/writer threads)
- * and closes the loopback. Both must happen on fold/unfold so a stale
+ * and closes the channel. Both must happen on fold/unfold so a stale
  * reader doesn't keep blocking on a dead pipe.
  */
 public class SshTerminalRenderer {
@@ -38,18 +39,49 @@ public class SshTerminalRenderer {
     private final float density;
     private final TermRenderHelper helper = new TermRenderHelper();
     private final TermSession termSession = new TermSession();
-    private final FakeShellLoopback loopback;
+    private final SshShellChannel channel;
 
     private int currentCols = -1;
     private int currentRows = -1;
     private boolean open;
     private boolean closed;
+    /** Notified when the terminal grid size changes (fold/unfold/etc). */
+    private GridSizeListener gridSizeListener;
 
-    public SshTerminalRenderer(float density) throws IOException {
+    /**
+     * @param density device density, used for font-size and padding.
+     * @param channel transport between TermSession and the shell. Phase 2
+     *                uses {@link SshShellChannel}; the interface matches
+     *                the Phase 1 fake-shell so this class doesn't need
+     *                to know which one it got.
+     */
+    public SshTerminalRenderer(float density, SshShellChannel channel) throws IOException {
         this.density = density;
-        this.loopback = new FakeShellLoopback();
-        termSession.setTermIn(loopback.getTerminalIn());
-        termSession.setTermOut(loopback.getTerminalOut());
+        this.channel = channel;
+        termSession.setTermIn(channel.getTerminalIn());
+        termSession.setTermOut(channel.getTerminalOut());
+    }
+
+    /**
+     * Initialise the target bitmap with our background colour so empty
+     * cells (which {@code TranscriptScreen.drawText} does NOT paint)
+     * start out the right colour instead of the default transparent
+     * black that {@code Bitmap.createBitmap} yields. Called once per
+     * bitmap allocation by {@code SshConnectionInitializer.openRenderer}.
+     */
+    public void seedBackground(Bitmap target) {
+        if (target == null || target.isRecycled()) return;
+        target.eraseColor(BG_COLOR);
+    }
+
+    /** Notified when {@link #renderInto} detects cols/rows changed. */
+    public void setGridSizeListener(GridSizeListener listener) {
+        this.gridSizeListener = listener;
+    }
+
+    /** Callback for grid-size changes (e.g. PTY resize over SSH). */
+    public interface GridSizeListener {
+        void onGridSizeChanged(int cols, int rows);
     }
 
     /**
@@ -82,7 +114,7 @@ public class SshTerminalRenderer {
                 @Override public void onUpdate() { onUpdate.run(); }
             });
         }
-        loopback.start();
+        channel.start();
         open = true;
         Log.i(TAG, "open: " + cols + " cols x " + rows + " rows, charW="
                 + helper.charWidth + " charH=" + helper.charHeight
@@ -92,7 +124,13 @@ public class SshTerminalRenderer {
     public void renderInto(Bitmap target) {
         if (closed || target == null || target.isRecycled()) return;
         Canvas c = new Canvas(target);
-        c.drawColor(BG_COLOR);
+        // Do NOT clear here — TranscriptScreen.drawText paints BG_COLOR
+        // for every occupied cell (and PaintRenderer.drawTextRun handles
+        // the foreground glyph). The bitmap itself was seeded with
+        // BG_COLOR via seedBackground() the first time it was allocated,
+        // so empty cells stay blue. Clearing each paint would force a
+        // full-bitmap pass that masks the natural cursor blink and
+        // contributes to flicker.
         int pad = paddingPx();
         int cols = TermRenderHelper.computeCols(c, helper.charWidth, pad);
         int rows = TermRenderHelper.computeRows(c, helper.charHeight, pad);
@@ -100,6 +138,9 @@ public class SshTerminalRenderer {
             currentCols = cols;
             currentRows = rows;
             termSession.updateSize(cols, rows);
+            if (gridSizeListener != null) {
+                gridSizeListener.onGridSizeChanged(cols, rows);
+            }
         }
         helper.render(termSession, c, fontSizePx(), pad);
     }
@@ -112,12 +153,13 @@ public class SshTerminalRenderer {
         if (closed) return;
         closed = true;
         open = false;
+        Log.w(TAG, "close: finishing TermSession (stack=" + new Throwable().getStackTrace()[1] + ")");
         try {
             termSession.finish();
         } catch (Throwable t) {
             Log.w(TAG, "termSession.finish failed", t);
         }
-        loopback.close();
+        channel.close();
     }
 
     private int fontSizePx() {

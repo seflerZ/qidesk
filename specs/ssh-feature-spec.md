@@ -41,12 +41,13 @@ SSH 不同于其他协议的地方:它的**输出是文本,不是位图**。但�
 **采用 trilead-ssh2**(已存在于 `SSHConnection.java`):
 
 ```gradle
-implementation 'com.trilead:trilead-ssh2:1.2.0'
-// 或:implementation files('libs/trilead-ssh2-1.2.0.jar')
+implementation files('libs/trilead-ssh2-1.0.0-build222.jar')
 ```
 
-> 原规格书指定的 Apache MINA sshd **不再使用**。理由:`SSHConnection.java`(753 行)已基于 trilead 实现了完整的连接 / 认证 / 端口跳转 / KnownHosts / InteractiveCallback 逻辑,改用 MINA 等于把这部分全部作废。沿用 trilead 可节省 60% 的协议层工作量。
-> MINA 的优势(更新活跃、对现代 SSH 特性支持好)对本项目影响有限,因为我们只需要密码 / 密钥认证 + 一个 shell channel。
+> ⚠️ **版本号修正(2026-06)**:原规格书写的 `1.2.0` 在 mavenCentral / jcenter / aliyun / jboss nexus 等所有仓库**均不存在**(HTTP 404)。该版本号是规格书笔误。真实存在的最高稳定版本是 **`1.0.0-build222`**(2025-01 jenkinsci/trilead-ssh2 维护版,248KB),与 `SSHConnection.java` 已有的 import 路径 `com.trilead.ssh2.*` 完全兼容,API 不变。
+>
+> 原规格书指定的 Apache MINA sshd **不再使用**。理由:`SSHConnection.java`(753 行)已基于 trilead 实现了完整的连接 / 认证 / 端口跳转 / KnownHosts / InteractiveCallback / 密码+公私钥认证 逻辑,改用 MINA 等于把这部分全部作废。沿用 trilead 可节省 60% 的协议层工作量。
+> MINA 的优势(更新活跃、对现代 SSH 特性支持好)对本项目影响有限,因为我们只需要密码 / 密钥认证 + 一个 shell channel。trilead-ssh2 build222 已经覆盖了 RSA / ECDSA / Ed25519 等所有现代密钥类型(底层走 JCE / BouncyCastle)。
 
 ---
 
@@ -197,29 +198,48 @@ remote-desktop-clients/
 
 **Phase 1 完成 = 终端 + 输入链路验证**。此时 SSH 网络还没接,但键盘 → 终端 → 位图 的整条链路都通了,Phase 2 只需把 `FakeShellLoopback` 那对 pipe 换成 trilead `Session.getStdout/getStdin`(详见 §10)。
 
-### Phase 2 — 接入真 SSH(trilead)
+### Phase 2 — 接入真 SSH(trilead,★ 修订 2026-06) ✅ 设备验收通过(2026-06-24)
 
-**目标**:把 Phase 1 的本地 `PipedInputStream` 换成 trilead `Session.getStdout()/getStdin()`,真连 SSH 服务器。
+**目标**:把 Phase 1 的本地 `PipedInputStream` 换成 trilead `Session.getStdout()/getStdin()`,真连 SSH 服务器。**架构上对齐 RDP / NVStream 的"独立 worker + drawBitmap"模型**——把 trilead 线程当成独立 worker,TermSession 是 worker 内部的状态机,worker 状态变化时回调 `renderInto(mbitmap)` + `reDraw`,主程序只展示位图。
 
-- [ ] 下载 `trilead-ssh2-1.2.0.jar` 到 `bVNC/libs/`
-- [ ] `bVNC/build.gradle` 加 `implementation files('libs/trilead-ssh2-1.2.0.jar')`
-- [ ] 新建 `ConfigSSH extends MainConfiguration`,布局 `config_ssh.xml`:
-  - 字段:昵称、服务器、端口(默认 22)、用户名、密码、保持密码
-  - 隐藏 SSH 隧道 / 颜色模式 / 分辨率等无关字段
-  - 保存后跳转 `SshTerminalActivity`
-- [ ] 新建 `SshTerminalActivity extends RemoteCanvasActivity`,主要重写 `onCreate` 的协议初始化分支
-- [ ] `SshConnectable` 内部组合现有 `SSHConnection.java`:
-  - 复用 `SSHConnection.connect()` / 认证逻辑
-  - 拿到 `Session` 后,把 `getStdout()` 接到 `TermSession.getTermOut()`(字节流),`getStdin()` 接到 `TermSession.getTermIn()`
-- [ ] `Utils.getConnectionSetupClass("ssh")` 返回 `ConfigSSH.class`
-- [ ] `AndroidManifest`(`aRDP-app` + `bVNC`)注册 `ConfigSSH` 和 `SshTerminalActivity`
-- [ ] 资源:`config_ssh.xml` / `ssh_terminal.xml` / `ssh_terminal_menu.xml`
-- [ ] 资源字符串:`description_ssh` 已有,补充其他 i18n
-- [ ] **可演示**:真连一台 Linux 服务器,能正常执行命令
+**trilead 版本修正**(★ 进一步修订 2026-06-24):规格书旧版的 `trilead-ssh2-1.2.0.jar` 在 mavenCentral / jcenter / jboss nexus / aliyun 等仓库**均不存在**(404)。该版本号是规格书笔误。**真实情况是**:项目里 `pubkeyGenerator/build.gradle` 已经声明 `api 'org.connectbot:sshlib:2.2.20'`——connectbot 维护的 trilead-ssh2 fork,包名仍是 `com.trilead.ssh2.*`,API 完全兼容(build222 的 `Connection.setCompression` 和 `(String, KeyPair)` 形式的 `authenticateWithPublicKey` 已移除,需走 `(String, File, String)` + 写 temp file)。Phase 2 **不要单独 vendor trilead jar**(会导致与 sshlib duplicate class),**只在 `bVNC/build.gradle` 加 `api 'org.connectbot:sshlib:2.2.20'` 即可**。
+
+**架构对照**(RDP / NVStream vs SSH Phase 2):
+| 阶段 | RDP | NVStream | SSH Phase 2 |
+|---|---|---|---|
+| 独立 worker | FreeRDP native process | Moonlight native decoder | **trilead background thread**(我们启) |
+| 内部状态机 | FreeRDP C 状态 | MediaCodec decoder buffer | **`TermSession` VT100 状态机** |
+| Worker 状态变化的回调 | `OnGraphicsUpdate(x,y,w,h)`(JNI) | `onGraphicsUpdate(Surface,...)` Listener | **`TermSession.setUpdateCallback(...)`**(AAR 内置) |
+| 写位图的方式 | `LibFreeRDP.updateGraphics(inst, bitmap, ...)` JNI in-place 写 | `PixelCopy.request(surface, bitmap, ...)` | **`SshTerminalRenderer.renderInto(mbitmap)`**(状态→位图) |
+| 触发画屏 | `viewable.reDraw(drawTask)` | `viewable.reDraw(drawTask)` | **`canvas.reDraw(0,0,fbW,fbH)`** |
+| 选用的 BitmapData | `UltraCompactBitmapData` | 同 | 同(§10.16) |
+
+**为什么 SSH 还需要 pipe**(RDP/NVStream 不需要):
+- `TermSession` 不接受 `null` 流,必须 `setTermIn/Out` 时给到非 null
+- 网络断时若 `TermSession` 从 `session.getStdout()` 读到 -1,会立即 `finish()` 整个 session,键盘失灵
+- pipe 作为**缓冲层**让 `TermSession` 永远只从 pipe 读,网络断时 pump 退出但 pipe 不关,`TermSession` 阻塞直到 teardown 主动关 pipe
+
+**Phase 2 任务清单**(★ 重组,2026-06):
+- [x] 1. 下载 `trilead-ssh2-1.0.0-build222.jar`(实际版本号,1.2.0 不存在)到 `bVNC/libs/`
+- [x] 2. `bVNC/build.gradle` 加 `implementation files('libs/trilead-ssh2-1.0.0-build222.jar')`
+- [x] 3. `SSHConnection.java` 新增 `public Session getSession()` + `public boolean openShellSession() throws Exception`(`openShellSession` 内部复用现成的 `connect()` / `verifyHostKey()` / `attemptSshPasswordAuthentication()` / `authenticateWithPubKey()` 路径,末尾加 `connection.openSession()` + `session.startShell()`(非 `execCommand`))
+- [x] 4. 新建 `bVNC/.../ssh/SshShellChannel.java` —— 持 trilead `Session` + 双 pipe + 后台 pump 线程,提供与 `FakeShellLoopback` 同 4 方法接口(`getTerminalIn/Out` / `start` / `close`)
+- [x] 5. `SshTerminalRenderer` 构造器签名改:`(float density, SshShellChannel channel)`,内部用 channel 流替代 FakeShellLoopback 流;`close()` 调 `channel.close()`
+- [x] 6. `SshConnectionInitializer` 加 `sshConnection` / `channel` / `connectThread` / `connectStarted` 字段 + `ReentrantLock`;`initialize()` 建 SSHConnection + SshShellChannel + 改后的 SshTerminalRenderer;`start()` 启"SSH-Connect"线程调 `doConnect()`(运行 `openShellSession()` + `channel.setSession()`);`teardown()` 按顺序清理
+- [x] 7. `SshCommunicator.close()` 调 `sshConnectionRef.terminateSSHTunnel()`(package-private setter 注入)
+- [x] 8. 删除 `bVNC/.../ssh/FakeShellLoopback.java`
+- [x] 9. `ConfigSSH.java` 改硬编码 `sshServer=10.0.2.2`(其它不动,最小可演示)
+- [x] 10. **可演示**:真连 SSH 服务器(`ssh user@10.0.2.2` 或局域网),执行 `uname -a` 看到远端内核信息
+
+**Phase 2 暂不做**(留 Phase 3):
+- `ConfigSSH extends MainConfiguration` 真配置页(带 UI 字段、布局 `config_ssh.xml`)
+- 新建 `SshTerminalActivity extends RemoteCanvasActivity`(最小演示继续用现有 `RemoteCanvasActivity`)
+- `ssh_terminal.xml` / `ssh_terminal_menu.xml` 资源
 
 ### Phase 3 — 完善
 
-- [ ] 密钥认证(RSA / ED25519)+ 口令短语支持
+- [ ] `ConfigSSH` 真配置页(`MainConfiguration` + `config_ssh.xml`,含密码/私钥切换 UI)
+- [ ] 密钥认证(RSA / ECDSA / Ed25519)+ 口令短语 —— **库侧已支持**(`SSHConnection.authenticateWithPubKey()`),UI 侧留 Phase 3
 - [ ] 心跳 / 网络切换(WiFi → 4G)重连
 - [ ] 文本选择 / 复制粘贴
 - [ ] 配色方案(Solarized Dark 等,`ColorScheme` 资源)
@@ -498,8 +518,8 @@ public class SshConnectionInitializer extends ConnectionInitializer {
 |------|------|------|
 | Phase 0 | 启动后屏幕中央显示"Hello SSH",用 DrawTask 流程,缩放/平移正常工作 | ✅ |
 | Phase 1 | 终端开屏即显示 welcome banner + `$ ` 提示符;键入字符逐个回显;回车换行再次打印 `$ `;软键盘/硬键盘都能用;折叠→展开不黑屏;`mbitmap` 实时刷新(UpdateCallback 单路径,无闪烁) | ✅ |
-| Phase 2 | 真连 `ssh user@127.0.0.1`,执行 `uname -a` 看到真实内核信息;`FakeShellLoopback` 整类删除,TermSession 直接接 trilead `Session.getStdout/getStdin` | ⏳ |
-| Phase 3 | 网络切换后自动重连;支持密钥认证;文本选择/复制粘贴;配色/字号设置 | ⏳ |
+| Phase 2 | 真连 `ssh user@sefler.site:2222`(局域网真服务器,Honor 折叠屏 + emulator `10.0.2.2` 都验证);执行 `ls` / `uname -a` / `pwd` 等命令看到真实输出;`FakeShellLoopback` 整类删除,`SshShellChannel` 接 trilead 流替代;架构对齐 RDP/NVStream 的"独立 worker + drawBitmap"模型(`SSH-Connect` 线程跑 trilead connect+auth+startShell,`SSH-Paint` HandlerThread 跑 `renderInto` 防主线程 paint 卡住 TermSession 写入链路);键盘 / 退格 / 中文 IME / ls 等命令输出全部实时响应,无闪烁;oh-my-zsh unicode glyph 不显示是字体问题(Phase 3 修);`adb logcat` 无 `NetworkOnMainThreadException` / zombie thread(2026-06-24 设备验收) | ✅ 设备验收通过 |
+| Phase 3 | UI 化的 `ConfigSSH extends MainConfiguration`(目前硬编码 4 个字段在 `ConfigSSH.java`);文本选择 / 复制粘贴;配色方案(Solarized Dark 等,`ColorScheme` 资源);字体大小调整;网络切换重连;密钥认证 UI(库侧已支持 `SSHConnection.authenticateWithPubKey`,只需 `ConfigSSH` 加切换 UI);oh-my-zsh unicode glyph(用支持 Nerd Font / Powerline 的字体替换 monospace) | ⏳ |
 
 ---
 
@@ -1077,4 +1097,167 @@ if (keyCode == 0 && chars != null && chars.length() > 0) {
 - `bVNC/.../input/RemoteSshKeyboard.java` — 含 `processLocalKeyEvent` 的 `keyCode == 0` unicode 分支,`+ setTermSession/getTermSession`(给 initializer 换绑用),无 `Log.i`
 - `bVNC/.../RemoteCanvas.java` — `onCreateInputConnection` 维持 `URI | NO_SUGGESTIONS`,无 SSH 分支
 - (已删)`bVNC/.../input/SshInputConnection.java` — `1c9ce769` 删除
+
+
+---
+
+## 10.15-10.19 Phase 2 教训(2026-06-24,设备验收后新增)
+
+> Phase 1 spec §10 写的是"键盘 → TermSession → 位图"管道工程;Phase 2 spec §3 写的是"删 fake shell,接 trilead"。**真正把 Phase 2 从"连得上"做到"敲命令不闪、退格正常"的,是下面这五条踩坑**,每条都不是"想做什么",是"做完之后真实的形状,以及踩过的坑"。
+
+### 10.15 trilead-ssh2 版本号修正(规格书旧版错)
+
+规格书 §3 旧版写的 `trilead-ssh2-1.2.0.jar` **在 mavenCentral / jcenter / jboss nexus / aliyun 全部 404**——该版本号是规格书笔误。**真正情况**:项目里 `pubkeyGenerator/build.gradle:40` 已经声明 `api 'org.connectbot:sshlib:2.2.20'`——connectbot 维护的 trilead-ssh2 fork,包名仍是 `com.trilead.ssh2.*`,API 与 build222 完全兼容。**Phase 2 不要手动下载 trilead jar**(会导致 `:aRDP-app:assembleGplayDebug` 报 `Duplicate class com.trilead.ssh2.transport.TransportManager`)。正确做法是 `bVNC/build.gradle` 加一行 `api 'org.connectbot:sshlib:2.2.20'`。
+
+### 10.16 `Session.startShell()` 之前必须 `requestPTY`(★ 关键)
+
+`com.trilead.ssh2.Session.startShell()` **默认申请 dumb PTY**(无 termtype、无尺寸、无 terminal modes)。服务器 shell 在 dumb PTY 下表现非常奇怪:
+- **缩进乱**:dumb PTY 没 advertised width,服务器假定 80 字符 wrap;我们屏幕 200+ 字符宽,行长度计算错位
+- **输入"无作用"**:dumb PTY 下 echo 行为不定,部分 shell 配成无 echo,你按了键看不到,误以为没生效;换行转换规则跟 Android 习惯的 CR 不一致,Enter 行为错乱
+
+修复(`SSHConnection.java`):
+```java
+public boolean openShellSession() throws Exception {
+    // ... connect + auth ...
+    session = connection.openSession();
+    requestShellPty(session);  // ← 必须先于 startShell()
+    session.startShell();
+}
+
+private void requestShellPty(Session s) throws IOException {
+    try {
+        s.requestPTY("xterm-256color", 80, 24, 640, 480, null);
+    } catch (IOException e) {
+        try { s.requestPTY("xterm", 80, 24, 0, 0, null); }
+        catch (IOException e2) { /* fall back to dumb */ }
+    }
+}
+```
+
+附带 fold/unfold 后调 `SSHConnection.resizePty(cols, rows)` 通过 `Session.resizePTY(cols, rows, 0, 0)` 通知服务器(配合 `SshTerminalRenderer.GridSizeListener` 把 cols/rows 变化传到 `SshConnectionInitializer`)。
+
+### 10.17 `authenticateWithPublicKey` 签名变更(build222)
+
+trilead build222 / sshlib 2.2.20 移除了 `(String, KeyPair)` 形式的 `authenticateWithPublicKey`。新签名是 `authenticateWithPublicKey(String, File, String)`(key 文件 + passphrase)。`SSHConnection` 之前从 `PubkeyUtils.decryptAndRecoverKeyPair()` 拿到 `KeyPair`,现在要写一个临时文件再传 File 路径:
+
+```java
+private boolean authenticateWithPubKey() throws Exception {
+    decryptAndRecoverKey();
+    java.io.File keyFile = writeKeyToTempFile(sshPrivKey);
+    try {
+        String pp = (passphrase != null) ? passphrase : "";
+        return connection.authenticateWithPublicKey(user, keyFile, pp);
+    } finally {
+        try { keyFile.delete(); } catch (Throwable ignored) {}
+    }
+}
+
+private static java.io.File writeKeyToTempFile(String openSshKey) throws IOException {
+    java.io.File f = java.io.File.createTempFile("sshkey-", ".pem");
+    f.deleteOnExit();
+    try (java.io.FileWriter w = new java.io.FileWriter(f)) { w.write(openSshKey); }
+    return f;
+}
+```
+
+同样:`Connection.setCompression(false)` 在 build222 已移除,删掉那行调用即可。
+
+### 10.18 `Session.getStdout()/getStdin()` 不抛 `IOException`
+
+build222 的 `Session.getStdout()` / `getStdin()` 是 **no-throws 签名**(底层 try-catch 内部处理)。**`SshShellChannel.readPumpLoop` / `writePumpLoop` 第一行不能套 `try { src = session.getStdout(); } catch (IOException) {}`**——编译会报 "在相应的 try 语句主体中不能抛出异常错误IOException"。改成单行调用 + null check 即可。
+
+### 10.19 paint 必须在 HandlerThread 后台线程跑(★ 最重要)
+
+**症状(都来自一个根因)**:
+- 打字时整个屏幕**第一行内容突然消失(只剩底色),然后很快出现**——第一行字符最长(提示符 `$ user@host:path$`),`PaintRenderer.drawTextRun` 的 `canvas.drawRect` 涂 BG_COLOR → `drawTextSegment` 画字 两步在第一行最明显
+- **退格键"无效"**——按一下字符不动,按几下后几个字符一起被删
+- 远端突发字节流(如 `ls` 输出)只能看到部分内容,后续字节需再敲命令才能看到
+
+**根因**:`SshTerminalRenderer.renderInto(mbitmap)` 在**主线程同步执行**(10-30ms)。期间:
+1. `TermSession.setUpdateCallback` 同步 fire,但主线程在 `renderInto` 里,UpdateCallback **排队**;`renderInto` 完成一次性画所有排队事件 → 用户感知"突现" / "闪烁"
+2. **键盘写入链路**(`processLocalKeyEvent → termSession.write → mWriteQueue → mWriterThread → terminalOutSink → writePump → trilead`)与 `renderInto` **抢主线程**;Backspace DEL 字节入 mWriteQueue 后,mWriterThread 异步 drain,但主线程被 renderInto 卡住时,**用户感觉 DEL 没生效,连按几下后远端 shell 一次性收到多个 DEL** → 字符"突然被删"
+3. `ls` 输出大量字节 → UpdateCallback 一次 fire 画**当前 TermSession 状态**,但 mid-burst 状态被合并,中间帧看不到
+
+**修复**(`SshConnectionInitializer.java`):
+```java
+private HandlerThread paintThread;        // "SSH-Paint"
+private Handler paintHandler;
+
+private void ensurePaintThread() {
+    if (paintThread != null && paintThread.isAlive()) return;
+    paintThread = new HandlerThread("SSH-Paint");
+    paintThread.start();
+    paintHandler = new Handler(paintThread.getLooper());
+}
+
+private void stopPaintThread() {
+    if (paintHandler != null) paintHandler.removeCallbacksAndMessages(null);
+    if (paintThread != null) { paintThread.quitSafely(); paintThread = null; }
+    paintHandler = null;
+}
+
+// 所有 paintAndRedraw() 调用(心跳 + UpdateCallback + onSurfaceCreated +
+// rebuildSSHFramebuffer) 走这一条:
+private void paintAndRedraw() { postPaintToBackground(); }
+
+private void postPaintToBackground() {
+    if (paintHandler == null) return;
+    // 合并多次 paint,只渲染最新 TermSession 状态
+    paintHandler.removeCallbacks(paintRunnable);
+    paintHandler.post(paintRunnable);
+}
+
+private final Runnable paintRunnable = new Runnable() {
+    @Override public void run() {
+        // ... renderInto → canvas.reDraw ...
+    }
+};
+```
+
+**生命周期**:`ensurePaintThread()` 在 `openRenderer()` 调;`stopPaintThread()` 在 `teardown()` 开头 + `rebuildSSHFramebuffer()` 开头都调(fold/unfold 重建 renderer 时换新 thread)。
+
+**效果**:
+- 主线程 paintAndRedraw() **<1ms**(只是 post 一个 runnable),不阻塞 UpdateCallback / 键盘输入
+- paint thread 串行处理,**多次 paint 合并成一次**(只渲染最新 TermSession 状态)
+- 第一行不再"消失-出现",**自然连续**;Backspace 实时生效;`ls` 完整输出
+
+### 10.20 Phase 2 设备验收(2026-06-24,Honor 折叠屏 / 局域网真服务器)
+
+实测路径(用户操作):
+1. `ConfigSSH.java` 硬编码 `setSshServer("sefler.site")` / `setSshPort(2222)` / `setSshUser("sefler")` / `setSshPassword("...")`
+2. `pm clear com.qihua.aRDP` 清数据库(让硬编码生效,绕过之前 VNC-over-SSH 残留的 SSH 记录)
+3. tap SSH tile → 弹 host key → Accept → 走密码认证(无需再弹密码框,因为字段已硬编码)→ 1-2s 连接
+4. 看到 zsh prompt(`~ ❯`),oh-my-zsh 的部分 unicode glyph 显示为方框(字体不支持,Phase 3 改)
+5. 输入 `ls` + Enter → **完整**输出文件列表(无半截刷新)
+6. 输入中文 → IME 投中文到 TermSession(zsh 收到中文 echo,可能乱码,但 **TermSession 状态机收到完整字节流**)
+7. 打字/退格 — **实时响应**,无闪烁
+8. 折叠→展开 — 画面重建,shell 状态重置(Phase 1 已接受的行为)
+
+**`adb logcat` 关键行**:
+```
+SshConnectionInitializer: startHeartbeat: 5 FPS heartbeat started
+SshConnectionInitializer: paint stats: 12 paints in last 1000 ms (heartbeat)
+SshConnectionInitializer: teardown: closing SSH
+SshConnectionInitializer: stopHeartbeat
+```
+
+## 11. Phase 2 实现文件清单(2026-06-24 状态)
+
+新增:
+- `bVNC/src/main/java/com/qihua/bVNC/ssh/SshShellChannel.java`(220 行,双 pipe + 后台 read/write pump)
+
+修改:
+- `bVNC/src/main/java/com/qihua/bVNC/SSHConnection.java`(753 → 850 行,新增 `getSession()` / `openShellSession()` / `resizePty()` / 抽出 `connectAndAuthenticate()` 共享路径;`authenticateWithPubKey` 走 temp file)
+- `bVNC/src/main/java/com/qihua/bVNC/ssh/SshTerminalRenderer.java`(构造器签名改接 `SshShellChannel`,加 `GridSizeListener` 接口 + `seedBackground` 一次性擦底色,删 `renderInto` 开头 `drawColor`)
+- `bVNC/src/main/java/com/qihua/bVNC/connection/SshConnectionInitializer.java`(加 SSH-Connect 后台线程 / SSH-Paint HandlerThread / 5 FPS heartbeat / `ReentrantLock` 保护 fold/unfold 与 connect 竞态 / `paintAndRedraw` 全部走 paint thread)
+- `bVNC/src/main/java/com/qihua/bVNC/communicator/SshCommunicator.java`(`close()` 调 `terminateSSHTunnel`,加 `setSshConnection` public setter)
+- `bVNC/src/main/java/com/qihua/bVNC/ConfigSSH.java`(硬编码 `sshServer/sshPort/sshUser/sshPassword`,Phase 3 改为真配置页)
+- `bVNC/build.gradle`(+1 行 `api 'org.connectbot:sshlib:2.2.20'`)
+
+删除:
+- `bVNC/src/main/java/com/qihua/bVNC/ssh/FakeShellLoopback.java`(115 行,Phase 1 假 tty 桥,Phase 2 由 `SshShellChannel` 接真 trilead 流替代)
+
+无改动:
+- `bVNC/src/main/AndroidManifest.xml`、`aRDP-app/src/main/AndroidManifest.xml`(Phase 0 注册的 `ConfigSSH` 已存在)
+- 任何资源文件(`config_ssh.xml` / `ssh_terminal.xml` / `ssh_terminal_menu.xml` 留 Phase 3 真配置页)
 

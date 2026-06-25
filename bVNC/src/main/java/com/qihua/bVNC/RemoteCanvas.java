@@ -71,6 +71,7 @@ import com.qihua.bVNC.dialogs.GetTextFragment;
 import com.qihua.bVNC.input.InputHandler;
 import com.qihua.bVNC.input.InputHandlerTouchpad;
 import com.qihua.bVNC.input.RemoteCanvasHandler;
+import com.qihua.bVNC.ssh.SSHConnection;
 import com.qihua.bVNC.input.RemoteKeyboard;
 import com.qihua.bVNC.input.RemotePointer;
 import com.qihua.bVNC.input.RemoteSshKeyboard;

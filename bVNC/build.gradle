@@ -65,6 +65,9 @@ dependencies {
 
     implementation files('libs/com.antlersoft.android.contentxml.jar')
     implementation files('libs/com.antlersoft.android.db.jar')
+    // SSH 终端依赖:connectbot 维护的 trilead-ssh2 fork,包名仍是 com.trilead.ssh2.*。
+    // pubkeyGenerator 已经 'api' 它,这里 bVNC 也直接 import trilead 类,需要显式 api 拉过来。
+    api 'org.connectbot:sshlib:2.2.20'
     // Current version of bVNC is built with bouncycastle with DH anon ciphers enabled. See https://github.com/qihua/bc-java
     //implementation files("libs/bctls-jdk18on-1.70.jar")
     implementation group: 'org.bouncycastle', name: 'bctls-jdk15on', version: '1.70'

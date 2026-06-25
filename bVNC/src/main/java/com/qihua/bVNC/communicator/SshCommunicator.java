@@ -1,33 +1,44 @@
 package com.qihua.bVNC.communicator;
 
 import android.os.Handler;
+import android.util.Log;
 
+import com.qihua.bVNC.ssh.SSHConnection;
 import com.undatech.opaque.RemoteConnectable;
 
 /**
- * Phase 0: stub RfbConnectable for SSH. Fixed framebuffer 1280x720,
- * no real connection. Goal is to validate the "render-to-mbitmap"
- * architectural contract before any SSH networking is wired in.
+ * {@link RemoteConnectable} adapter for the SSH terminal protocol. The
+ * "connection" here is a trilead-backed shell session, not a graphics
+ * protocol — most {@code write*} methods are no-ops, there is no
+ * per-frame framebuffer-update cycle, and the only state pushed back
+ * to the canvas is via TermSession's {@code setUpdateCallback}
+ * (handled by {@code SshConnectionInitializer}, not via this class).
  *
- * Most write* methods are no-ops: there is no real protocol to write
- * to in Phase 0. They are only present to satisfy RfbConnectable's
- * abstract API.
- *
- * Phase 2 will replace the hardcoded dimensions with the actual
- * TermSession rows/cols, and trigger redraws on PTY output.
+ * <p>Phase 2 holds an {@link SSHConnection} reference so {@link #close()}
+ * can tear down the underlying SSH tunnel. The reference is injected
+ * by {@code SshConnectionInitializer.initialize()} via the package-private
+ * {@link #setSshConnection(SSHConnection)} setter.
  */
 public class SshCommunicator extends RemoteConnectable {
+    private static final String TAG = "SshCommunicator";
 
     private final int framebufferWidth;
     private final int framebufferHeight;
     private boolean inNormalProtocol = false;
     private boolean certificateAccepted = false;
+    /** Injected by SshConnectionInitializer so close() can tear down the SSH tunnel. */
+    private SSHConnection sshConnection;
 
     public SshCommunicator(boolean debugLogging, Handler handler,
                            int framebufferWidth, int framebufferHeight) {
         super(debugLogging, handler);
         this.framebufferWidth = framebufferWidth;
         this.framebufferHeight = framebufferHeight;
+    }
+
+    /** Inject the SSHConnection so {@link #close()} can tear it down. */
+    public void setSshConnection(SSHConnection sshConnection) {
+        this.sshConnection = sshConnection;
     }
 
     @Override
@@ -92,6 +103,15 @@ public class SshCommunicator extends RemoteConnectable {
 
     @Override
     public void close() {
+        if (sshConnection != null) {
+            try {
+                Log.i(TAG, "close: terminating SSH tunnel");
+                sshConnection.terminateSSHTunnel();
+            } catch (Throwable t) {
+                Log.w(TAG, "close: terminateSSHTunnel failed", t);
+            }
+            sshConnection = null;
+        }
     }
 
     @Override

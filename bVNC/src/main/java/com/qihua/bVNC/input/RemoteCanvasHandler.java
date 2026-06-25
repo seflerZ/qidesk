@@ -18,7 +18,7 @@ import androidx.fragment.app.FragmentManager;
 
 import com.qihua.bVNC.RemoteCanvas;
 import com.qihua.bVNC.RemoteCanvasActivity;
-import com.qihua.bVNC.SSHConnection;
+import com.qihua.bVNC.ssh.SSHConnection;
 import com.qihua.bVNC.Utils;
 import com.qihua.bVNC.dialogs.GetTextFragment;
 import com.undatech.opaque.Connection;

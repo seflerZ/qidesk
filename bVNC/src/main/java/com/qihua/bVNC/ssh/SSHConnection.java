@@ -17,7 +17,7 @@
  * USA.
  */
 
-package com.qihua.bVNC;
+package com.qihua.bVNC.ssh;
 
 import android.content.Context;
 import android.os.Bundle;
@@ -27,7 +27,12 @@ import android.util.Base64;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.qihua.bVNC.Constants;
+import com.qihua.bVNC.RemoteCanvas;
+import com.qihua.bVNC.SecureTunnel;
+import com.qihua.bVNC.Utils;
 import com.qihua.bVNC.dialogs.GetTextFragment;
+import com.qihua.bVNC.R;
 import com.qihua.pubkeygenerator.PubkeyUtils;
 import com.trilead.ssh2.Connection;
 import com.trilead.ssh2.ConnectionInfo;
@@ -36,7 +41,6 @@ import com.trilead.ssh2.KnownHosts;
 import com.trilead.ssh2.Session;
 import com.undatech.opaque.MessageDialogs;
 import com.undatech.opaque.RemoteClientLibConstants;
-import com.qihua.bVNC.R;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -55,7 +59,11 @@ import java.util.concurrent.CountDownLatch;
 public class SSHConnection implements InteractiveCallback, GetTextFragment.OnFragmentDismissedListener {
     private final static String TAG = "SSHConnection";
     private final static int MAXTRIES = 3;
-    private final static int MAX_AUTH_RETRIES = 3;
+    /** TEMP DEBUG (Phase 2): set to 0 so the first auth failure throws
+     *  instead of looping into the GET_SSH_CREDENTIALS dialog. Lets the
+     *  user see in logcat WHY the hardcoded password was rejected
+     *  (wrong password? server required keyboard-interactive? etc). */
+    private final static int MAX_AUTH_RETRIES = 0;
     private final static int MAX_DECRYPTION_ATTEMPTS = 3;
     private final int numPortTries = 1000;
     private Connection connection;
@@ -144,6 +152,15 @@ public class SSHConnection implements InteractiveCallback, GetTextFragment.OnFra
         return idHash;
     }
 
+    /**
+     * Returns the trilead Session opened by {@link #openShellSession()}, or null
+     * if no shell session is currently open. Phase 2 SSH terminal uses this to
+     * bridge the shell's stdio into TermSession's piped transport.
+     */
+    public Session getSession() {
+        return session;
+    }
+
     public void setVerificationCode(String verificationCode) {
         this.verificationCode = verificationCode;
         this.userInputLatch.countDown();
@@ -220,73 +237,8 @@ public class SSHConnection implements InteractiveCallback, GetTextFragment.OnFra
     public int initializeSSHTunnel() throws Exception {
         int port = -1;
 
-        // Attempt to connect.
-        if (!connect())
-            throw new Exception(context.getString(R.string.error_ssh_unable_to_connect));
-
-        // Verify host key against saved one.
-        if (!verifyHostKey()) {
-            this.changeOrInitializeSshHostKey(true);
-        }
-
-        // Authenticate and set up port forwarding.
-        if (!usePubKey) {
-            Log.i(TAG, "SSH tunnel not configured to use public key, trying password auth");
-            if (!canAuthWithPass()) {
-                Log.e(TAG, "SSH server does not support password authentication so throw an error");
-                String authMethods = Arrays.toString(connection.getRemainingAuthMethods(user));
-                throw new Exception(context.getString(R.string.error_ssh_kbd_auth_method_unavail) + " " + authMethods);
-            }
-            attemptSshPasswordAuthentication();
-        } else {
-            Log.i(TAG, "SSH tunnel is configured to use public key, will attempt");
-            if (canAuthWithPubKey()) {
-                Log.i(TAG, "SSH server supports pubkey authentication, continuing");
-                // Pubkey auth method is allowed so try it.
-                if (!authenticateWithPubKey()) {
-                    if (!canAuthWithPubKey()) {
-                        // If pubkey authentication is now no longer available, we know pubkey
-                        // authentication succeeded but the server wants further authentication.
-                        Log.i(TAG, "SSH server needs more than key auth, trying password auth in addition");
-                        MessageDialogs.displayToast(context, handler,
-                                context.getString(R.string.ssh_server_needs_password_in_addition_to_key),
-                                Toast.LENGTH_LONG);
-                        attemptSshPasswordAuthentication();
-                    } else {
-                        Log.e(TAG, "Failed to authenticate to SSH server with key");
-                        throw new Exception(context.getString(R.string.error_ssh_key_auth_fail));
-                    }
-                }
-            } else {
-                // Pubkey authentication is not available, so try password if one was supplied.
-                if (canAuthWithPass()) {
-                    Log.i(TAG, "Key auth enabled, but server is asking for password, trying password auth");
-                    MessageDialogs.displayToast(context, handler,
-                            context.getString(R.string.ssh_server_needs_password_in_addition_to_key),
-                            Toast.LENGTH_LONG);
-                    attemptSshPasswordAuthentication();
-                    Log.d(TAG, "isAuthenticationComplete: " + connection.isAuthenticationComplete());
-                    Log.d(TAG, "isAuthenticationPartialSuccess: " + connection.isAuthenticationPartialSuccess());
-                    if (!connection.isAuthenticationComplete()) {
-                        Log.i(TAG, "Key auth enabled, password authenticated succeeded, and server is asking for key auth");
-                        // If password authentication is now no longer available, we know password
-                        // authentication succeeded but the server wants further authentication.
-                        if (!authenticateWithPubKey()) {
-                            Log.e(TAG, "Key authentication failed");
-                            throw new Exception(context.getString(R.string.error_ssh_key_auth_fail));
-                        }
-                    } else if (!connection.isAuthenticationComplete()) {
-                        Log.e(TAG, "Password authentication failed");
-                        throw new Exception(context.getString(R.string.error_ssh_pwd_auth_fail));
-                    }
-                } else {
-                    Log.e(TAG, "SSH server does not support key auth, but SSH tunnel is configured to use it");
-                    String authMethods = Arrays.toString(connection.getRemainingAuthMethods(user));
-                    throw new Exception(context.getString(R.string.error_ssh_pubkey_auth_method_unavail)
-                            + " " + authMethods);
-                }
-            }
-        }
+        // Establish connection + authenticate (shared with openShellSession).
+        connectAndAuthenticate();
 
         // Run a remote command if commanded to.
         if (autoXEnabled) {
@@ -335,7 +287,7 @@ public class SSHConnection implements InteractiveCallback, GetTextFragment.OnFra
      * @return the local port forwarded to the given remote port
      * @throws Exception
      */
-    int createLocalPortForward(int port) throws Exception {
+    public int createLocalPortForward(int port) throws Exception {
         int localForwardedPort;
 
         // At this point we know we are authenticated.
@@ -357,8 +309,6 @@ public class SSHConnection implements InteractiveCallback, GetTextFragment.OnFra
     public boolean connect() {
 
         try {
-            connection.setCompression(false);
-
             // TODO: Try using the provided KeyVerifier instead of verifying keys myself.
             connectionInfo = connection.connect(null, 6000, 24000);
 
@@ -386,7 +336,161 @@ public class SSHConnection implements InteractiveCallback, GetTextFragment.OnFra
      * Disconnects from remote server.
      */
     public void terminateSSHTunnel() {
-        connection.close();
+        if (session != null) {
+            try {
+                session.close();
+            } catch (Throwable t) {
+                Log.w(TAG, "session.close failed", t);
+            }
+            session = null;
+        }
+        if (connection != null) {
+            connection.close();
+        }
+    }
+
+    /**
+     * Notify the SSH server that the local terminal grid size changed
+     * (e.g. after fold/unfold). Passes through to trilead's
+     * {@code Session.resizePTY}. No-op if the shell hasn't been opened
+     * yet (PTY not allocated) or if the server rejects the resize.
+     */
+    public void resizePty(int cols, int rows) {
+        Session s = session;
+        if (s == null) return;
+        try {
+            s.resizePTY(cols, rows, 0, 0);
+            Log.i(TAG, "resizePty: " + cols + "x" + rows);
+        } catch (Throwable t) {
+            Log.w(TAG, "resizePty failed: " + t.getMessage());
+        }
+    }
+
+    /**
+     * Connects to the SSH server, verifies the host key, and authenticates
+     * using the configured method (password or public key). The shared
+     * "connect+auth" path used by both VNC-over-SSH tunneling
+     * ({@link #initializeSSHTunnel()}) and the Phase 2 SSH terminal
+     * ({@link #openShellSession()}).
+     *
+     * @throws Exception if connect / verify / auth fails after retries
+     */
+    private void connectAndAuthenticate() throws Exception {
+        if (!connect())
+            throw new Exception(context.getString(R.string.error_ssh_unable_to_connect));
+
+        if (!verifyHostKey()) {
+            this.changeOrInitializeSshHostKey(true);
+        }
+
+        if (!usePubKey) {
+            Log.i(TAG, "SSH not configured to use public key, trying password auth");
+            if (!canAuthWithPass()) {
+                Log.e(TAG, "SSH server does not support password authentication");
+                String authMethods = Arrays.toString(connection.getRemainingAuthMethods(user));
+                throw new Exception(context.getString(R.string.error_ssh_kbd_auth_method_unavail) + " " + authMethods);
+            }
+            attemptSshPasswordAuthentication();
+        } else {
+            Log.i(TAG, "SSH configured to use public key, will attempt");
+            if (canAuthWithPubKey()) {
+                Log.i(TAG, "SSH server supports pubkey authentication, continuing");
+                if (!authenticateWithPubKey()) {
+                    if (!canAuthWithPubKey()) {
+                        Log.i(TAG, "SSH server needs more than key auth, trying password auth in addition");
+                        MessageDialogs.displayToast(context, handler,
+                                context.getString(R.string.ssh_server_needs_password_in_addition_to_key),
+                                Toast.LENGTH_LONG);
+                        attemptSshPasswordAuthentication();
+                    } else {
+                        Log.e(TAG, "Failed to authenticate to SSH server with key");
+                        throw new Exception(context.getString(R.string.error_ssh_key_auth_fail));
+                    }
+                }
+            } else if (canAuthWithPass()) {
+                Log.i(TAG, "Key auth enabled, but server is asking for password, trying password auth");
+                MessageDialogs.displayToast(context, handler,
+                        context.getString(R.string.ssh_server_needs_password_in_addition_to_key),
+                        Toast.LENGTH_LONG);
+                attemptSshPasswordAuthentication();
+                if (!connection.isAuthenticationComplete()) {
+                    if (!authenticateWithPubKey()) {
+                        Log.e(TAG, "Key authentication failed");
+                        throw new Exception(context.getString(R.string.error_ssh_key_auth_fail));
+                    }
+                } else if (!connection.isAuthenticationComplete()) {
+                    Log.e(TAG, "Password authentication failed");
+                    throw new Exception(context.getString(R.string.error_ssh_pwd_auth_fail));
+                }
+            } else {
+                Log.e(TAG, "SSH server does not support key auth, but SSH tunnel is configured to use it");
+                String authMethods = Arrays.toString(connection.getRemainingAuthMethods(user));
+                throw new Exception(context.getString(R.string.error_ssh_pubkey_auth_method_unavail)
+                        + " " + authMethods);
+            }
+        }
+    }
+
+    /**
+     * Connects, authenticates, and opens an interactive shell channel for
+     * Phase 2 SSH terminal. Unlike {@link #initializeSSHTunnel()} this
+     * does NOT run AutoX or set up port forwarding — the returned Session
+     * is a long-lived shell whose stdio is bridged to TermSession by
+     * {@code SshShellChannel}.
+     *
+     * <p>Must be called on a background thread (the TCP handshake and
+     * auth round-trips can block for seconds). The caller is responsible
+     * for the matching {@link #terminateSSHTunnel()} when finished.
+     *
+     * <p>PTY negotiation: the shell needs a real PTY (with sane
+     * columns/rows, line discipline, echo) for the line-editing and
+     * line-wrapping behavior the user expects. {@code startShell()} with
+     * no prior {@code requestPTY} opens a "dumb" PTY of unknown size,
+     * which is what causes the visible garbled formatting (server wraps
+     * at 80 cols while the screen renders at 200+, echo behaves
+     * inconsistently, CR/LF conversion is off). We request an xterm-256color
+     * PTY at the dimensions TermSession will use.
+     *
+     * @return true if a shell session is now open (call {@link #getSession()})
+     * @throws Exception on connect / verify / auth / startShell failure
+     */
+    public boolean openShellSession() throws Exception {
+        // Tear down any prior shell so a retry doesn't leak a dangling session.
+        if (session != null) {
+            try { session.close(); } catch (Throwable t) { Log.w(TAG, "stale session.close failed", t); }
+            session = null;
+        }
+        connectAndAuthenticate();
+        Log.i(TAG, "openShellSession: authentication complete, opening shell channel");
+        session = connection.openSession();
+        requestShellPty(session);
+        session.startShell();
+        return true;
+    }
+
+    /**
+     * Request an xterm-256color PTY sized to match TermSession's grid.
+     * Called from {@link #openShellSession()} immediately before
+     * {@code startShell()}. The columns/rows are conservative defaults;
+     * {@code SshShellChannel} / {@code SshTerminalRenderer} can call
+     * {@code session.resizePTY()} on the returned session when the grid
+     * size changes (e.g. fold/unfold).
+     */
+    private void requestShellPty(com.trilead.ssh2.Session s) throws IOException {
+        try {
+            s.requestPTY("xterm-256color", 80, 24, 640, 480, null);
+        } catch (IOException e) {
+            // Some minimal servers reject the termtype or extended modes;
+            // fall back to the simplest PTY shape that still requests a
+            // sized terminal. If even this fails, let startShell()
+            // proceed with a "dumb" PTY.
+            Log.w(TAG, "PTY request with modes failed, falling back: " + e.getMessage());
+            try {
+                s.requestPTY("xterm", 80, 24, 0, 0, null);
+            } catch (IOException e2) {
+                Log.w(TAG, "PTY request fallback failed, starting with dumb PTY: " + e2.getMessage());
+            }
+        }
     }
 
     private boolean verifyHostKey() {
@@ -463,12 +567,17 @@ public class SSHConnection implements InteractiveCallback, GetTextFragment.OnFra
         boolean isAuthenticated = false;
 
         try {
+            Log.i(TAG, "authenticateWithPassword: hasKbdInt=" + hasKeyboardInteractiveAuth()
+                    + " hasPwd=" + hasPasswordAuth()
+                    + " user=" + user
+                    + " passwordLen=" + (password == null ? -1 : password.length()));
             if (hasKeyboardInteractiveAuth()) {
                 Log.i(TAG, "Trying SSH keyboard-interactive authentication.");
                 isAuthenticated = connection.authenticateWithKeyboardInteractive(user, this);
             }
             if (!isAuthenticated && hasPasswordAuth()) {
-                Log.i(TAG, "Trying SSH password authentication. " + user + " " + password);
+                Log.i(TAG, "Trying SSH password authentication. user=" + user
+                        + " passwordLen=" + (password == null ? -1 : password.length()));
                 isAuthenticated = connection.authenticateWithPassword(user, password);
             }
             return isAuthenticated;
@@ -509,7 +618,26 @@ public class SSHConnection implements InteractiveCallback, GetTextFragment.OnFra
     private boolean authenticateWithPubKey() throws Exception {
         decryptAndRecoverKey();
         Log.i(TAG, "Trying SSH pubkey authentication.");
-        return connection.authenticateWithPublicKey(user, kp);
+        // trilead-ssh2 build222 dropped the (String, KeyPair) overload;
+        // write the OpenSSH-format private key to a temp file and pass
+        // that, with an empty passphrase when unencrypted.
+        java.io.File keyFile = writeKeyToTempFile(sshPrivKey);
+        try {
+            String pp = (passphrase != null) ? passphrase : "";
+            return connection.authenticateWithPublicKey(user, keyFile, pp);
+        } finally {
+            // Best-effort cleanup of the temp file.
+            try { keyFile.delete(); } catch (Throwable ignored) {}
+        }
+    }
+
+    private static java.io.File writeKeyToTempFile(String openSshKey) throws IOException {
+        java.io.File f = java.io.File.createTempFile("sshkey-", ".pem");
+        f.deleteOnExit();
+        try (java.io.FileWriter w = new java.io.FileWriter(f)) {
+            w.write(openSshKey);
+        }
+        return f;
     }
 
     private int createPortForward(int localPortStart, String remoteHost, int remotePort) {
