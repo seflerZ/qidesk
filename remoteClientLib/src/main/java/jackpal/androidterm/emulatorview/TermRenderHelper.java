@@ -1,6 +1,7 @@
 package jackpal.androidterm.emulatorview;
 
 import android.graphics.Canvas;
+import android.graphics.Typeface;
 
 /**
  * Bridge into the AAR's package-private rendering surface. Lives in the
@@ -34,15 +35,21 @@ public final class TermRenderHelper {
      * Assumes {@code session.initializeEmulator(cols, rows)} has already
      * been called (caller guarantees this — initializer + renderer wire it
      * up at startup).
+     *
+     * @param typeface the monospace font to render with. Pass
+     *                 {@link TermFontFactory#load} from
+     *                 SshConnectionInitializer in production; a default
+     *                 {@code Typeface.MONOSPACE} is used if null.
      */
-    public void render(TermSession session, Canvas canvas, int fontSizePx, int paddingPx) {
+    public void render(TermSession session, Canvas canvas, int fontSizePx, int paddingPx, Typeface typeface) {
         TerminalEmulator emu = session.getEmulator();
         TranscriptScreen screen = session.getTranscriptScreen();
         if (emu == null || screen == null) {
             return;
         }
         if (renderer == null || rendererFontSize != fontSizePx) {
-            renderer = new PaintRenderer(fontSizePx, SOLARIZED);
+            renderer = new PaintRenderer(fontSizePx, SOLARIZED,
+                    typeface != null ? typeface : Typeface.MONOSPACE);
             rendererFontSize = fontSizePx;
         }
         charWidth = renderer.getCharacterWidth();
@@ -83,10 +90,15 @@ public final class TermRenderHelper {
      * Probe the cell size of a given font without rendering anything.
      * Used by the renderer before its first paint, so it can call
      * TermSession.updateSize(cols, rows) with sensible values.
+     *
+     * @param typeface the monospace font that will be used to render.
+     *                 Cell metrics depend on the font, so the probe must
+     *                 use the same font that {@code render} will use.
      */
-    public void probe(int fontSizePx) {
+    public void probe(int fontSizePx, Typeface typeface) {
         if (renderer == null || rendererFontSize != fontSizePx) {
-            renderer = new PaintRenderer(fontSizePx, SOLARIZED);
+            renderer = new PaintRenderer(fontSizePx, SOLARIZED,
+                    typeface != null ? typeface : Typeface.MONOSPACE);
             rendererFontSize = fontSizePx;
         }
         charWidth = renderer.getCharacterWidth();

@@ -1241,16 +1241,48 @@ SshConnectionInitializer: teardown: closing SSH
 SshConnectionInitializer: stopHeartbeat
 ```
 
-## 11. Phase 2 实现文件清单(2026-06-24 状态)
+### 10.21 Nerd Font + CJK 字体支持(2026-06-25 新增)
+
+**问题**:Phase 2 设备验收第 4 步"看到 zsh prompt(`~ ❯`),oh-my-zsh 的部分 unicode glyph 显示为方框(字体不支持,Phase 3 改)" —— 当时 `PaintRenderer` 走 `Typeface.MONOSPACE`,系统字体不含 Nerd PUA 码点,U+E0B0 / U+F080 / U+E5FA 等图标显示为空白或方框。
+
+**解决**:打包 `SarasaMonoSCNerd-Regular.ttf`(~24MB,48556 码点,含 ASCII + CJK 29666 字 + Nerd PUA-A 1356 图标)到 `bVNC/src/main/assets/fonts/`,`PaintRenderer` 改用资产字体。
+
+**为什么不打包 CaskaydiaMono Nerd 做 fallback**(实测):
+- 两份字体 `unitsPerEm` 不一致(Sarasa 1000 vs CaskaydiaMono 2048)
+- 同一字符 'X' 的 advance 不同(Sarasa 500/em vs CaskaydiaMono 1200/em)
+- `Typeface.Builder.addFont` API 26+ 合并后,Android 按 codepoint 自动选字体,但每个字符按所属字体的 metrics 渲染 → Nerd 图标列宽比 ASCII 列宽 17%,导致 prompt 错列
+- **实测结论:只塞 Sarasa 一份,放弃合并族**;2 个冷门图标(kotlin U+E634、emacs U+E632)显示为空,可接受
+
+**新增类** `bVNC/src/main/java/com/qihua/bVNC/ssh/TermFontFactory.java`:
+```java
+public static Typeface load(AssetManager assets) {
+    // 优先 assets/fonts/SarasaMonoSCNerd-Regular.ttf,失败 fallback Typeface.MONOSPACE
+    // 双检锁缓存,Android font loader 启动慢但只跑一次
+}
+```
+
+**链路**:SshConnectionInitializer 拿 ctx → SshTerminalRenderer(density, channel, ctx) → TermFontFactory.load(ctx.getAssets()) → TermRenderHelper.probe/render(..., typeface) → PaintRenderer(fontSize, scheme, typeface) → mTextPaint.setTypeface(typeface)
+
+**Bold 文本**:仍走 `Paint.setFakeBoldText(true)`(Sarasa Regular 没有 Bold 字形),Nerd 图标略发糊,ASCII 几乎看不出。Italic 同理(VT100 italic 在终端几乎不出现)。
+
+**体积影响**:APK 增加 ~24MB(`assets/fonts/SarasaMonoSCNerd-Regular.ttf`)。
+
+## 11. Phase 2 实现文件清单(2026-06-24 状态,2026-06-25 增补字体)
 
 新增:
 - `bVNC/src/main/java/com/qihua/bVNC/ssh/SshShellChannel.java`(220 行,双 pipe + 后台 read/write pump)
+- `bVNC/src/main/java/com/qihua/bVNC/ssh/TermFontFactory.java`(§10.21,~95 行,从 APK assets 加载 SarasaMonoSCNerd-Regular.ttf,缓存单例,fallback Typeface.MONOSPACE)
+- `bVNC/src/main/assets/fonts/SarasaMonoSCNerd-Regular.ttf`(~24MB,Sarasa Mono SC + Nerd Font PUA-A + 完整中日韩,48556 码点)
 
 修改:
-- `bVNC/src/main/java/com/qihua/bVNC/SSHConnection.java`(753 → 850 行,新增 `getSession()` / `openShellSession()` / `resizePty()` / 抽出 `connectAndAuthenticate()` 共享路径;`authenticateWithPubKey` 走 temp file)
-- `bVNC/src/main/java/com/qihua/bVNC/ssh/SshTerminalRenderer.java`(构造器签名改接 `SshShellChannel`,加 `GridSizeListener` 接口 + `seedBackground` 一次性擦底色,删 `renderInto` 开头 `drawColor`)
-- `bVNC/src/main/java/com/qihua/bVNC/connection/SshConnectionInitializer.java`(加 SSH-Connect 后台线程 / SSH-Paint HandlerThread / 5 FPS heartbeat / `ReentrantLock` 保护 fold/unfold 与 connect 竞态 / `paintAndRedraw` 全部走 paint thread)
+- `bVNC/src/main/java/com/qihua/bVNC/ssh/SSHConnection.java`(Phase 2 整体迁移到 ssh 子包,package 改 `com.qihua.bVNC.ssh`)
+- `bVNC/src/main/java/com/qihua/bVNC/ssh/SshTerminalRenderer.java`(构造器加 Context 参数,从 ctx 取 Typeface;helper.probe/render 透传 typeface)
+- `remoteClientLib/src/main/java/jackpal/androidterm/emulatorview/TermRenderHelper.java`(probe/render 加 Typeface 参数,透传给 PaintRenderer)
+- `remoteClientLib/jni/libs/deps/Android-Terminal-Emulator/emulatorview/src/main/java/jackpal/androidterm/emulatorview/PaintRenderer.java`(构造器加 Typeface 参数,旧构造器保留为 Typeface.MONOSPACE 兼容入口)
+- `bVNC/src/main/java/com/qihua/bVNC/connection/SshConnectionInitializer.java`(创建 SshTerminalRenderer 时传 ctx)
 - `bVNC/src/main/java/com/qihua/bVNC/communicator/SshCommunicator.java`(`close()` 调 `terminateSSHTunnel`,加 `setSshConnection` public setter)
+- `bVNC/src/main/java/com/qihua/bVNC/RemoteCanvas.java`(`import com.qihua.bVNC.ssh.SSHConnection`)
+- `bVNC/src/main/java/com/qihua/bVNC/input/RemoteCanvasHandler.java`(import 路径更新)
 - `bVNC/src/main/java/com/qihua/bVNC/ConfigSSH.java`(硬编码 `sshServer/sshPort/sshUser/sshPassword`,Phase 3 改为真配置页)
 - `bVNC/build.gradle`(+1 行 `api 'org.connectbot:sshlib:2.2.20'`)
 

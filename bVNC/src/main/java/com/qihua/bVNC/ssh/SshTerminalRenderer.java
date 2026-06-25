@@ -1,8 +1,10 @@
 package com.qihua.bVNC.ssh;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.util.Log;
 
 import com.qihua.bVNC.Constants;
@@ -40,6 +42,8 @@ public class SshTerminalRenderer {
     private final TermRenderHelper helper = new TermRenderHelper();
     private final TermSession termSession = new TermSession();
     private final SshShellChannel channel;
+    /** Terminal font (Sarasa Mono SC Nerd + Nerd PUA-A + CJK). */
+    private final Typeface terminalTypeface;
 
     private int currentCols = -1;
     private int currentRows = -1;
@@ -54,10 +58,17 @@ public class SshTerminalRenderer {
      *                uses {@link SshShellChannel}; the interface matches
      *                the Phase 1 fake-shell so this class doesn't need
      *                to know which one it got.
+     * @param ctx     Context for loading the bundled terminal font asset.
+     *                May be {@code null} for tests; the renderer then
+     *                falls back to {@link Typeface#MONOSPACE} via
+     *                {@link TermFontFactory}.
      */
-    public SshTerminalRenderer(float density, SshShellChannel channel) throws IOException {
+    public SshTerminalRenderer(float density, SshShellChannel channel, Context ctx) throws IOException {
         this.density = density;
         this.channel = channel;
+        this.terminalTypeface = ctx != null
+                ? TermFontFactory.load(ctx.getAssets())
+                : Typeface.MONOSPACE;
         termSession.setTermIn(channel.getTerminalIn());
         termSession.setTermOut(channel.getTerminalOut());
     }
@@ -96,7 +107,7 @@ public class SshTerminalRenderer {
      * @param onUpdate    invoked on each TermSession screen change
      */
     public void open(int initialPxW, int initialPxH, Runnable onUpdate) {
-        helper.probe(fontSizePx());
+        helper.probe(fontSizePx(), terminalTypeface);
         int pad = paddingPx();
         int cols = TermRenderHelper.computeCols(emptyCanvasOf(initialPxW), helper.charWidth, pad);
         int rows = TermRenderHelper.computeRows(emptyCanvasOf(initialPxH), helper.charHeight, pad);
@@ -142,7 +153,7 @@ public class SshTerminalRenderer {
                 gridSizeListener.onGridSizeChanged(cols, rows);
             }
         }
-        helper.render(termSession, c, fontSizePx(), pad);
+        helper.render(termSession, c, fontSizePx(), pad, terminalTypeface);
     }
 
     public TermSession getTermSession() {

@@ -214,8 +214,10 @@ public class SshConnectionInitializer extends ConnectionInitializer {
         // 2. Build the channel + renderer. TermSession is wired to the
         //    channel's pipes now; the channel starts pumping the moment
         //    doConnect() calls channel.attach() with a live trilead Session.
+        //    The context is needed for loading the terminal font (Sarasa Mono
+        //    SC Nerd) from APK assets.
         channel = new SshShellChannel();
-        renderer = new SshTerminalRenderer(density, channel);
+        renderer = new SshTerminalRenderer(density, channel, ctx);
         // Forward grid-size changes to the remote PTY so the shell's
         // line editor knows the new dimensions. Trilead's resizePTY is
         // a no-op if the shell isn't open yet — safe to call preemptively.
@@ -578,7 +580,7 @@ public class SshConnectionInitializer extends ConnectionInitializer {
 
             // 3. Build a fresh channel + renderer.
             channel = new SshShellChannel();
-            renderer = new SshTerminalRenderer(density, channel);
+            renderer = new SshTerminalRenderer(density, channel, ctx);
             renderer.setGridSizeListener((cols, rows) -> {
                 if (sshConnection != null) sshConnection.resizePty(cols, rows);
             });
