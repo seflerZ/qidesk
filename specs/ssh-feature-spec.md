@@ -238,6 +238,33 @@ remote-desktop-clients/
 
 ### Phase 3 — 完善
 
+#### §3.7 — 终端状态机替换为 libvterm(JNI)(2026-06-26,新增,详见 [`libvterm-integration.md`](./libvterm-integration.md))
+
+**目标**:Phase 3.1 完成后 vim/less/htop 退出时双重 prompt / 残留内容等 AAR 缺陷已无法通过修 AAR 解决,换 libvterm(TragicWarrior 维护,2026-06-26 昨天还在推)。
+
+**完整 spec 见** [`specs/libvterm-integration.md`](./libvterm-integration.md),本节只列差异点。
+
+**架构决策**:
+- 业务层(`SshConnectionInitializer` / `SshShellChannel` / `SshCommunicator` / `SshTerminalConnection` / `ConfigSSH` / 折叠屏 / paint HandlerThread / 字体加载) **0 改动**
+- 状态机层(`SshTerminalRenderer` / `TermRenderHelper`) **整体重写**
+- AAR(`emulatorview-release.aar` + `TermRenderHelper.java`) **删除**
+- 引入 NDK / CMake(项目首次跑 native build)
+
+**关键技术点**:
+- libvterm C + JNI 桥(~400 行 C)
+- 状态机不主动回调 Java,Java 在 paint 线程上 `pollDirty()` 拉
+- `VTermCanvasRenderer` 自己用 `TextPaint` + `Canvas.drawText`,不走 AAR 的 `BaseTextRenderer`
+- 折叠屏 / paint HandlerThread / 字体 / 认证 全部沿用
+
+**预期效果**:
+- vim / less / htop 退出后**无双重 prompt / 残留**
+- zsh completion **不错位**
+- OSC 52 / OSC 4 / 鼠标 SGR 模式 等 AAR 未实现功能 libvterm 标准支持
+
+**工期预估**:6-9 工作日(不含设备调试)
+
+**不做**:OSC 52 剪贴板 / OSC 4 颜色查询 / 鼠标 / 字体回退(留 Phase 4 评估 connectbot/termlib)
+
 #### §3.1 — ConfigSSH 真配置页 + SSH 终端独立协议(2026-06-25) ✅
 
 **目标**:把 Phase 2 的硬编码 `ConfigSSH.java` 改成 `MainConfiguration` 子类,跟 `ConfigVNC` / `ConfigRDP` 同形态;同时把 SSH 终端从 `SSHConnection`(VNC-over-SSH 隧道通用层)抽离,变成**独立协议**走 VNC-style 字段。
@@ -548,6 +575,7 @@ public class SshConnectionInitializer extends ConnectionInitializer {
 | Phase 1 | 终端开屏即显示 welcome banner + `$ ` 提示符;键入字符逐个回显;回车换行再次打印 `$ `;软键盘/硬键盘都能用;折叠→展开不黑屏;`mbitmap` 实时刷新(UpdateCallback 单路径,无闪烁) | ✅ |
 | Phase 2 | 真连 `ssh user@sefler.site:2222`(局域网真服务器,Honor 折叠屏 + emulator `10.0.2.2` 都验证);执行 `ls` / `uname -a` / `pwd` 等命令看到真实输出;`FakeShellLoopback` 整类删除,`SshShellChannel` 接 trilead 流替代;架构对齐 RDP/NVStream 的"独立 worker + drawBitmap"模型(`SSH-Connect` 线程跑 trilead connect+auth+startShell,`SSH-Paint` HandlerThread 跑 `renderInto` 防主线程 paint 卡住 TermSession 写入链路);键盘 / 退格 / 中文 IME / ls 等命令输出全部实时响应,无闪烁;oh-my-zsh unicode glyph 不显示是字体问题(Phase 3 修);`adb logcat` 无 `NetworkOnMainThreadException` / zombie thread(2026-06-24 设备验收) | ✅ 设备验收通过 |
 | Phase 3 | UI 化的 `ConfigSSH extends MainConfiguration`(目前硬编码 4 个字段在 `ConfigSSH.java`);文本选择 / 复制粘贴;配色方案(Solarized Dark 等,`ColorScheme` 资源);字体大小调整;网络切换重连;密钥认证 UI(库侧已支持 `SSHConnection.authenticateWithPubKey`,只需 `ConfigSSH` 加切换 UI);oh-my-zsh unicode glyph(用支持 Nerd Font / Powerline 的字体替换 monospace) | ⏳ |
+| Phase 3.7 | 终端状态机替换为 libvterm(JNI);vim/less/htop 退出后无双重 prompt / 残留;zsh completion 不错位;为 Phase 3.3 剪贴板 / Phase 3.3+ 鼠标 SGR 模式做基础设施准备。完整 spec 见 [`libvterm-integration.md`](./libvterm-integration.md) | ⏳ |
 
 ---
 
@@ -1362,4 +1390,47 @@ public static Typeface load(AssetManager assets) {
 11. 回归冒烟:VNC / RDP / NVStream 直连 + VNC-over-SSH 隧道 各自能用
 12. fold/unfold:沿用 Phase 1/2 行为
 13. logcat:无 NetworkOnMainThreadException / 无 zombie thread
+
+---
+
+## 13. Phase 3.7 实现文件清单(2026-06-26,libvterm 替换 AAR)
+
+**架构改动**:终端状态机从 AAR(Android-Terminal-Emulator 2014 版)替换为 libvterm(TragicWarrior 维护,2026-06-26 活跃)。业务层 0 改动,状态机层整体重写。完整 spec 见 [`libvterm-integration.md`](./libvterm-integration.md)。
+
+新增:
+- `specs/libvterm-integration.md`(独立 spec,~500 行,决策/风险/验收)
+- `remoteClientLib/jni/CMakeLists.txt`(~30 行,CMake 入口)
+- `remoteClientLib/jni/src/vterm_jni.c`(~400 行,JNI 桥实现)
+- `remoteClientLib/jni/libs/deps/libvterm/`(完整 vendor,5000+ 行 C,TragicWarrior/libvterm)
+- `bVNC/src/main/java/com/qihua/bVNC/ssh/libvterm/SshTermStateMachine.java`(~150 行,Java 端 handle,包内 native 声明)
+- `bVNC/src/main/java/com/qihua/bVNC/ssh/libvterm/VTermCanvasRenderer.java`(~200 行,grid → Canvas 渲染,字体测量 / CJK 宽字符 / cursor 画法)
+
+修改:
+- `bVNC/src/main/java/com/qihua/bVNC/ssh/SshTerminalRenderer.java`(整体重写 ~200 行,`TermSession` → `SshTermStateMachine`,`TermRenderHelper` → `VTermCanvasRenderer`)
+- `bVNC/src/main/java/com/qihua/bVNC/input/RemoteSshKeyboard.java`(~3 行,`termSession.write(cp)` → `renderer.writeCodepoint(cp)`)
+- `remoteClientLib/build.gradle`(+CMake / externalNativeBuild 配置,− `api(name: 'emulatorview-release', ext: 'aar')`)
+- 根 `build.gradle`(+`android.ndkVersion '27.0.12077973'`)
+- `specs/ssh-feature-spec.md`(本节,§3.7 + §5 + §13)
+
+删除:
+- `remoteClientLib/emulatorview-release.aar`(2.4MB,Android-Terminal-Emulator AAR)
+- `remoteClientLib/src/main/java/jackpal/androidterm/emulatorview/TermRenderHelper.java`(AAR 同包 hack)
+
+无改动:
+- `bVNC/src/main/java/com/qihua/bVNC/connection/SshConnectionInitializer.java`(`paintAndRedraw` / `ensurePaintThread` / `stopPaintThread` / `rebuildSSHFramebuffer` 已通过 `setGridSizeListener` 解耦,**0 改动**)
+- `bVNC/src/main/java/com/qihua/bVNC/ssh/SshShellChannel.java`(只暴露 `InputStream`/`OutputStream`,已与状态机解耦,**0 改动**)
+- `bVNC/src/main/java/com/qihua/bVNC/communicator/SshCommunicator.java`(`setSshTerminalConnection` 接口不变,**0 改动**)
+- `bVNC/src/main/java/com/qihua/bVNC/ssh/SshTerminalConnection.java`(`connect`/`openShell`/`resizePty`/`close` API 不变,**0 改动**)
+- `bVNC/src/main/java/com/qihua/bVNC/ConfigSSH.java` + `main_ssh.xml` + `layout-large/main_ssh.xml`(**0 改动**)
+- `bVNC/src/main/java/com/qihua/bVNC/ssh/TermFontFactory.java`(字体加载不变,继续 Sarasa Mono SC Nerd,**0 改动**)
+- 折叠屏 / paint HandlerThread / fold-unfold 业务层全部沿用
+- `bVNC/src/main/java/com/qihua/bVNC/ssh/SSHConnection.java`(VNC-over-SSH 隧道类,**0 改动**)
+- `ConfigVNC` / `ConfigRDP` / `ConfigNVStream` / `ConfigSPICE`(其它 4 个协议配置页 0 改动)
+- `RemoteCanvas` / `RemoteCanvasActivity` / `ConnectionInitializer`(基类 0 改动)
+
+**端到端验收**(详见 `libvterm-integration.md` §10):
+- 编译:`./gradlew :remoteClientLib:assembleGplayRelease` + `:bVNC:compileGplayReleaseJavaWithJavac` + `:aRDP-app:assembleGplayDebug` 全成功,产出 `libvterm.so`(arm64-v8a),APK 体积净减少约 1.5MB
+- 功能:终端开屏显示 WELCOME banner / 软键盘输入回显 / 中文 IME / `ls` `pwd` 完整输出 / Backspace 实时 / 折叠展开
+- 修复:**vim 退出不再双重 prompt** + 残留清空 / less 退出正常 / htop 退出正常 / zsh completion 不错列
+- 回归:VNC/RDP/SPICE/NVStream 0 影响 / 折叠屏 fold/unfold 沿用 / logcat 无 UnsatisfiedLinkError / `grep -r "jackpal.androidterm.emulatorview" bVNC/src` 0 命中
 
