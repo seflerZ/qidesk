@@ -602,6 +602,8 @@ bVNC对应的功能如下：
   </string>
     <string name="rdp_password_hint">密码</string>
     <string name="rdp_server_empty">服务器或端口是空着。无法连接！</string>
+    <string name="ssh_server_empty">SSH 服务器地址不能为空</string>
+    <string name="ssh_user_empty">SSH 用户名不能为空</string>
     <string name="rdp_username_hint">用户名</string>
     <string name="remote_sound_disabled">声音已禁用</string>
     <string name="remote_sound_on_device">本地设备上的声音</string>

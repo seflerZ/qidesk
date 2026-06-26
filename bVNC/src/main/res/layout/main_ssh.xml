@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    SSH terminal configuration layout (Phase 3.1).
+
+    Reuses the field IDs (sshServer / sshPort / sshUser / sshPassword /
+    checkboxKeepSshPass) and the wrapper container IDs (sshServerEntry /
+    sshCredentials) that the rest of the SSH-tunnel code already
+    references. We deliberately do NOT include VNC/RDP fields (textIP /
+    textPORT / textUsername / textPASSWORD / geometryGroup / ...) nor the
+    SSH-tunnel pubkey UI (checkboxUseSshPubkey / sshPassphrase /
+    buttonGeneratePubkey) — those are unrelated to the SSH terminal
+    protocol. See ssh-feature-spec.md §3.1.
+
+    Companion file: layout-large/main_ssh.xml (same content, textAppearance
+    bumps from "Medium" to "Large" for tablets/foldables).
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent">
+
+    <LinearLayout
+        android:id="@+id/mainLayout"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="0dip">
+
+        <TableLayout
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="5dip"
+            android:paddingEnd="5dip">
+
+            <TableRow>
+                <EditText
+                    android:id="@+id/textNickname"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="@string/nickname_caption_hint"
+                    android:singleLine="true"
+                    android:textAlignment="center"
+                    android:gravity="center"
+                    android:textAppearance="?android:attr/textAppearanceLarge" />
+            </TableRow>
+
+            <TableRow>
+                <TextView
+                    android:id="@+id/sshCaption"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/ssh_tunnel_settings"
+                    android:textAppearance="?android:attr/textAppearanceMedium" />
+            </TableRow>
+
+            <TableRow>
+                <LinearLayout
+                    android:id="@+id/sshServerEntry"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="horizontal">
+
+                    <EditText
+                        android:id="@+id/sshServer"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="3"
+                        android:hint="@string/address_caption_ssh_hint"
+                        android:inputType="textNoSuggestions|textVisiblePassword"
+                        android:nextFocusDown="@+id/sshPort"
+                        android:singleLine="true"
+                        android:textAppearance="?android:attr/textAppearanceMedium" />
+
+                    <EditText
+                        android:id="@+id/sshPort"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:hint="@string/port_ssh_hint"
+                        android:inputType="textNoSuggestions|textVisiblePassword"
+                        android:nextFocusDown="@+id/sshUser"
+                        android:singleLine="true"
+                        android:text="22"
+                        android:textAppearance="?android:attr/textAppearanceMedium" />
+                </LinearLayout>
+            </TableRow>
+
+            <TableRow>
+                <LinearLayout
+                    android:id="@+id/sshCredentials"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:padding="0dp"
+                        android:singleLine="true">
+
+                        <EditText
+                            android:id="@+id/sshUser"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:hint="@string/username_hint_ssh"
+                            android:inputType="textNoSuggestions|textVisiblePassword"
+                            android:nextFocusDown="@+id/sshPassword"
+                            android:textAppearance="?android:attr/textAppearanceMedium" />
+
+                        <EditText
+                            android:id="@+id/sshPassword"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:hint="@string/password_hint_ssh"
+                            android:inputType="textNoSuggestions|textPassword"
+                            android:textAppearance="?android:attr/textAppearanceMedium" />
+                    </LinearLayout>
+
+                    <CheckBox
+                        android:id="@+id/checkboxKeepSshPass"
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:singleLine="true"
+                        android:text="@string/keep_password_button"
+                        android:textAppearance="?android:attr/textAppearanceMedium" />
+                </LinearLayout>
+            </TableRow>
+
+            <!--
+                MainConfiguration.onCreate() unconditionally looks up
+                R.id.buttonGeneratePubkey and calls setOnClickListener
+                on it. Phase 3.1's SSH terminal does not need the Manage
+                Key button (pubkey auth is deferred to Phase 3.6), but
+                the base class doesn't know that. We add a hidden GONE
+                placeholder so findViewById returns non-null and the
+                base class's setup doesn't NPE.
+            -->
+            <TableRow>
+                <Button
+                    android:id="@+id/buttonGeneratePubkey"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:enabled="true"
+                    android:text="@string/ssh_pubkey_button"
+                    android:visibility="gone"
+                    android:textAppearance="?android:attr/textAppearanceLarge" />
+            </TableRow>
+
+            <!--
+                Same reason as buttonGeneratePubkey: MainConfiguration
+                always looks up R.id.layoutUseSshPubkey. Phase 3.1's
+                SSH terminal doesn't use pubkey auth, so the container
+                is hidden (visibility=gone) but the View itself exists.
+            -->
+            <TableRow>
+                <LinearLayout
+                    android:id="@+id/layoutUseSshPubkey"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone" />
+            </TableRow>
+        </TableLayout>
+    </LinearLayout>
+</ScrollView>

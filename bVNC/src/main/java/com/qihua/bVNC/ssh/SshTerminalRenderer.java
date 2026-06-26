@@ -49,6 +49,15 @@ public class SshTerminalRenderer {
     private int currentRows = -1;
     private boolean open;
     private boolean closed;
+    /**
+     * Sentinel value used by {@link TermRenderHelper} (via the package-private
+     * helper API) to know when the mScreen reference has changed since the
+     * last paint. A simple Object identity probe — the helper cannot expose
+     * a TranscriptScreen reference across package boundaries, so it
+     * returns true/false based on whether the current screen differs from
+     * the last one seen, and the renderer re-seeds the background when so.
+     */
+    private int lastPaintedScreenMarker;
     /** Notified when the terminal grid size changes (fold/unfold/etc). */
     private GridSizeListener gridSizeListener;
 
@@ -135,13 +144,6 @@ public class SshTerminalRenderer {
     public void renderInto(Bitmap target) {
         if (closed || target == null || target.isRecycled()) return;
         Canvas c = new Canvas(target);
-        // Do NOT clear here — TranscriptScreen.drawText paints BG_COLOR
-        // for every occupied cell (and PaintRenderer.drawTextRun handles
-        // the foreground glyph). The bitmap itself was seeded with
-        // BG_COLOR via seedBackground() the first time it was allocated,
-        // so empty cells stay blue. Clearing each paint would force a
-        // full-bitmap pass that masks the natural cursor blink and
-        // contributes to flicker.
         int pad = paddingPx();
         int cols = TermRenderHelper.computeCols(c, helper.charWidth, pad);
         int rows = TermRenderHelper.computeRows(c, helper.charHeight, pad);
@@ -153,11 +155,55 @@ public class SshTerminalRenderer {
                 gridSizeListener.onGridSizeChanged(cols, rows);
             }
         }
-        helper.render(termSession, c, fontSizePx(), pad, terminalTypeface);
+        // Detect alt/main buffer flips. The helper reports whether the
+        // emulator's current screen reference is the same as the one
+        // we painted from last time. A flip means a TUI application
+        // (vim, less, htop, top) entered or exited alt screen via
+        // CSI ? 47 h / ? 1049 h. Without re-seeding the mbitmap
+        // background, the alt buffer's content remains visible after
+        // we switch back to the main buffer, and the new prompt
+        // painted by zsh appears on top of stale alt-buffer pixels —
+        // the user sees "two prompts" and "old data not cleared". We
+        // only reseed on a flip, NOT on every paint, so the natural
+        // "do not clear" optimization (avoiding flicker) is preserved
+        // for the steady state.
+        int marker = lastPaintedScreenMarker;
+        int newMarker = helper.renderAndDetectScreenFlip(
+                termSession, c, fontSizePx(), pad, terminalTypeface, marker);
+        if (newMarker != marker) {
+            lastPaintedScreenMarker = newMarker;
+            // Re-seed the mbitmap background. Re-rendering the current
+            // (just-flipped) screen on a clean canvas covers the
+            // alt-buffer residue with the new screen's content, and
+            // we avoid the "draw into the same mbitmap region" race
+            // that produced black bars when we tried to also wipe the
+            // AAR's main buffer from outside (the TranscriptScreen's
+            // dimensions don't always match the mbitmap pixel size, so
+            // calls into blockSet failed and left uninitialized cells).
+            Log.i(TAG, "renderInto: screen reference changed, reseeding background");
+            target.eraseColor(BG_COLOR);
+            helper.render(termSession, c, fontSizePx(), pad, terminalTypeface);
+        }
     }
 
     public TermSession getTermSession() {
         return termSession;
+    }
+
+    /**
+     * Current grid size as last computed by renderInto. The SshConnectionInitializer
+     * passes this to SshTerminalConnection.openShell so the PTY (and the
+     * applications it spawns — vim, less, htop, ...) starts with the right
+     * cols/rows from the first byte, instead of being told later via SIGWINCH
+     * (which is the cause of TUI apps initially rendering into the upper-left
+     * 80x24 region of the larger mbitmap).
+     */
+    public int getCurrentCols() {
+        return currentCols;
+    }
+
+    public int getCurrentRows() {
+        return currentRows;
     }
 
     public void close() {

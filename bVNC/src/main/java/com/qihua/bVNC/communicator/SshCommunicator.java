@@ -3,7 +3,7 @@ package com.qihua.bVNC.communicator;
 import android.os.Handler;
 import android.util.Log;
 
-import com.qihua.bVNC.ssh.SSHConnection;
+import com.qihua.bVNC.ssh.SshTerminalConnection;
 import com.undatech.opaque.RemoteConnectable;
 
 /**
@@ -14,10 +14,11 @@ import com.undatech.opaque.RemoteConnectable;
  * to the canvas is via TermSession's {@code setUpdateCallback}
  * (handled by {@code SshConnectionInitializer}, not via this class).
  *
- * <p>Phase 2 holds an {@link SSHConnection} reference so {@link #close()}
- * can tear down the underlying SSH tunnel. The reference is injected
- * by {@code SshConnectionInitializer.initialize()} via the package-private
- * {@link #setSshConnection(SSHConnection)} setter.
+ * <p>Phase 3.1 holds a {@link SshTerminalConnection} reference so
+ * {@link #close()} can tear down the underlying SSH terminal session.
+ * The reference is injected by {@code SshConnectionInitializer.initialize()}
+ * via the package-private {@link #setSshTerminalConnection(SshTerminalConnection)}
+ * setter.
  */
 public class SshCommunicator extends RemoteConnectable {
     private static final String TAG = "SshCommunicator";
@@ -27,7 +28,7 @@ public class SshCommunicator extends RemoteConnectable {
     private boolean inNormalProtocol = false;
     private boolean certificateAccepted = false;
     /** Injected by SshConnectionInitializer so close() can tear down the SSH tunnel. */
-    private SSHConnection sshConnection;
+    private SshTerminalConnection sshTerminal;
 
     public SshCommunicator(boolean debugLogging, Handler handler,
                            int framebufferWidth, int framebufferHeight) {
@@ -36,9 +37,9 @@ public class SshCommunicator extends RemoteConnectable {
         this.framebufferHeight = framebufferHeight;
     }
 
-    /** Inject the SSHConnection so {@link #close()} can tear it down. */
-    public void setSshConnection(SSHConnection sshConnection) {
-        this.sshConnection = sshConnection;
+    /** Inject the SshTerminalConnection so {@link #close()} can tear it down. */
+    public void setSshTerminalConnection(SshTerminalConnection sshTerminal) {
+        this.sshTerminal = sshTerminal;
     }
 
     @Override
@@ -103,14 +104,14 @@ public class SshCommunicator extends RemoteConnectable {
 
     @Override
     public void close() {
-        if (sshConnection != null) {
+        if (sshTerminal != null) {
             try {
-                Log.i(TAG, "close: terminating SSH tunnel");
-                sshConnection.terminateSSHTunnel();
+                Log.i(TAG, "close: terminating SSH terminal session");
+                sshTerminal.close();
             } catch (Throwable t) {
-                Log.w(TAG, "close: terminateSSHTunnel failed", t);
+                Log.w(TAG, "close: sshTerminal.close failed", t);
             }
-            sshConnection = null;
+            sshTerminal = null;
         }
     }
 

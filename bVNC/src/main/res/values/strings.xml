@@ -662,6 +662,8 @@ If you are looking for a quick performance boost, try setting the Color mode to 
     </string>
     <string name="rdp_password_hint">Password</string>
     <string name="rdp_server_empty">Server or port empty. Cannot connect!</string>
+    <string name="ssh_server_empty">SSH server address is required</string>
+    <string name="ssh_user_empty">SSH username is required</string>
     <string name="rdp_username_hint">Username</string>
 
     <string name="remote_sound_disabled">Sound Disabled</string>

@@ -238,8 +238,36 @@ remote-desktop-clients/
 
 ### Phase 3 — 完善
 
-- [ ] `ConfigSSH` 真配置页(`MainConfiguration` + `config_ssh.xml`,含密码/私钥切换 UI)
-- [ ] 密钥认证(RSA / ECDSA / Ed25519)+ 口令短语 —— **库侧已支持**(`SSHConnection.authenticateWithPubKey()`),UI 侧留 Phase 3
+#### §3.1 — ConfigSSH 真配置页 + SSH 终端独立协议(2026-06-25) ✅
+
+**目标**:把 Phase 2 的硬编码 `ConfigSSH.java` 改成 `MainConfiguration` 子类,跟 `ConfigVNC` / `ConfigRDP` 同形态;同时把 SSH 终端从 `SSHConnection`(VNC-over-SSH 隧道通用层)抽离,变成**独立协议**走 VNC-style 字段。
+
+**架构决策(★ 关键)**:
+- SSH 终端 = 独立协议 = 跟 RDP / NVStream 同字段集(`getAddress/getPort/getUserName/getPassword`)
+- SSH 隧道 = VNC/RDP 加密辅助 = 仍用 `SshXxx` 字段
+- 字段含义干净:`Address/Port/UserName/Password` 给"独立协议"(RDP/NVStream/SSH terminal);`SshXxx` 永远只给"VNC-over-SSH 隧道"
+- 两套 SSH 逻辑长期共存:`SSHConnection`(VNC/RDP 加密工具,不动)+ `SshTerminalConnection`(SSH terminal 直调 trilead,新增)
+
+**Phase 3.1 任务清单(2026-06-25 全部完成)**:
+- [x] 1. 新建 `bVNC/src/main/res/layout/main_ssh.xml`(~110 行,只含 SSH terminal 字段:nickname / server / port / user / password / keep-pass,**不**含 VNC/RDP 字段、**不**含 SSH 隧道 pubkey UI)
+- [x] 2. 新建 `bVNC/src/main/res/layout-large/main_ssh.xml`(大屏变体,`textAppearance` 改 Large)
+- [x] 3. 重写 `bVNC/src/main/java/com/qihua/bVNC/ConfigSSH.java`(60→~110 行,`extends MainConfiguration`,字段源 VNC-style,显式清空 `SshXxx` 字段避免污染隧道语义)
+- [x] 4. 新建 `bVNC/src/main/java/com/qihua/bVNC/ssh/SshTerminalConnection.java`(~140 行,封装 trilead `Connection` + `Session`,公共方法 `connect(user, pwd)` / `openShell(cols, rows)` / `resizePty(cols, rows)` / `close()` / `getCurrentHostKey()`,**不** extends 任何东西直调 trilead)
+- [x] 5. 改 `SshShellChannel` 构造器签名(本步**未做**——`SshShellChannel` 已经是 `SshShellChannel()` 无参 + `attach(Session)` 模式,内部不变,只换调用方)
+- [x] 6. 改 `SshConnectionInitializer.java`(~80 行改:`SSHConnection sshConnection` → `SshTerminalConnection sshTerminal`;`initialize()` 从 VNC-style 字段读 4 个参数 + `conn.getSshHostKey()` 作 savedHostKey;`doConnect()` 调 `sshTerminal.connect()+openShell()`;`teardown()/rebuildSSHFramebuffer()` 调 `sshTerminal.close()`;`SshCommunicator` setter 同步改)
+- [x] 7. 改 `bVNC/src/main/java/com/qihua/bVNC/communicator/SshCommunicator.java`(`setSshConnection(SSHConnection)` → `setSshTerminalConnection(SshTerminalConnection)`,`close()` 调 `sshTerminal.close()`)
+- [x] 8. `values/strings.xml` + `values-zh-rCN/strings.xml` 加 `ssh_server_empty` / `ssh_user_empty` 提示
+- [x] 9. 编译 + APK 打包验证:`./gradlew :bVNC:compileGplayReleaseJavaWithJavac` BUILD SUCCESSFUL;`./gradlew :aRDP-app:assembleGplayDebug` BUILD SUCCESSFUL(43.3MB,含 `res/layout/main_ssh.xml` + `res/layout-large-v4/main_ssh.xml` + Sarasa Nerd 字体 23.9MB)
+
+**Phase 3.1 暂不做**(留 §3.2+):
+- host key fingerprint dialog + KnownHosts 持久化(`SshTerminalConnection` 当前 trust-everything,Phase 3.6 改)
+- pubkey 认证 + keyboard-interactive(Phase 3.6)
+- 密钥 UI(`Manage Key` 按钮,Phase 3.6)
+
+#### §3.2+ — 后续(待排期)
+
+- [ ] 密钥认证(RSA / ECDSA / Ed25519)+ 口令短语 UI(`MainConfiguration` + `Manage Key` 按钮;库侧需扩展 `SshTerminalConnection` 走 `(String, File, String)` 签名)
+- [ ] Host key fingerprint dialog(首次连接弹 dialog,显示 hex fingerprint,Accept/Reject,落库到 `ConnectionBean.getSshHostKey()`)
 - [ ] 心跳 / 网络切换(WiFi → 4G)重连
 - [ ] 文本选择 / 复制粘贴
 - [ ] 配色方案(Solarized Dark 等,`ColorScheme` 资源)
@@ -1292,4 +1320,46 @@ public static Typeface load(AssetManager assets) {
 无改动:
 - `bVNC/src/main/AndroidManifest.xml`、`aRDP-app/src/main/AndroidManifest.xml`(Phase 0 注册的 `ConfigSSH` 已存在)
 - 任何资源文件(`config_ssh.xml` / `ssh_terminal.xml` / `ssh_terminal_menu.xml` 留 Phase 3 真配置页)
+
+## 12. Phase 3.1 实现文件清单(2026-06-25,ConfigSSH 真配置页 + SSH 终端独立协议)
+
+**架构改动**:SSH 终端从 `SSHConnection`(VNC-over-SSH 隧道通用层)抽离,新增 `SshTerminalConnection` 直调 trilead。`SSHConnection.java` 0 改动(其它 4 个 feature:VNC-over-SSH / RDP-over-SSH / AutoX / SecureTunnel 继续用它)。
+
+新增:
+- `bVNC/src/main/res/layout/main_ssh.xml`(~110 行,只含 SSH terminal 字段:nickname / server / port / user / password / keep-pass)
+- `bVNC/src/main/res/layout-large/main_ssh.xml`(大屏变体,textAppearance 改 Large)
+- `bVNC/src/main/java/com/qihua/bVNC/ssh/SshTerminalConnection.java`(~140 行,封装 trilead `Connection` + `Session`,密码认证 + xterm-256color PTY + startShell,Phase 3.6 加 pubkey + host key fingerprint)
+
+修改:
+- `bVNC/src/main/java/com/qihua/bVNC/ConfigSSH.java`(60 → ~110 行,`extends MainConfiguration`,字段源 VNC-style,显式清空 `SshXxx` 字段避免污染隧道语义)
+- `bVNC/src/main/java/com/qihua/bVNC/connection/SshConnectionInitializer.java`(~80 行改:`SSHConnection` → `SshTerminalConnection`;`initialize()` 从 VNC-style 字段读 4 个参数;`doConnect()` 调 `sshTerminal.connect()+openShell()`;`teardown()/rebuildSSHFramebuffer()` 调 `sshTerminal.close()`;`SshCommunicator` setter 同步改)
+- `bVNC/src/main/java/com/qihua/bVNC/communicator/SshCommunicator.java`(`setSshConnection(SSHConnection)` → `setSshTerminalConnection(SshTerminalConnection)`,`close()` 调 `sshTerminal.close()`)
+- `bVNC/src/main/res/values/strings.xml` + `values-zh-rCN/strings.xml`(+2 行 `ssh_server_empty` / `ssh_user_empty` 提示)
+
+无改动:
+- `bVNC/src/main/java/com/qihua/bVNC/ssh/SSHConnection.java`(VNC-over-SSH / RDP-over-SSH / AutoX / SecureTunnel 4 个 feature 继续用,**0 改动**)
+- `bVNC/src/main/java/com/qihua/bVNC/ssh/SshShellChannel.java`(已经是 `SshShellChannel()` + `attach(Session)` 模式,内部 pipe + pump 架构不变,**0 改动**)
+- `bVNC/src/main/java/com/qihua/bVNC/ssh/SshTerminalRenderer.java`(渲染层,数据源 = TermSession,不变)
+- `bVNC/src/main/java/com/qihua/bVNC/ssh/TermFontFactory.java`(Nerd 字体加载,不变)
+- `remoteClientLib/src/main/java/jackpal/androidterm/emulatorview/TermRenderHelper.java`(字体透传,不变)
+- `remoteClientLib/jni/libs/deps/Android-Terminal-Emulator/emulatorview/src/main/java/jackpal/androidterm/emulatorview/PaintRenderer.java`(字体注入,不变)
+- `ConnectionBean` / `AbstractConnectionBean` / `Database` / `MainConfiguration` / `ConnectionInitializer`(基类 0 改动)
+- `ConfigVNC` / `ConfigRDP` / `ConfigNVStream` / `ConfigSPICE`(其它 4 个协议的 Config 0 改动)
+- `RemoteCanvas` / `RemoteCanvasActivity` / `SshCommunicator` 公共方法(只换 setter 内部类型,公共 API 不变)
+- `AndroidManifest.xml` / `R.menu.connectionsetupmenu` / 任何 menu / 任何 color resource
+
+**端到端验收**(2026-06-25 设备验收,等用户跑):
+1. tap SSH tile → 进入 ConfigSSH 配置页(不是瞬时跳)
+2. 配置页有 nickname / server / port / user / password / keep-pass 字段,无 VNC/RDP/SSH-隧道字段
+3. 填错校验:server 留空 + Save → 弹 "SSH server address is required" toast
+4. 正常保存 → grid 看到新 SSH 卡片
+5. 点卡片 → 真连 SSH(走 `SshTerminalConnection.connect()` 直调 trilead,不再走 `SSHConnection.openShellSession()`)
+6. DB 落库验证:杀 app 重开 → grid 仍显示
+7. DB 读回验证:点卡片 → 连的是 `selected.getAddress()`,不是硬编码
+8. edit 字段回填:长按卡片 → edit → 字段已填
+9. 多 profile 隔离:再建 SSH profile → 各自连各自
+10. 字段语义隔离:SSH terminal profile 不会污染 VNC-over-SSH 隧道的 SshXxx 字段
+11. 回归冒烟:VNC / RDP / NVStream 直连 + VNC-over-SSH 隧道 各自能用
+12. fold/unfold:沿用 Phase 1/2 行为
+13. logcat:无 NetworkOnMainThreadException / 无 zombie thread
 

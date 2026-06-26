@@ -91,48 +91,79 @@ public abstract class MainConfiguration extends AppCompatActivity {
         Log.d(TAG, "commonUpdateViewFromSelected called");
         selected.loadFromSharedPreferences(this);
         selectedConnType = selected.getConnectionType();
-        checkboxKeepSshPass.setChecked(selected.getKeepSshPassword());
-
-        if (selected.getKeepSshPassword() || selected.getSshPassword().length() > 0) {
-            sshPassword.setText(selected.getSshPassword());
-        } else {
-            sshPassword.setText("");
+        if (checkboxKeepSshPass != null) {
+            checkboxKeepSshPass.setChecked(selected.getKeepSshPassword());
         }
 
-        if (selected.getKeepSshPassword() || selected.getSshPassPhrase().length() > 0) {
-            sshPassphrase.setText(selected.getSshPassPhrase());
-        } else {
-            sshPassphrase.setText("");
+        if (sshPassword != null) {
+            if (selected.getKeepSshPassword() || selected.getSshPassword().length() > 0) {
+                sshPassword.setText(selected.getSshPassword());
+            } else {
+                sshPassword.setText("");
+            }
         }
 
-        if (selectedConnType == Constants.CONN_TYPE_SSH && selected.getAddress().equals(""))
-            ipText.setText("localhost");
-        else
-            ipText.setText(selected.getAddress());
+        // sshPassphrase is VNC-only (pubkey path). May be null in
+        // Phase 3.1's SSH terminal layout.
+        if (sshPassphrase != null) {
+            if (selected.getKeepSshPassword() || selected.getSshPassPhrase().length() > 0) {
+                sshPassphrase.setText(selected.getSshPassPhrase());
+            } else {
+                sshPassphrase.setText("");
+            }
+        }
 
-        if (selected.getUseLocalCursor() == Constants.CURSOR_AUTO) {
-            radioCursor.check(R.id.radioCursorAuto);
-        } else if (selected.getUseLocalCursor() == Constants.CURSOR_FORCE_LOCAL) {
-            radioCursor.check(R.id.radioCursorForceLocal);
-        } else if (selected.getUseLocalCursor() == Constants.CURSOR_FORCE_DISABLE) {
-            radioCursor.check(R.id.radioCursorForceDisable);
+        // ipText is VNC/RDP/NVStream's main address field. May be null
+        // in the SSH terminal layout (which uses sshServer + getAddress
+        // for the host but writes via updateConnectionFromView's own
+        // setAddress call).
+        if (ipText != null) {
+            if (selectedConnType == Constants.CONN_TYPE_SSH && selected.getAddress().equals(""))
+                ipText.setText("localhost");
+            else
+                ipText.setText(selected.getAddress());
+        }
+
+        // radioCursor is VNC-only. May be null in other layouts.
+        if (radioCursor != null) {
+            if (selected.getUseLocalCursor() == Constants.CURSOR_AUTO) {
+                radioCursor.check(R.id.radioCursorAuto);
+            } else if (selected.getUseLocalCursor() == Constants.CURSOR_FORCE_LOCAL) {
+                radioCursor.check(R.id.radioCursorForceLocal);
+            } else if (selected.getUseLocalCursor() == Constants.CURSOR_FORCE_DISABLE) {
+                radioCursor.check(R.id.radioCursorForceDisable);
+            }
         }
     }
 
     public void commonUpdateSelectedFromView() {
         Log.d(TAG, "commonUpdateSelectedFromView called");
         selected.setConnectionType(selectedConnType);
-        selected.setAddress(ipText.getText().toString());
-        selected.setSshPassPhrase(sshPassphrase.getText().toString());
-        selected.setSshPassword(sshPassword.getText().toString());
-        selected.setKeepSshPassword(checkboxKeepSshPass.isChecked());
+        // ipText is VNC/RDP/NVStream's address field. SSH terminal
+        // does its own selected.setAddress via its updateConnectionFromView
+        // override (using sshServer, not ipText). Null-check here so this
+        // common method is safe to call from non-VNC layouts.
+        if (ipText != null) {
+            selected.setAddress(ipText.getText().toString());
+        }
+        if (sshPassphrase != null) {
+            selected.setSshPassPhrase(sshPassphrase.getText().toString());
+        }
+        if (sshPassword != null) {
+            selected.setSshPassword(sshPassword.getText().toString());
+        }
+        if (checkboxKeepSshPass != null) {
+            selected.setKeepSshPassword(checkboxKeepSshPass.isChecked());
+        }
 
-        if (radioCursor.getCheckedRadioButtonId() == R.id.radioCursorAuto) {
-            selected.setUseLocalCursor(Constants.CURSOR_AUTO);
-        } else if (radioCursor.getCheckedRadioButtonId() == R.id.radioCursorForceLocal) {
-            selected.setUseLocalCursor(Constants.CURSOR_FORCE_LOCAL);
-        } else if (radioCursor.getCheckedRadioButtonId() == R.id.radioCursorForceDisable) {
-            selected.setUseLocalCursor(Constants.CURSOR_FORCE_DISABLE);
+        if (radioCursor != null) {
+            if (radioCursor.getCheckedRadioButtonId() == R.id.radioCursorAuto) {
+                selected.setUseLocalCursor(Constants.CURSOR_AUTO);
+            } else if (radioCursor.getCheckedRadioButtonId() == R.id.radioCursorForceLocal) {
+                selected.setUseLocalCursor(Constants.CURSOR_FORCE_LOCAL);
+            } else if (radioCursor.getCheckedRadioButtonId() == R.id.radioCursorForceDisable) {
+                selected.setUseLocalCursor(Constants.CURSOR_FORCE_DISABLE);
+            }
         }
     }
 
@@ -158,30 +189,44 @@ public abstract class MainConfiguration extends AppCompatActivity {
         setTitle(R.string.configure_connection);
 
         // Here we say what happens when the Pubkey Generate button is pressed.
+        // Phase 3.1 note: the Manage Key button is only present in the VNC
+        // and RDP layouts. SSH terminal's main_ssh.xml omits it (pubkey
+        // auth is deferred to Phase 3.6), so we null-check before wiring
+        // the click listener to avoid an NPE for SSH-shaped layouts.
         buttonGeneratePubkey = (Button) findViewById(R.id.buttonGeneratePubkey);
-        buttonGeneratePubkey.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                generatePubkey();
-            }
-        });
+        if (buttonGeneratePubkey != null) {
+            buttonGeneratePubkey.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    generatePubkey();
+                }
+            });
+        }
 
         versionAndCode = (TextView) findViewById(R.id.versionAndCode);
-        versionAndCode.setText(Utils.getVersionAndCode(this));
+        if (versionAndCode != null) {
+            versionAndCode.setText(Utils.getVersionAndCode(this));
+        }
 
         database = ((App) getApplication()).getDatabase();
 
-        ((Button) findViewById(R.id.copyLogcat)).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                LogcatReader logcatReader = new LogcatReader();
-                ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                cm.setText(logcatReader.getMyLogcat(Constants.LOGCAT_MAX_LINES));
-                Toast.makeText(getBaseContext(), getResources().getString(R.string.log_copied),
-                        Toast.LENGTH_LONG).show();
-            }
-        });
+        // The copy-logcat button is only in the VNC layout. Null-check for
+        // layouts that don't include it.
+        View copyLogcat = findViewById(R.id.copyLogcat);
+        if (copyLogcat != null) {
+            ((Button) copyLogcat).setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    LogcatReader logcatReader = new LogcatReader();
+                    ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                    cm.setText(logcatReader.getMyLogcat(Constants.LOGCAT_MAX_LINES));
+                    Toast.makeText(getBaseContext(), getResources().getString(R.string.log_copied),
+                            Toast.LENGTH_LONG).show();
+                }
+            });
+        }
 
+        // Optional: cursor-mode radio group is only in the VNC layout.
         radioCursor = findViewById(R.id.radioCursor);
 
         sshCredentials = (LinearLayout) findViewById(R.id.sshCredentials);
@@ -189,12 +234,16 @@ public abstract class MainConfiguration extends AppCompatActivity {
         layoutUseSshPubkey = (LinearLayout) findViewById(R.id.layoutUseSshPubkey);
         sshServerEntry = (LinearLayout) findViewById(R.id.sshServerEntry);
         sshPassword = (EditText) findViewById(R.id.sshPassword);
+        // sshPassphrase is VNC-only (pubkey path) — may be null in SSH terminal.
         sshPassphrase = (EditText) findViewById(R.id.sshPassphrase);
 
         // Define what happens when somebody selects different connection types.
+        // Optional: only VNC and RDP layouts have a connection-type spinner.
         spinnerConnectionType = (Spinner) findViewById(R.id.spinnerConnectionType);
 
         nickText = (EditText) findViewById(R.id.textNickname);
+        // ipText is VNC/RDP/NVStream's main address field — not present
+        // in the SSH terminal layout. Null-check deferred to the call sites.
         ipText = (EditText) findViewById(R.id.textIP);
 
         checkboxKeepSshPass = (CheckBox) findViewById(R.id.checkboxKeepSshPass);
@@ -213,10 +262,10 @@ public abstract class MainConfiguration extends AppCompatActivity {
      */
     protected void setVisibilityOfSshWidgets(int visibility) {
         Log.d(TAG, "setVisibilityOfSshWidgets called");
-        sshCredentials.setVisibility(visibility);
-        sshCaption.setVisibility(visibility);
-        layoutUseSshPubkey.setVisibility(visibility);
-        sshServerEntry.setVisibility(visibility);
+        if (sshCredentials != null) sshCredentials.setVisibility(visibility);
+        if (sshCaption != null) sshCaption.setVisibility(visibility);
+        if (layoutUseSshPubkey != null) layoutUseSshPubkey.setVisibility(visibility);
+        if (sshServerEntry != null) sshServerEntry.setVisibility(visibility);
     }
 
     @Override

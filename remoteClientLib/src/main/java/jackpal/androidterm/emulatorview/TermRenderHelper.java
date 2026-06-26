@@ -31,6 +31,19 @@ public final class TermRenderHelper {
     public int charHeight;
 
     /**
+     * TranscriptScreen reference the last time render() or
+     * renderAndDetectScreenFlip() painted. Used to detect alt/main
+     * buffer flips so callers can re-seed the mbitmap background
+     * (otherwise TUI applications like vim would leave alt-buffer
+     * residue on the mbitmap when they exit, making the next prompt
+     * appear as a "second prompt" on top of stale content). The
+     * reference is package-private to the emulatorview package,
+     * which is why this detection lives here and the renderer side
+     * uses the public {@link #renderAndDetectScreenFlip} wrapper.
+     */
+    private TranscriptScreen lastPaintedScreen;
+
+    /**
      * Paint the active screen of {@code session} into {@code canvas}.
      * Assumes {@code session.initializeEmulator(cols, rows)} has already
      * been called (caller guarantees this — initializer + renderer wire it
@@ -43,7 +56,15 @@ public final class TermRenderHelper {
      */
     public void render(TermSession session, Canvas canvas, int fontSizePx, int paddingPx, Typeface typeface) {
         TerminalEmulator emu = session.getEmulator();
-        TranscriptScreen screen = session.getTranscriptScreen();
+        // Use the emulator's *current* screen (mScreen), not the session's
+        // mTranscriptScreen. The latter is always the main buffer; the
+        // former flips to the alt buffer when an application sends
+        // CSI ? 47 h / ? 1047 h / ? 1049 h (vim, less, htop, ...). Without
+        // this, TUI applications would render into the alt buffer but
+        // SshTerminalRenderer would keep reading from the main buffer,
+        // showing only the previous prompt and a blank painted region
+        // for the TUI's rows.
+        TranscriptScreen screen = emu.getScreen();
         if (emu == null || screen == null) {
             return;
         }
@@ -70,6 +91,42 @@ public final class TermRenderHelper {
             screen.drawText(row, canvas, x, y, renderer, cursorX, -1, -1, "", 0);
             y += charHeight;
         }
+    }
+
+    /**
+     * Like {@link #render}, but reports whether the emulator's current
+     * screen reference differs from the marker the caller passes in.
+     * This is how the SshTerminalRenderer detects a TUI application's
+     * alt-screen enter/exit and re-seeds the mbitmap background; the
+     * TranscriptScreen class is package-private and cannot be exposed
+     * across package boundaries, so callers compare an integer marker
+     * that we mutate when the underlying screen reference changes.
+     *
+     * @param marker   the caller's last-seen marker value (initial
+     *                 call: 0; subsequent calls: previous return value)
+     * @return the same marker if the screen reference is unchanged;
+     *         a different value (marker + 1) if the reference changed
+     *         since the previous call. Callers can re-seed the
+     *         mbitmap background and call {@link #render} again when
+     *         the returned value differs from the input.
+     */
+    public int renderAndDetectScreenFlip(TermSession session, Canvas canvas,
+                                         int fontSizePx, int paddingPx, Typeface typeface,
+                                         int marker) {
+        TerminalEmulator emu = session.getEmulator();
+        TranscriptScreen screen = emu != null ? emu.getScreen() : null;
+        if (emu == null || screen == null) {
+            return marker;
+        }
+        render(session, canvas, fontSizePx, paddingPx, typeface);
+        if (lastPaintedScreen != screen) {
+            lastPaintedScreen = screen;
+            // Marker advances by 1 each time the screen reference
+            // changes. Caller compares the returned marker against
+            // the one it passed in to detect a flip.
+            return marker + 1;
+        }
+        return marker;
     }
 
     /** Cells that fit horizontally in canvas, with equal padding on both sides. */

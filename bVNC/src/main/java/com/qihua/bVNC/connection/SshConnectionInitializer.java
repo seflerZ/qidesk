@@ -12,7 +12,7 @@ import android.view.Display;
 import com.qihua.bVNC.App;
 import com.qihua.bVNC.Constants;
 import com.qihua.bVNC.RemoteCanvas;
-import com.qihua.bVNC.ssh.SSHConnection;
+import com.qihua.bVNC.ssh.SshTerminalConnection;
 import com.qihua.bVNC.communicator.SshCommunicator;
 import com.qihua.bVNC.input.RemoteSshKeyboard;
 import com.qihua.bVNC.input.RemoteSshPointer;
@@ -127,11 +127,25 @@ public class SshConnectionInitializer extends ConnectionInitializer {
     private boolean heartbeatStarted;
 
     /**
-     * Phase 2: real SSH connection. Built in {@link #initialize(RemoteCanvas)}
-     * without touching the network; the actual connect+auth+startShell
-     * happens on {@link #connectThread}.
+     * Phase 3.1: real SSH terminal connection (replaces the Phase 2
+     * {@code SSHConnection}, which is the VNC-over-SSH-tunnel helper).
+     * Built in {@link #initialize(RemoteCanvas)}; the actual
+     * connect+auth+startShell happens on {@link #connectThread} via
+     * {@link SshTerminalConnection#connect} +
+     * {@link SshTerminalConnection#openShell}.
      */
-    private SSHConnection sshConnection;
+    private SshTerminalConnection sshTerminal;
+    /**
+     * SSH terminal connection parameters. Pulled from VNC-style
+     * {@link Connection} fields ({@code getAddress/getPort/getUserName/getPassword})
+     * in {@link #initialize}, then handed to {@code SshTerminalConnection.connect}
+     * from the connect thread.
+     */
+    private String sshHost;
+    private int sshPort;
+    private String sshUser;
+    private String sshPassword;
+    private String savedHostKey;
     /**
      * Phase 2: bridge between the trilead Session and TermSession. Built
      * in {@link #initialize(RemoteCanvas)} so the renderer can wire its
@@ -201,11 +215,22 @@ public class SshConnectionInitializer extends ConnectionInitializer {
                 + " (displayRect " + canvas.displayRect.width() + "x" + canvas.displayRect.height()
                 + ", factor " + Constants.SSH_SMART_RESOLUTION_FACTOR + ")");
 
-        // 1. Build the SSHConnection (no network yet) and the SshCommunicator.
-        sshConnection = new SSHConnection(conn, ctx, canvas.handler);
+        // 1. Pull VNC-style fields from the Connection (Phase 3.1: SSH
+        //    terminal is its own protocol, NOT a VNC-over-SSH tunnel —
+        //    it uses getAddress/Port/UserName/Password, not getSshXxx).
+        //    No network yet; sshTerminal is created here without touching
+        //    the socket. The actual connect+auth+startShell happens on
+        //    connectThread via SshTerminalConnection.connect.
+        sshHost = conn.getAddress();
+        sshPort = conn.getPort() == 0 ? 22 : conn.getPort();
+        sshUser = conn.getUserName();
+        sshPassword = conn.getPassword();
+        savedHostKey = conn.getSshHostKey() == null ? "" : conn.getSshHostKey();
+        sshTerminal = new SshTerminalConnection(sshHost, sshPort, savedHostKey);
+
         SshCommunicator sshComm = new SshCommunicator(App.debugLog, canvas.handler, fbW, fbH);
-        // SshCommunicator.close() must tear down the SSH tunnel too.
-        sshComm.setSshConnection(sshConnection);
+        // SshCommunicator.close() must tear down the SSH terminal too.
+        sshComm.setSshTerminalConnection(sshTerminal);
         canvas.rfbconn = sshComm;
 
         canvas.pointer = new RemoteSshPointer(canvas.rfbconn, canvas, canvas.handler, App.debugLog);
@@ -222,7 +247,7 @@ public class SshConnectionInitializer extends ConnectionInitializer {
         // line editor knows the new dimensions. Trilead's resizePTY is
         // a no-op if the shell isn't open yet — safe to call preemptively.
         renderer.setGridSizeListener((cols, rows) -> {
-            if (sshConnection != null) sshConnection.resizePty(cols, rows);
+            if (sshTerminal != null) sshTerminal.resizePty(cols, rows);
         });
         TermSession termSession = renderer.getTermSession();
         ((RemoteSshKeyboard) canvas.keyboard).setTermSession(termSession);
@@ -284,19 +309,34 @@ public class SshConnectionInitializer extends ConnectionInitializer {
      */
     private void doConnect() {
         try {
-            Log.i(TAG, "doConnect: opening shell session via trilead");
-            sshConnection.openShellSession();
-            SessionSnapshot snapshot = new SessionSnapshot(sshConnection.getSession());
-            // The first thing the connect thread writes to the canvas is
-            // the shell attach: the channel's pumps will start forwarding
-            // bytes, and TermSession will fire UpdateCallback. We must
-            // call openRenderer on the main thread to be safe with
-            // TermSession's mMsgHandler (it posts to main, so calling
-            // openRenderer is fine from here too — but the original
-            // openRenderer() was already called from start() before any
-            // shell existed; we just need to re-render the now-populated
-            // grid once the prompt arrives).
-            channel.attach(snapshot.session);
+            Log.i(TAG, "doConnect: connecting " + sshUser + "@" + sshHost + ":" + sshPort);
+            boolean authOk = sshTerminal.connect(sshUser, sshPassword);
+            if (!authOk) {
+                throw new Exception("SSH password authentication failed for " + sshUser + "@" + sshHost);
+            }
+            Log.i(TAG, "doConnect: auth OK, opening shell with xterm-256color PTY");
+            // Open the PTY at the renderer's *real* cols/rows, not the
+            // 80x24 Phase 2 default. If we start at 80x24, TUI applications
+            // (vim, less, htop, top) initialize their internal window to
+            // 80x24 and only resize on a later SIGWINCH. They do redraw
+            // on SIGWINCH, but the user-perceptible artifact is that the
+            // TUI starts in the upper-left 80x24 quadrant of the mbitmap
+            // and the surrounding area stays as the previous prompt /
+            // blank — which looks like the TUI is broken. Starting at the
+            // true size skips that initial misrender entirely.
+            int cols = 80, rows = 24;
+            if (renderer != null) {
+                int rc = renderer.getCurrentCols();
+                int rr = renderer.getCurrentRows();
+                if (rc > 0) cols = rc;
+                if (rr > 0) rows = rr;
+            }
+            Log.i(TAG, "doConnect: opening PTY at " + cols + "x" + rows);
+            com.trilead.ssh2.Session sshSession = sshTerminal.openShell(cols, rows);
+            // The pumps start forwarding bytes; TermSession will fire
+            // UpdateCallback. We just need to re-render the now-populated
+            // grid once the prompt arrives.
+            channel.attach(sshSession);
             shellReady = true;
             Log.i(TAG, "doConnect: shell channel attached, terminal should start showing output");
             // Force one paint now so the (still empty, blue) grid gives
@@ -312,12 +352,6 @@ public class SshConnectionInitializer extends ConnectionInitializer {
                 }
             }
         }
-    }
-
-    /** Holder so we can declare a final local in doConnect() for clarity. */
-    private static final class SessionSnapshot {
-        final com.trilead.ssh2.Session session;
-        SessionSnapshot(com.trilead.ssh2.Session s) { this.session = s; }
     }
 
     private void postPaint() {
@@ -360,9 +394,9 @@ public class SshConnectionInitializer extends ConnectionInitializer {
             // 4. Belt-and-braces: tear down the trilead connection in case
             //    the channel didn't open a session.
             try {
-                if (sshConnection != null) sshConnection.terminateSSHTunnel();
+                if (sshTerminal != null) sshTerminal.close();
             } catch (Throwable t) {
-                Log.w(TAG, "teardown: terminateSSHTunnel failed", t);
+                Log.w(TAG, "teardown: sshTerminal.close failed", t);
             }
             connectStarted = false;
             shellReady = false;
@@ -561,17 +595,17 @@ public class SshConnectionInitializer extends ConnectionInitializer {
             }
             closeRenderer();
             try {
-                if (sshConnection != null) sshConnection.terminateSSHTunnel();
+                if (sshTerminal != null) sshTerminal.close();
             } catch (Throwable t) {
-                Log.w(TAG, "rebuild: terminateSSHTunnel failed", t);
+                Log.w(TAG, "rebuild: sshTerminal.close failed", t);
             }
 
-            // 2. Build a fresh SSHConnection + SshCommunicator (the
+            // 2. Build a fresh SshTerminalConnection + SshCommunicator (the
             //    rebuild could happen mid-handshake; the old one might
-            //    never have completed).
-            sshConnection = new SSHConnection(conn, ctx, canvas.handler);
+            //    never have completed). VNC-style fields, not SshXxx.
+            sshTerminal = new SshTerminalConnection(sshHost, sshPort, savedHostKey);
             SshCommunicator sshComm = new SshCommunicator(App.debugLog, canvas.handler, fbW, fbH);
-            sshComm.setSshConnection(sshConnection);
+            sshComm.setSshTerminalConnection(sshTerminal);
             canvas.rfbconn = sshComm;
             canvas.reallocateDrawable(w, h);
 
@@ -582,7 +616,7 @@ public class SshConnectionInitializer extends ConnectionInitializer {
             channel = new SshShellChannel();
             renderer = new SshTerminalRenderer(density, channel, ctx);
             renderer.setGridSizeListener((cols, rows) -> {
-                if (sshConnection != null) sshConnection.resizePty(cols, rows);
+                if (sshTerminal != null) sshTerminal.resizePty(cols, rows);
             });
             ((RemoteSshKeyboard) canvas.keyboard).setTermSession(renderer.getTermSession());
 
