@@ -58,6 +58,16 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
         }
+        // Phase 3.7: libvterm.so / vterm_jni.so need jniDebuggable=true so
+        // Android Studio's Debugger knows to launch lldb-server against
+        // the native libraries. Without this, "Debug" hangs on "Loading
+            // debugger…" then crashes (NDK 27 lldb-server attach failure).
+        // Mirrors remoteClientLib/jni/libs/deps/FreeRDP/.../freeRDPCore/
+        // build.gradle (line 19-22).
+        debug {
+            jniDebuggable true
+            renderscriptDebuggable true
+        }
     }
 
     sourceSets.main {
