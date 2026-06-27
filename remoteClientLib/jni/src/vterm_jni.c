@@ -42,6 +42,16 @@ typedef struct {
     // Damage ring buffer
     int           dirty_rows[MAX_DIRTY_ROWS];
     int           dirty_count;
+    // Parser callbacks. libvterm stores this pointer verbatim in
+    // vt->parser.callbacks and dereferences it on every byte that
+    // hits the NORMAL state. It MUST live as long as the VTerm, so
+    // we keep it in the handle (heap-allocated by calloc). Earlier
+    // it was a local in nativeCreate and the pointer became dangling
+    // after the function returned — every subsequent
+    // vterm_input_write jumped into a stack frame that had been
+    // reused, dereferenced garbage, and SIGSEGV'd. Tombstone 32 on
+    // 2026-06-27.
+    VTermParserCallbacks parser_callbacks;
 } jhandle_t;
 
 // Damage callback: called by libvterm when cells in [start_row,
@@ -112,6 +122,63 @@ static int jni_settermprop(VTermProp prop, VTermValue *val, void *user) {
 
 static int jni_bell(void *user) { (void) user; return 1; }
 
+// Parser-layer text callback. libvterm 0.3.3's vterm_input_write
+// dereferences vt->parser.callbacks->text in the NORMAL state when it
+// encounters a printable character. If we don't register a parser
+// callback, it SIGSEGV at NULL + offsetof(text) (verified via
+// tombstone 30 on 2026-06-27). Same pattern for escape/csi/osc/
+// dcs/apc/pm/sos callbacks — each one is a struct field, and
+// vterm_input_write dereferences them all even if we don't care
+// about the events. Returning 0 from any of them makes vterm's
+// internal "do_*" function fall through to the default
+// state-machine handling, which is what we want — the screen layer
+// already implements all the rendering.
+static int jni_text(const char *bytes, size_t len, void *user) {
+    (void) bytes; (void) user;
+    return 0;  // 0 = "didn't consume" — vterm falls through to default
+}
+
+static int jni_control(unsigned char c, void *user) {
+    (void) c; (void) user;
+    return 0;
+}
+
+static int jni_escape(const char *bytes, size_t len, void *user) {
+    (void) bytes; (void) user; (void) len;
+    return 0;
+}
+
+static int jni_csi(const char *leader, const long *args, int argcount,
+                    const char *intermed, char command, void *user) {
+    (void) leader; (void) args; (void) argcount; (void) intermed; (void) command; (void) user;
+    return 0;
+}
+
+static int jni_osc(int command, VTermStringFragment frag, void *user) {
+    (void) command; (void) frag; (void) user;
+    return 0;
+}
+
+static int jni_dcs(const char *command, size_t commandlen, VTermStringFragment frag, void *user) {
+    (void) command; (void) commandlen; (void) frag; (void) user;
+    return 0;
+}
+
+static int jni_apc(VTermStringFragment frag, void *user) {
+    (void) frag; (void) user;
+    return 0;
+}
+
+static int jni_pm(VTermStringFragment frag, void *user) {
+    (void) frag; (void) user;
+    return 0;
+}
+
+static int jni_sos(VTermStringFragment frag, void *user) {
+    (void) frag; (void) user;
+    return 0;
+}
+
 // (neovim/libvterm 0.3.3 doesn't have vterm_state_set_cursorvis or
 // vterm_state_set_cursorpos; cursor updates come through the
 // movecursor screen callback above.)
@@ -157,6 +224,29 @@ Java_com_qihua_bVNC_ssh_libvterm_SshTermStateMachine_nativeCreate(
     };
     vterm_screen_set_callbacks(h->vts, &cb, h);
     vterm_screen_enable_altscreen(h->vts, 1);
+
+    // Register parser-layer callbacks. libvterm 0.3.3's
+    // vterm_input_write dereferences vt->parser.callbacks->text in
+    // the NORMAL state; the escape/csi/osc paths dereference
+    // callbacks->escape/csi/osc. Any NULL field crashes the
+    // process. We register all 9 fields as no-ops (return 0);
+    // the screen layer's own callbacks handle the actual rendering.
+    //
+    // CRITICAL: the callbacks struct is stored in jhandle_t (heap,
+    // lifetime = the VTerm), NOT a local on nativeCreate's stack.
+    // libvterm keeps a verbatim pointer to it and dereferences on
+    // every byte that hits NORMAL. See tombstone 32 on 2026-06-27.
+    h->parser_callbacks.text    = jni_text;
+    h->parser_callbacks.control = jni_control;
+    h->parser_callbacks.escape  = jni_escape;
+    h->parser_callbacks.csi     = jni_csi;
+    h->parser_callbacks.osc     = jni_osc;
+    h->parser_callbacks.dcs     = jni_dcs;
+    h->parser_callbacks.apc     = jni_apc;
+    h->parser_callbacks.pm      = jni_pm;
+    h->parser_callbacks.sos     = jni_sos;
+    h->parser_callbacks.resize  = NULL;  // libvterm uses internal state for resize
+    vterm_parser_set_callbacks(h->vt, &h->parser_callbacks, h);
 
     // Initial paint: mark everything dirty
     VTermRect r = { .start_row = 0, .end_row = rows, .start_col = 0, .end_col = cols };
