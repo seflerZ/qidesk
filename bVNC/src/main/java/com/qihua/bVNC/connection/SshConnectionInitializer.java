@@ -22,8 +22,6 @@ import com.undatech.opaque.Connection;
 
 import java.util.concurrent.locks.ReentrantLock;
 
-import jackpal.androidterm.emulatorview.TermSession;
-
 /**
  * SSH lifecycle owner. Moved out of RemoteCanvas so that adding a 6th
  * protocol doesn't touch the host.
@@ -249,8 +247,9 @@ public class SshConnectionInitializer extends ConnectionInitializer {
         renderer.setGridSizeListener((cols, rows) -> {
             if (sshTerminal != null) sshTerminal.resizePty(cols, rows);
         });
-        TermSession termSession = renderer.getTermSession();
-        ((RemoteSshKeyboard) canvas.keyboard).setTermSession(termSession);
+        // Phase 3.7: getTermSession() now returns SshTermStateMachine
+        // (libvterm wrapper) instead of the AAR's TermSession.
+        ((RemoteSshKeyboard) canvas.keyboard).setTermSession(renderer.getTermSession());
     }
 
     @Override
@@ -618,6 +617,10 @@ public class SshConnectionInitializer extends ConnectionInitializer {
             renderer.setGridSizeListener((cols, rows) -> {
                 if (sshTerminal != null) sshTerminal.resizePty(cols, rows);
             });
+            // Phase 3.7: renderer.getTermSession() now returns
+            // SshTermStateMachine (libvterm wrapper) instead of the
+            // AAR's TermSession. The keyboard's setTermSession
+            // signature is updated to match in Step 6.
             ((RemoteSshKeyboard) canvas.keyboard).setTermSession(renderer.getTermSession());
 
             openRenderer();

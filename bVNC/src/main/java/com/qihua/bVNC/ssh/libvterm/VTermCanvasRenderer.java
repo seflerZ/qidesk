@@ -55,8 +55,8 @@ public final class VTermCanvasRenderer {
 
         Paint.FontMetrics fm = textPaint.getFontMetrics();
         this.charHeight = (int) Math.ceil(fm.descent - fm.ascent);
-        this.charWidth = textPaint.measureText("M");
-        if (charWidth <= 0f) charWidth = charHeight * 0.6f;  // last-ditch fallback
+        float measured = textPaint.measureText("M");
+        this.charWidth = (measured > 0f) ? measured : charHeight * 0.6f;
 
         this.bgPaint = new Paint();
         bgPaint.setStyle(Paint.Style.FILL);

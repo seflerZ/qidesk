@@ -3,32 +3,32 @@ package com.qihua.bVNC.ssh;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Typeface;
 import android.util.Log;
 
 import com.qihua.bVNC.Constants;
+import com.qihua.bVNC.ssh.libvterm.SshTermStateMachine;
+import com.qihua.bVNC.ssh.libvterm.VTermCanvasRenderer;
 
 import java.io.IOException;
 
-import jackpal.androidterm.emulatorview.TermRenderHelper;
-import jackpal.androidterm.emulatorview.TermSession;
-import jackpal.androidterm.emulatorview.UpdateCallback;
-
 /**
- * SSH terminal renderer. Owns the TermSession + a transport channel
- * (Phase 1: a local fake-shell loopback; Phase 2: a real trilead-backed
- * {@link SshShellChannel}). Each renderInto(Bitmap) pass:
+ * SSH terminal renderer. Phase 3.7 replaces the AAR's
+ * {@code TermSession} (from the vendored Android-Terminal-Emulator
+ * AAR) with libvterm via {@link SshTermStateMachine}. All paint /
+ * keyboard / resize logic mirrors the AAR version; the only new
+ * responsibility is reading the grid from the libvterm JNI state
+ * machine.
  *
- *   1. Recomputes char cell metrics via TermRenderHelper.probe (cheap).
- *   2. If cols/rows changed, calls TermSession.updateSize.
- *   3. Clears the bitmap to Solarized base03.
- *   4. Delegates to TermRenderHelper.render to paint the grid.
+ * <p>The renderInto(Bitmap) call delegates to {@link VTermCanvasRenderer},
+ * which iterates the libvterm grid (cols x rows) and paints each
+ * cell. CJK width, cursor, attrs (bold/italic/underline/reverse)
+ * are handled there.
  *
- * Lifecycle: caller creates -> open() -> renderInto* -> close().
- * close() finishes the TermSession (which joins its reader/writer threads)
- * and closes the channel. Both must happen on fold/unfold so a stale
- * reader doesn't keep blocking on a dead pipe.
+ * <p>The AAR's {@code TermSession.UpdateCallback} had no equivalent
+ * in libvterm — instead the SSH-Vterm-Reader thread (started in
+ * {@link #open}) drains SSH bytes into the state machine and the
+ * paint path polls dirty rows on demand.
  */
 public class SshTerminalRenderer {
     private static final String TAG = "SshTerminalRenderer";
@@ -39,56 +39,31 @@ public class SshTerminalRenderer {
     private static final float PADDING_DP = 8f;
 
     private final float density;
-    private final TermRenderHelper helper = new TermRenderHelper();
-    private final TermSession termSession = new TermSession();
     private final SshShellChannel channel;
     /** Terminal font (Sarasa Mono SC Nerd + Nerd PUA-A + CJK). */
     private final Typeface terminalTypeface;
+    private final byte[] readBuffer = new byte[4096];
 
+    private SshTermStateMachine stateMachine;
+    private VTermCanvasRenderer canvasRenderer;
     private int currentCols = -1;
     private int currentRows = -1;
     private boolean open;
     private boolean closed;
-    /**
-     * Sentinel value used by {@link TermRenderHelper} (via the package-private
-     * helper API) to know when the mScreen reference has changed since the
-     * last paint. A simple Object identity probe — the helper cannot expose
-     * a TranscriptScreen reference across package boundaries, so it
-     * returns true/false based on whether the current screen differs from
-     * the last one seen, and the renderer re-seeds the background when so.
-     */
-    private int lastPaintedScreenMarker;
     /** Notified when the terminal grid size changes (fold/unfold/etc). */
     private GridSizeListener gridSizeListener;
+    /** Background thread that drains SSH bytes into the state machine. */
+    private Thread readerThread;
 
-    /**
-     * @param density device density, used for font-size and padding.
-     * @param channel transport between TermSession and the shell. Phase 2
-     *                uses {@link SshShellChannel}; the interface matches
-     *                the Phase 1 fake-shell so this class doesn't need
-     *                to know which one it got.
-     * @param ctx     Context for loading the bundled terminal font asset.
-     *                May be {@code null} for tests; the renderer then
-     *                falls back to {@link Typeface#MONOSPACE} via
-     *                {@link TermFontFactory}.
-     */
     public SshTerminalRenderer(float density, SshShellChannel channel, Context ctx) throws IOException {
         this.density = density;
         this.channel = channel;
         this.terminalTypeface = ctx != null
                 ? TermFontFactory.load(ctx.getAssets())
                 : Typeface.MONOSPACE;
-        termSession.setTermIn(channel.getTerminalIn());
-        termSession.setTermOut(channel.getTerminalOut());
     }
 
-    /**
-     * Initialise the target bitmap with our background colour so empty
-     * cells (which {@code TranscriptScreen.drawText} does NOT paint)
-     * start out the right colour instead of the default transparent
-     * black that {@code Bitmap.createBitmap} yields. Called once per
-     * bitmap allocation by {@code SshConnectionInitializer.openRenderer}.
-     */
+    /** Initialise the target bitmap with our background colour. */
     public void seedBackground(Bitmap target) {
         if (target == null || target.isRecycled()) return;
         target.eraseColor(BG_COLOR);
@@ -105,39 +80,59 @@ public class SshTerminalRenderer {
     }
 
     /**
-     * Start the TermSession + the fake-shell echo loop. Must be called
-     * after construction and before renderInto. The {@code onUpdate}
-     * callback fires whenever TermSession's screen mutates, so the caller
-     * can request an immediate redraw instead of waiting for the next
-     * heartbeat tick.
+     * Start the libvterm state machine + the SSH reader thread.
+     * Must be called after construction and before renderInto.
      *
      * @param initialPxW  initial bitmap width  (used to seed cols)
      * @param initialPxH  initial bitmap height (used to seed rows)
-     * @param onUpdate    invoked on each TermSession screen change
+     * @param onUpdate    invoked on each SSH-Paint frame (paint path
+     *                    is unchanged from AAR version). The state
+     *                    machine internally records dirty rows; the
+     *                    paint path doesn't need to know them.
      */
     public void open(int initialPxW, int initialPxH, Runnable onUpdate) {
-        helper.probe(fontSizePx(), terminalTypeface);
+        int fontSizePx = fontSizePx();
         int pad = paddingPx();
-        int cols = TermRenderHelper.computeCols(emptyCanvasOf(initialPxW), helper.charWidth, pad);
-        int rows = TermRenderHelper.computeRows(emptyCanvasOf(initialPxH), helper.charHeight, pad);
+        canvasRenderer = new VTermCanvasRenderer(fontSizePx, pad, terminalTypeface);
+        int cols = Math.max(20, (initialPxW - 2 * pad) / (int) canvasRenderer.charWidth);
+        int rows = Math.max(10, (initialPxH - 2 * pad) / canvasRenderer.charHeight);
         currentCols = cols;
         currentRows = rows;
-        // UTF-8 on from boot. TermSession's mDefaultUTF8Mode defaults to
-        // false, so the emulator interprets input as Latin-1. With UTF-8
-        // off, write(0x4F60) for 你 writes the bytes [E4 BD A0] which
-        // display as 3 separate Latin-1 glyphs. Setting this before
-        // updateSize() so initializeEmulator() picks it up.
-        termSession.setDefaultUTF8Mode(true);
-        termSession.updateSize(cols, rows); // also initializes the emulator
-        if (onUpdate != null) {
-            termSession.setUpdateCallback(new UpdateCallback() {
-                @Override public void onUpdate() { onUpdate.run(); }
-            });
-        }
+        stateMachine = new SshTermStateMachine(cols, rows);
+        // Reader thread: drains SSH bytes from channel.getTerminalIn()
+        // into the libvterm state machine. Runs until close().
+        // (SshShellChannel.getTerminalIn() returns an InputStream
+        //  from which the shell's output is read.)
+        final java.io.InputStream sshOut = channel.getTerminalIn();
+        readerThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    while (!Thread.currentThread().isInterrupted()) {
+                        int n = sshOut.read(readBuffer);
+                        if (n < 0) {
+                            // EOF — server closed the channel
+                            Log.i(TAG, "readerThread: EOF on SSH channel");
+                            return;
+                        }
+                        if (n > 0 && stateMachine != null) {
+                            stateMachine.write(readBuffer, 0, n);
+                            if (onUpdate != null) onUpdate.run();
+                        }
+                    }
+                } catch (IOException e) {
+                    if (!Thread.currentThread().isInterrupted()) {
+                        Log.w(TAG, "readerThread: SSH read failed", e);
+                    }
+                }
+            }
+        }, "SSH-VTerm-Reader");
+        readerThread.setDaemon(true);
+        readerThread.start();
         channel.start();
         open = true;
         Log.i(TAG, "open: " + cols + " cols x " + rows + " rows, charW="
-                + helper.charWidth + " charH=" + helper.charHeight
+                + canvasRenderer.charWidth + " charH=" + canvasRenderer.charHeight
                 + " pad=" + pad + "px");
     }
 
@@ -145,58 +140,43 @@ public class SshTerminalRenderer {
         if (closed || target == null || target.isRecycled()) return;
         Canvas c = new Canvas(target);
         int pad = paddingPx();
-        int cols = TermRenderHelper.computeCols(c, helper.charWidth, pad);
-        int rows = TermRenderHelper.computeRows(c, helper.charHeight, pad);
+        int cols = Math.max(20, (target.getWidth() - 2 * pad) / (int) canvasRenderer.charWidth);
+        int rows = Math.max(10, (target.getHeight() - 2 * pad) / canvasRenderer.charHeight);
         if (cols != currentCols || rows != currentRows) {
             currentCols = cols;
             currentRows = rows;
-            termSession.updateSize(cols, rows);
+            if (stateMachine != null) stateMachine.setSize(cols, rows);
             if (gridSizeListener != null) {
                 gridSizeListener.onGridSizeChanged(cols, rows);
             }
         }
-        // Detect alt/main buffer flips. The helper reports whether the
-        // emulator's current screen reference is the same as the one
-        // we painted from last time. A flip means a TUI application
-        // (vim, less, htop, top) entered or exited alt screen via
-        // CSI ? 47 h / ? 1049 h. Without re-seeding the mbitmap
-        // background, the alt buffer's content remains visible after
-        // we switch back to the main buffer, and the new prompt
-        // painted by zsh appears on top of stale alt-buffer pixels —
-        // the user sees "two prompts" and "old data not cleared". We
-        // only reseed on a flip, NOT on every paint, so the natural
-        // "do not clear" optimization (avoiding flicker) is preserved
-        // for the steady state.
-        int marker = lastPaintedScreenMarker;
-        int newMarker = helper.renderAndDetectScreenFlip(
-                termSession, c, fontSizePx(), pad, terminalTypeface, marker);
-        if (newMarker != marker) {
-            lastPaintedScreenMarker = newMarker;
-            // Re-seed the mbitmap background. Re-rendering the current
-            // (just-flipped) screen on a clean canvas covers the
-            // alt-buffer residue with the new screen's content, and
-            // we avoid the "draw into the same mbitmap region" race
-            // that produced black bars when we tried to also wipe the
-            // AAR's main buffer from outside (the TranscriptScreen's
-            // dimensions don't always match the mbitmap pixel size, so
-            // calls into blockSet failed and left uninitialized cells).
-            Log.i(TAG, "renderInto: screen reference changed, reseeding background");
-            target.eraseColor(BG_COLOR);
-            helper.render(termSession, c, fontSizePx(), pad, terminalTypeface);
+        if (stateMachine != null) {
+            canvasRenderer.render(stateMachine, c);
         }
     }
 
-    public TermSession getTermSession() {
-        return termSession;
+    /**
+     * Returns the libvterm state machine (replaces the AAR's
+     * {@code getTermSession()}). Used by RemoteSshKeyboard to write
+     * input codepoints.
+     */
+    public SshTermStateMachine getTermSession() {
+        return stateMachine;
     }
 
     /**
-     * Current grid size as last computed by renderInto. The SshConnectionInitializer
-     * passes this to SshTerminalConnection.openShell so the PTY (and the
-     * applications it spawns — vim, less, htop, ...) starts with the right
-     * cols/rows from the first byte, instead of being told later via SIGWINCH
-     * (which is the cause of TUI apps initially rendering into the upper-left
-     * 80x24 region of the larger mbitmap).
+     * Convenience for RemoteSshKeyboard — write a single codepoint
+     * to the state machine as if the user had typed it.
+     */
+    public void writeCodepoint(int codepoint) {
+        if (stateMachine != null) stateMachine.writeInput(codepoint);
+    }
+
+    /**
+     * Current grid size as last computed by renderInto. The
+     * SshConnectionInitializer passes this to SshTerminalConnection
+     * so the PTY starts with the right cols/rows from the first
+     * byte (avoids the upper-left 80x24 corner bug).
      */
     public int getCurrentCols() {
         return currentCols;
@@ -210,11 +190,15 @@ public class SshTerminalRenderer {
         if (closed) return;
         closed = true;
         open = false;
-        Log.w(TAG, "close: finishing TermSession (stack=" + new Throwable().getStackTrace()[1] + ")");
+        if (readerThread != null) {
+            readerThread.interrupt();
+            try { readerThread.join(200); } catch (InterruptedException ignored) {}
+            readerThread = null;
+        }
         try {
-            termSession.finish();
+            if (stateMachine != null) stateMachine.destroy();
         } catch (Throwable t) {
-            Log.w(TAG, "termSession.finish failed", t);
+            Log.w(TAG, "stateMachine.destroy failed", t);
         }
         channel.close();
     }
@@ -226,21 +210,4 @@ public class SshTerminalRenderer {
     private int paddingPx() {
         return Math.max(0, Math.round(PADDING_DP * density));
     }
-
-    /**
-     * Build a throwaway Canvas of the given width/height for computeCols/Rows
-     * pre-paint. Avoids allocating a real Bitmap before we know the final
-     * size.
-     */
-    private static Canvas emptyCanvasOf(int wOrH) {
-        Canvas c = new Canvas();
-        // Canvas dimensions are read from the backing bitmap; without one we
-        // need to use setBitmap with a 1x1 bitmap of the right "size axis".
-        Bitmap b = Bitmap.createBitmap(Math.max(1, wOrH), Math.max(1, wOrH), Bitmap.Config.ALPHA_8);
-        c.setBitmap(b);
-        return c;
-    }
-
-    @SuppressWarnings("unused")
-    private static int unused = Color.BLACK; // keep Color import in case Phase 1.5 reuses for theming
 }

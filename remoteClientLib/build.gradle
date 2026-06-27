@@ -29,6 +29,24 @@ android {
         minSdkVersion project.getProperties().get("SDK_VERSION")
         ndk.abiFilters 'arm64-v8a'
         multiDexEnabled true
+        // Phase 3.7: enable CMake for libvterm JNI bridge (Step 1+).
+        // Don't link c++_shared here — moonlight-core already provides it,
+        // AGP mergeDebugNativeLibs will fail on duplicate (verified Step 1).
+        externalNativeBuild {
+            cmake {
+                arguments '-DANDROID_STL=c++_static'
+                cFlags   '-std=c11'
+                cppFlags '-std=c++17'
+            }
+        }
+    }
+
+    // Phase 3.7: register CMakeLists.txt. libvterm + JNI bridge live in
+    // remoteClientLib/jni/. Replaces the AAR for the SSH terminal state machine.
+    externalNativeBuild {
+        cmake {
+            path 'jni/CMakeLists.txt'
+        }
     }
 
     namespace 'com.undatech.remoteClientLib'
@@ -62,8 +80,8 @@ dependencies {
     implementation group: 'commons-validator', name: 'commons-validator', version: '1.7'
     implementation 'androidx.appcompat:appcompat:1.4.1'
 
-    // Android-Terminal-Emulator AAR. `api` so bVNC's SshTerminalRenderer and
-    // RemoteSshKeyboard can reach TermSession without re-declaring the dep.
-    // The package-mate helper TermRenderHelper in this module does the same.
-    api(name: 'emulatorview-release', ext: 'aar')
+    // Phase 3.7: Android-Terminal-Emulator AAR removed. The terminal
+    // state machine is now libvterm (vendored at jni/libs/deps/libvterm/)
+    // accessed via JNI bridge at jni/src/vterm_jni.c. The .so is built
+    // by externalNativeBuild above.
 }

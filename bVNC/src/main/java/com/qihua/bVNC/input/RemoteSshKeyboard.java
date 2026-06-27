@@ -4,24 +4,27 @@ import android.content.Context;
 import android.os.Handler;
 import android.view.KeyEvent;
 
+import com.qihua.bVNC.ssh.libvterm.SshTermStateMachine;
 import com.undatech.opaque.RemoteConnectable;
 
-import jackpal.androidterm.emulatorview.TermSession;
-
 /**
- * Phase 1: translates Android KeyEvent -> ANSI byte -> TermSession.
+ * Phase 3.7: translates Android KeyEvent -> codepoint ->
+ * SshTermStateMachine (libvterm wrapper).
  *
- * The session is set after construction by SshConnectionInitializer (the
- * initializer owns the TermSession lifecycle — keyboard just gets a
- * reference). fold/unfold swap the session via setTermSession(), which
- * mirrors the existing setRfb() pattern.
+ * <p>Phase 1-3.1 used the AAR's TermSession with .write(int).
+ * Phase 3.7 replaces it with libvterm's SshTermStateMachine, where
+ * the equivalent is .writeInput(int). The mapping logic (ENTER → '\r',
+ * DEL → 0x7f, TAB → '\t', ESC → 0x1b, CJK IME unicode delivery) is
+ * identical — libvterm's writeInput takes a Unicode codepoint and
+ * synthesizes the right bytes for the server.
  *
- * Phase 2 will additionally plumb TermSession.getTermOut() into the SSH
- * channel for real network I/O; processLocalKeyEvent stays unchanged.
+ * <p>The keyboard reference is set after construction by
+ * SshConnectionInitializer. fold/unfold swap the reference via
+ * setTermSession().
  */
 public class RemoteSshKeyboard extends RemoteKeyboard {
 
-    private TermSession termSession;
+    private SshTermStateMachine termSession;
 
     public RemoteSshKeyboard(RemoteConnectable r, Context v, Handler h, boolean debugLog) {
         super(r, v, h, debugLog);
@@ -32,17 +35,22 @@ public class RemoteSshKeyboard extends RemoteKeyboard {
         this.rfb = rfb;
     }
 
-    /** Phase 1: swap the TermSession that processLocalKeyEvent writes into. */
-    public void setTermSession(TermSession termSession) {
+    /**
+     * Phase 3.7: swap the SshTermStateMachine that
+     * processLocalKeyEvent writes into. The parameter is now
+     * {@link SshTermStateMachine} (libvterm wrapper) instead of
+     * the AAR's TermSession.
+     */
+    public void setTermSession(SshTermStateMachine termSession) {
         this.termSession = termSession;
     }
 
     /**
-     * Phase 1.1: hand the TermSession to {@link SshInputConnection} so the
-     * IME's commitText / setComposingText path can write into the same
-     * terminal that the keyboard path does.
+     * Returns the underlying SshTermStateMachine. (Kept for
+     * symmetry with the prior getTermSession() — IME's
+     * SshInputConnection is no longer used since 2026-06-14.)
      */
-    public TermSession getTermSession() {
+    public SshTermStateMachine getTermSession() {
         return termSession;
     }
 
@@ -61,34 +69,32 @@ public class RemoteSshKeyboard extends RemoteKeyboard {
         //   (b) ACTION_MULTIPLE + getCharacters() — older / less common
         //       IMEs; handled here too for completeness.
         //
-        // Mirrors RemoteRdpKeyboard.processLocalKeyEvent at line 65, which
-        // is why RDP's Chinese IME input has always worked.
+        // Mirrors RemoteRdpKeyboard.processLocalKeyEvent, which is
+        // why RDP's Chinese IME input has always worked.
         if (keyCode == 0 && chars != null && chars.length() > 0) {
             int len = chars.length();
             for (int i = 0; i < len; ) {
                 int cp = chars.codePointAt(i);
-                termSession.write(cp);
+                termSession.writeInput(cp);
                 i += Character.charCount(cp);
             }
             return true;
         }
-        // Phase 1 consumes both DOWN and UP so the host (Android IME) doesn't
-        // try to interpret the event. We only act on ACTION_DOWN.
         if (evt.getAction() != KeyEvent.ACTION_DOWN) {
             return true;
         }
         switch (keyCode) {
             case KeyEvent.KEYCODE_ENTER:
-                termSession.write('\r');
+                termSession.writeInput('\r');
                 return true;
             case KeyEvent.KEYCODE_DEL:
-                termSession.write(0x7f); // ASCII DEL — the canonical "backspace" in TTY land
+                termSession.writeInput(0x7f); // ASCII DEL — the canonical "backspace" in TTY land
                 return true;
             case KeyEvent.KEYCODE_TAB:
-                termSession.write('\t');
+                termSession.writeInput('\t');
                 return true;
             case KeyEvent.KEYCODE_ESCAPE:
-                termSession.write(0x1b);
+                termSession.writeInput(0x1b);
                 return true;
         }
         int metaState = evt.getMetaState() | additionalMetaState;
@@ -97,7 +103,7 @@ public class RemoteSshKeyboard extends RemoteKeyboard {
             // Non-printable, no special handling — let the host keep it.
             return false;
         }
-        termSession.write(codePoint);
+        termSession.writeInput(codePoint);
         return true;
     }
 

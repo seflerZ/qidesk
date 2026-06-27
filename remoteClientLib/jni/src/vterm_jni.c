@@ -81,14 +81,25 @@ static int jni_moverect(VTermRect dest, VTermRect src, void *user) {
 
 // Resize callback: only the rows/cols reported; we don't act
 // (Java drives the resize via setSize when it sees cols/rows change).
-static int jni_resize(int rows, int cols, VTermResizeHandle rs, void *user) {
-    (void) rs;
+// neovim/libvterm 0.3.3 callback signature: resize(int rows, int cols, void *user)
+static int jni_resize(int rows, int cols, void *user) {
     jhandle_t *h = (jhandle_t *) user;
     h->rows = rows;
     h->cols = cols;
     // Treat the whole new screen as dirty
     VTermRect r = { .start_row = 0, .end_row = rows, .start_col = 0, .end_col = cols };
     jni_damage(r, user);
+    return 1;
+}
+
+// movecursor callback: neovim/libvterm 0.3.3 fires this on every
+// cursor move with the new pos, old pos, and current visibility.
+static int jni_movecursor(VTermPos pos, VTermPos oldpos, int visible, void *user) {
+    (void) oldpos;
+    jhandle_t *h = (jhandle_t *) user;
+    h->cursor_row = pos.row;
+    h->cursor_col = pos.col;
+    h->cursor_visible = visible;
     return 1;
 }
 
@@ -101,18 +112,9 @@ static int jni_settermprop(VTermProp prop, VTermValue *val, void *user) {
 
 static int jni_bell(void *user) { (void) user; return 1; }
 
-// Cursor visibility callback (DECTCEM mode). Update cached cursor.
-static void jni_cursorvis(int visible, void *user) {
-    jhandle_t *h = (jhandle_t *) user;
-    h->cursor_visible = visible;
-}
-
-// Cursor position callback. Update cached cursor.
-static void jni_cursorpos(VTermPos pos, void *user) {
-    jhandle_t *h = (jhandle_t *) user;
-    h->cursor_row = pos.row;
-    h->cursor_col = pos.col;
-}
+// (neovim/libvterm 0.3.3 doesn't have vterm_state_set_cursorvis or
+// vterm_state_set_cursorpos; cursor updates come through the
+// movecursor screen callback above.)
 
 // Helper: extract jhandle_t from a Java long. JNI guarantees that
 // pointer-sized long fits; on 32-bit ABIs we'd need a different
@@ -144,15 +146,12 @@ Java_com_qihua_bVNC_ssh_libvterm_SshTermStateMachine_nativeCreate(
     h->cols = cols;
     h->cursor_visible = 1;  // default visible
 
-    VTermState *state = vterm_obtain_state(h->vt);
-    vterm_state_set_cursorvis(state, jni_cursorvis, h);
-    vterm_state_set_cursorpos(state, jni_cursorpos, h);
-
     h->vts = vterm_obtain_screen(h->vt);
     VTermScreenCallbacks cb = {
         .damage    = jni_damage,
         .moverect  = jni_moverect,
         .resize    = jni_resize,
+        .movecursor = jni_movecursor,
         .settermprop = jni_settermprop,
         .bell      = jni_bell,
     };
@@ -278,12 +277,11 @@ static int packAttrs(VTermScreenCellAttrs *a) {
 static int colorToRgb(VTermColor *c) {
     if (VTERM_COLOR_IS_DEFAULT_FG(c)) return 0xFF839496;  // Solarized base0
     if (VTERM_COLOR_IS_DEFAULT_BG(c)) return 0xFF002B36;  // Solarized base03
-    if (c->indexed) {
-        // libvterm doesn't have a 256-color → RGB conversion callback
-        // hook, so the caller should have set VTERM_FLAG_TRUECOLOR
-        // and pre-resolved. For now, the 8 standard ANSI colors
-        // are mapped to terminal classics.
-        switch (c->idx) {
+    if (VTERM_COLOR_IS_INDEXED(c)) {
+        // 8 standard ANSI + 8 bright ANSI; extended 16-255 we just
+        // approximate as base0 (libvterm doesn't expose a 256-color
+        // palette by default — apps that want truecolor set RGB mode).
+        switch (c->indexed.idx) {
             case 0:  return 0xFF073642;  // bright black
             case 1:  return 0xFFDC322F;  // red
             case 2:  return 0xFF859900;  // green
@@ -372,11 +370,4 @@ Java_com_qihua_bVNC_ssh_libvterm_SshTermStateMachine_nativeDestroy(
     if (!h) return;
     if (h->vt) vterm_free(h->vt);
     free(h);
-}
-
-// Step 1 hello world kept for build-time smoke test. Returns 42.
-JNIEXPORT jint JNICALL
-Java_com_qihua_bVNC_ssh_libvterm_SshTermStateMachine_hello(JNIEnv *env, jobject thiz) {
-    (void) env; (void) thiz;
-    return 42;
 }
