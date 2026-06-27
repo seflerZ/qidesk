@@ -108,22 +108,26 @@ public class SshTerminalRenderer {
             @Override
             public void run() {
                 try {
+                    long totalRead = 0;
                     while (!Thread.currentThread().isInterrupted()) {
                         int n = sshOut.read(readBuffer);
                         if (n < 0) {
-                            // EOF — server closed the channel
-                            Log.i(TAG, "readerThread: EOF on SSH channel");
+                            Log.i(TAG, "readerThread: EOF on SSH channel, totalRead=" + totalRead);
                             return;
                         }
-                        if (n > 0 && stateMachine != null) {
-                            stateMachine.write(readBuffer, 0, n);
+                        if (n > 0) {
+                            totalRead += n;
+                            Log.i(TAG, "readerThread: read n=" + n + " total=" + totalRead
+                                    + " firstByte=0x" + Integer.toHexString(readBuffer[0] & 0xff)
+                                    + " lastByte=0x" + Integer.toHexString(readBuffer[n-1] & 0xff));
+                            if (stateMachine != null) {
+                                stateMachine.write(readBuffer, 0, n);
+                            }
                             if (onUpdate != null) onUpdate.run();
                         }
                     }
                 } catch (IOException e) {
-                    if (!Thread.currentThread().isInterrupted()) {
-                        Log.w(TAG, "readerThread: SSH read failed", e);
-                    }
+                    Log.w(TAG, "readerThread: SSH read failed", e);
                 }
             }
         }, "SSH-VTerm-Reader");

@@ -6,65 +6,62 @@
 #                     external deps (no ncurses, no libtool, no
 #                     glib). System.loadLibrary("vterm") picks it up.
 #   libvterm_jni.so — Java_com_qihua_..._nativeXxx bridge that
-#                     wraps VTerm* in a Java-side handle (SshTermStateMachine).
-#                     Static-links libvterm so callers don't have to
-#                     link two .so's. System.loadLibrary("vterm_jni").
+#                     wraps VTerm* in a Java-side handle
+#                     (SshTermStateMachine). System.loadLibrary("vterm_jni").
 #
-# This mirrors the layout of remoteClientLib/jni/libs/deps/moonlight-android/
-# app/src/main/jni/{Android.mk,moonlight-core/Android.mk}, which is the
-# project's established pattern for native libs inside Gradle modules:
-#   - per-library LOCAL_* variables in a subdir Android.mk
-#   - explicit -Wl,-z,max-page-size=16384 for Android 15+ alignment
-#   - APP_SUPPORT_FLEXIBLE_PAGE_SIZES + mllvm -page-size=16384 in the
-#     top-level Application.mk for the AGP/ndk-build integration
-#
-# Path note: when AGP invokes ndk-build via externalNativeBuild, the
-# working directory is an intermediates dir under build/, NOT the
-# remoteClientLib/jni/ directory. The parent dispatcher
-# (remoteClientLib/jni/Android.mk) sets LOCAL_PATH=$(call my-dir) so
-# $(LOCAL_PATH) always resolves to remoteClientLib/jni/ regardless of
-# cwd. We prefix all paths below with $(LOCAL_PATH) for the same
-# reason moonlight-core's Android.mk does.
+# Layout mirrors remoteClientLib/jni/libs/deps/moonlight-android/
+# app/src/main/jni/{Android.mk,moonlight-core/Android.mk}: the
+# top-level dispatcher (jni/Android.mk) sets LOCAL_PATH=jni/, this
+# file lives in jni/libs/vterm_jni/, and we restore LOCAL_PATH to
+# jni/libs/vterm_jni/ via MY_LOCAL_PATH so relative LOCAL_SRC_FILES
+# and LOCAL_C_INCLUDES below resolve against THIS directory — not
+# the dispatcher. ndk-build then prepends NDK_PROJECT_PATH (.) on
+# top, so the final src path is `./libs/deps/libvterm/src/...`
+# relative to NDK_PROJECT_PATH=remoteClientLib/.
+MY_LOCAL_PATH := $(call my-dir)
+
 include $(CLEAR_VARS)
+LOCAL_PATH := $(MY_LOCAL_PATH)
 
 # ---- libvterm (vendored at libs/deps/libvterm/) ----
 LOCAL_MODULE := vterm
 
-# Upstream Makefile builds src/*.c (9 files). encoding.c depends on
-# fullwidth.inc, which is checked into the tarball so we don't need
-# to run tbl2inc_c.pl at build time.
 LOCAL_SRC_FILES := \
-    $(LOCAL_PATH)/libs/deps/libvterm/src/encoding.c \
-    $(LOCAL_PATH)/libs/deps/libvterm/src/keyboard.c \
-    $(LOCAL_PATH)/libs/deps/libvterm/src/mouse.c \
-    $(LOCAL_PATH)/libs/deps/libvterm/src/parser.c \
-    $(LOCAL_PATH)/libs/deps/libvterm/src/pen.c \
-    $(LOCAL_PATH)/libs/deps/libvterm/src/screen.c \
-    $(LOCAL_PATH)/libs/deps/libvterm/src/state.c \
-    $(LOCAL_PATH)/libs/deps/libvterm/src/unicode.c \
-    $(LOCAL_PATH)/libs/deps/libvterm/src/vterm.c
+    ../deps/libvterm/src/encoding.c \
+    ../deps/libvterm/src/keyboard.c \
+    ../deps/libvterm/src/mouse.c \
+    ../deps/libvterm/src/parser.c \
+    ../deps/libvterm/src/pen.c \
+    ../deps/libvterm/src/screen.c \
+    ../deps/libvterm/src/state.c \
+    ../deps/libvterm/src/unicode.c \
+    ../deps/libvterm/src/vterm.c
 
+# Absolute include paths. ndk-build does NOT prefix LOCAL_C_INCLUDES
+# with NDK_PROJECT_PATH (unlike LOCAL_SRC_FILES), so relative paths
+# here resolve against ndk-build's cwd which depends on the caller.
+# prepare_project.sh cwd=remoteClientLib/, AGP cwd=intermediates/.
+# Absolute paths work for both.
 LOCAL_C_INCLUDES := \
-    $(LOCAL_PATH)/libs/deps/libvterm/include \
-    $(LOCAL_PATH)/libs/deps/libvterm/src
+    $(LOCAL_PATH)/../deps/libvterm/include \
+    $(LOCAL_PATH)/../deps/libvterm/src
 
 LOCAL_CFLAGS := -Wall -Wpedantic -std=c99 -fPIC -O2 -include stdbool.h
 
-# libvterm's own header has an inline function in vterm_keycodes.h that
-# expects a VTerm * parameter; harmless on Android NDK.
 LOCAL_LDFLAGS += -Wl,-z,max-page-size=16384,--exclude-libs,ALL
 
 include $(BUILD_SHARED_LIBRARY)
 
 # ---- JNI bridge (vterm_jni.c) ----
 include $(CLEAR_VARS)
+LOCAL_PATH := $(MY_LOCAL_PATH)
 LOCAL_MODULE := vterm_jni
 
-LOCAL_SRC_FILES := $(LOCAL_PATH)/src/vterm_jni.c
+LOCAL_SRC_FILES := ../../src/vterm_jni.c
 
 LOCAL_C_INCLUDES := \
-    $(LOCAL_PATH)/libs/deps/libvterm/include \
-    $(LOCAL_PATH)/libs/deps/libvterm/src
+    $(LOCAL_PATH)/../deps/libvterm/include \
+    $(LOCAL_PATH)/../deps/libvterm/src
 
 LOCAL_CFLAGS := -Wall -std=c11 -O2 -fvisibility=hidden
 

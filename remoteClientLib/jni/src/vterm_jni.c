@@ -52,12 +52,18 @@ typedef struct {
     // reused, dereferenced garbage, and SIGSEGV'd. Tombstone 32 on
     // 2026-06-27.
     VTermParserCallbacks parser_callbacks;
+    // Screen callbacks. Same lifetime concern as parser_callbacks
+    // above — libvterm stores &this in vt->screen->callbacks and
+    // dereferences it on every cell change. Must be heap-stable.
+    VTermScreenCallbacks screen_callbacks;
 } jhandle_t;
 
 // Damage callback: called by libvterm when cells in [start_row,
 // end_row) of the screen change. We just append to the ring.
 static int jni_damage(VTermRect rect, void *user) {
     jhandle_t *h = (jhandle_t *) user;
+    LOGI("damage: rect=[%d,%d) cols=%d..%d dirty_count_was=%d",
+         rect.start_row, rect.end_row, rect.start_col, rect.end_col, h->dirty_count);
     int n = rect.end_row - rect.start_row;
     for (int i = 0; i < n; i++) {
         int r = rect.start_row + i;
@@ -214,39 +220,29 @@ Java_com_qihua_bVNC_ssh_libvterm_SshTermStateMachine_nativeCreate(
     h->cursor_visible = 1;  // default visible
 
     h->vts = vterm_obtain_screen(h->vt);
-    VTermScreenCallbacks cb = {
-        .damage    = jni_damage,
-        .moverect  = jni_moverect,
-        .resize    = jni_resize,
-        .movecursor = jni_movecursor,
-        .settermprop = jni_settermprop,
-        .bell      = jni_bell,
-    };
-    vterm_screen_set_callbacks(h->vts, &cb, h);
+    h->screen_callbacks.damage    = jni_damage;
+    h->screen_callbacks.moverect  = jni_moverect;
+    h->screen_callbacks.resize    = jni_resize;
+    h->screen_callbacks.movecursor = jni_movecursor;
+    h->screen_callbacks.settermprop = jni_settermprop;
+    h->screen_callbacks.bell      = jni_bell;
+    vterm_screen_set_callbacks(h->vts, &h->screen_callbacks, h);
     vterm_screen_enable_altscreen(h->vts, 1);
 
-    // Register parser-layer callbacks. libvterm 0.3.3's
-    // vterm_input_write dereferences vt->parser.callbacks->text in
-    // the NORMAL state; the escape/csi/osc paths dereference
-    // callbacks->escape/csi/osc. Any NULL field crashes the
-    // process. We register all 9 fields as no-ops (return 0);
-    // the screen layer's own callbacks handle the actual rendering.
+    // Parser-layer callbacks: do NOT call vterm_parser_set_callbacks
+    // here. vterm_obtain_screen() above internally calls
+    // vterm_obtain_state() which installs state.c's on_text/on_csi/
+    // on_osc/etc. Those route through the state machine → putglyph
+    // → screen.putglyph → damagerect → our damage callback. If we
+    // overrode them with no-op jni_text/jni_csi etc., every printable
+    // byte would be silently dropped (libvterm forces pos += 1 with
+    // eaten=0 from the text callback, but no putglyph fires) — that's
+    // why the terminal rendered as a blank screen.
     //
-    // CRITICAL: the callbacks struct is stored in jhandle_t (heap,
-    // lifetime = the VTerm), NOT a local on nativeCreate's stack.
-    // libvterm keeps a verbatim pointer to it and dereferences on
-    // every byte that hits NORMAL. See tombstone 32 on 2026-06-27.
-    h->parser_callbacks.text    = jni_text;
-    h->parser_callbacks.control = jni_control;
-    h->parser_callbacks.escape  = jni_escape;
-    h->parser_callbacks.csi     = jni_csi;
-    h->parser_callbacks.osc     = jni_osc;
-    h->parser_callbacks.dcs     = jni_dcs;
-    h->parser_callbacks.apc     = jni_apc;
-    h->parser_callbacks.pm      = jni_pm;
-    h->parser_callbacks.sos     = jni_sos;
-    h->parser_callbacks.resize  = NULL;  // libvterm uses internal state for resize
-    vterm_parser_set_callbacks(h->vt, &h->parser_callbacks, h);
+    // The earlier parser-callback boilerplate was added to defeat
+    // SIGSEGV from NULL function pointers in parser.c; that risk
+    // doesn't exist because vterm_obtain_state's parser-callbacks
+    // struct has all 9 slots populated (see state.c line 2046-2057).
 
     // Initial paint: mark everything dirty
     VTermRect r = { .start_row = 0, .end_row = rows, .start_col = 0, .end_col = cols };

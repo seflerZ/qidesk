@@ -46,24 +46,18 @@ android {
 
     useLibrary 'org.apache.http.legacy'
 
-    // Phase 3.7 (post-CMake→ndkBuild fix): libvterm.so + libvterm_jni.so
-    // are PRE-BUILT by docker-compose (build-deps.sh's build_vterm) and
-    // dropped into src/main/jniLibs/arm64-v8a/. AGP packages those
+    // Phase 3.7: libvterm.so + libvterm_jni.so are PRE-BUILT by
+    // docker-compose (which runs `prepare_project.sh build` →
+    // `ndk-build -C remoteClientLib/jni` via bVNC/prepare_project.sh
+    // line 116). Output lands in
+    // remoteClientLib/src/main/jniLibs/arm64-v8a/. AGP packages those
     // automatically as native libraries — we do NOT register
-    // externalNativeBuild.ndkBuild here, because that would force AGP
-    // to re-run ndk-build from jni/Android.mk every APK build.
-    //
-    // To rebuild libvterm: `cd remoteClientLib/jni/libs && ./build-deps.sh build`
-    // (re-runs ndk-build with NDK_LIBS_OUT=../../src/main/jniLibs).
-    //
-    // Why no externalNativeBuild at all:
-    //   - moonlight-core / freeRDPCore each have their own externalNativeBuild
-    //     because their source lives in their own jni/Android.mk (separate
-    //     AGP modules). Ours is the same pattern, but the source is
-    //     vendored at remoteClientLib/jni/libs/deps/libvterm/ and we
-    //     ship pre-built binaries, so we skip the AGP build path.
-    //   - This also keeps AS Debug mode free of NDK compilation on every
-    //     build, matching what build-deps.sh already produces.
+    // externalNativeBuild here, because that would force AGP to
+    // re-run ndk-build from jni/Android.mk every APK build and
+    // reproduce the path-resolution issues I hit during initial
+    // Phase 3.7. Just rebuild via
+    // `sudo docker-compose -f docker/docker-compose.yml up` and AS
+    // will pick up the new .so files next time it packages.
 
     buildTypes {
         release {
