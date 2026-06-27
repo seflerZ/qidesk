@@ -29,29 +29,41 @@ android {
         minSdkVersion project.getProperties().get("SDK_VERSION")
         ndk.abiFilters 'arm64-v8a'
         multiDexEnabled true
-        // Phase 3.7: enable CMake for libvterm JNI bridge (Step 1+).
-        // Don't link c++_shared here — moonlight-core already provides it,
-        // AGP mergeDebugNativeLibs will fail on duplicate (verified Step 1).
-        externalNativeBuild {
-            cmake {
-                arguments '-DANDROID_STL=c++_static'
-                cFlags   '-std=c11'
-                cppFlags '-std=c++17'
-            }
-        }
+        // Phase 3.7: native build is done via ndk-build (mirrors the
+        // moonlight-core pattern). See remoteClientLib/jni/Android.mk
+        // which dispatches into libs/vterm_jni/Android.mk. We don't
+        // declare an externalNativeBuild block here at all — ndk-build
+        // is wired in via the per-buildType blocks below.
     }
 
-    // Phase 3.7: register CMakeLists.txt. libvterm + JNI bridge live in
-    // remoteClientLib/jni/. Replaces the AAR for the SSH terminal state machine.
-    externalNativeBuild {
-        cmake {
-            path 'jni/CMakeLists.txt'
-        }
-    }
+    // Phase 3.7: native libs (libvterm.so, libvterm_jni.so) are built
+    // by the project's ndk-build setup under remoteClientLib/jni/.
+    // Output lands in $ProjectPath/build/intermediates/ndkBuild/...
+    // AGP picks them up automatically and packages into the AAR's
+    // jni/<abi>/ folder; no jniLibs/ directory needed in src/main/.
 
     namespace 'com.undatech.remoteClientLib'
 
     useLibrary 'org.apache.http.legacy'
+
+    // Phase 3.7 (post-CMake→ndkBuild fix): libvterm.so + libvterm_jni.so
+    // are PRE-BUILT by docker-compose (build-deps.sh's build_vterm) and
+    // dropped into src/main/jniLibs/arm64-v8a/. AGP packages those
+    // automatically as native libraries — we do NOT register
+    // externalNativeBuild.ndkBuild here, because that would force AGP
+    // to re-run ndk-build from jni/Android.mk every APK build.
+    //
+    // To rebuild libvterm: `cd remoteClientLib/jni/libs && ./build-deps.sh build`
+    // (re-runs ndk-build with NDK_LIBS_OUT=../../src/main/jniLibs).
+    //
+    // Why no externalNativeBuild at all:
+    //   - moonlight-core / freeRDPCore each have their own externalNativeBuild
+    //     because their source lives in their own jni/Android.mk (separate
+    //     AGP modules). Ours is the same pattern, but the source is
+    //     vendored at remoteClientLib/jni/libs/deps/libvterm/ and we
+    //     ship pre-built binaries, so we skip the AGP build path.
+    //   - This also keeps AS Debug mode free of NDK compilation on every
+    //     build, matching what build-deps.sh already produces.
 
     buildTypes {
         release {
@@ -92,6 +104,10 @@ dependencies {
 
     // Phase 3.7: Android-Terminal-Emulator AAR removed. The terminal
     // state machine is now libvterm (vendored at jni/libs/deps/libvterm/)
-    // accessed via JNI bridge at jni/src/vterm_jni.c. The .so is built
-    // by externalNativeBuild above.
+    // accessed via JNI bridge at jni/src/vterm_jni.c. The .so files
+    // (libvterm.so, libvterm_jni.so) are PRE-BUILT by docker-compose via
+    // build-deps.sh's build_vterm(), which runs ndk-build and drops the
+    // output into src/main/jniLibs/arm64-v8a/. AGP picks them up
+    // automatically — no externalNativeBuild block is declared on this
+    // module (otherwise AS would re-trigger ndk-build every APK build).
 }

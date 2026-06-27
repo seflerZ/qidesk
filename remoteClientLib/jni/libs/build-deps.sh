@@ -623,6 +623,66 @@ build_freerdp() {
     touch FREERDP_BUILT
 }
 
+build_vterm() {
+    # Phase 3.7: build libvterm.so + libvterm_jni.so via ndk-build and
+    # drop the artifacts into remoteClientLib/src/main/jniLibs/<abi>/ so
+    # the AAR packages them as if they were pre-built. Mirrors the
+    # build_moonlight() function above (same ndk-build + NDK_LIBS_OUT
+    # mechanism) and uses the same vendored-deps pattern: clone libvterm
+    # from ${libvterm_url} (neovim/libvterm) into deps/libvterm if not
+    # already present, then ndk-build against the vterm_jni subdir's
+    # Android.mk.
+    #
+    # Output:
+    #   remoteClientLib/src/main/jniLibs/arm64-v8a/libvterm.so
+    #   remoteClientLib/src/main/jniLibs/arm64-v8a/libvterm_jni.so
+    if [ -f VTERM_BUILT ]
+    then
+      echo ; echo
+      echo "libvterm was previously built. Remove $(realpath VTERM_BUILT) if you want to rebuild it."
+      echo ; echo
+      return
+    fi
+    pushd deps
+    basedir="$(pwd)"
+    # Vendor libvterm if missing. Same pattern as build_moonlight:
+    # if ! .git/ → git clone → checkout pinned version.
+    if [ ! -d ${libvterm_build}/.git/ ]
+    then
+        rm -rf ${libvterm_build}/
+        git clone ${libvterm_url}
+        pushd ${libvterm_build}
+        git checkout ${libvterm_ver}
+        git reset --hard
+        popd
+    fi
+    # ndk-build needs the source visible at jni/libs/deps/libvterm/
+    # (where remoteClientLib/jni/libs/vterm_jni/Android.mk's relative
+    # paths resolve from). The cloned tree lives at deps/libvterm
+    # relative to the build-deps.sh working directory (= jni/libs/).
+    # Symlink so jni/libs/deps/libvterm/ points at the cloned tree.
+    rm -f "../deps/libvterm"
+    ln -s "${basedir}/${libvterm_build}" "../deps/libvterm"
+    popd
+    # Now drive ndk-build from remoteClientLib/jni/. The dispatcher
+    # Android.mk pulls in libs/vterm_jni/Android.mk via explicit
+    # include (not all-subdir-makefiles, to avoid symlinked
+    # moonlight-core/evdev_reader dirs).
+    pushd ../..
+    basedir="$(pwd)"
+    echo "Building libvterm + vterm_jni in ${basedir}/jni"
+    export NDK_LIBS_OUT="${basedir}/src/main/jniLibs"
+    mkdir -p "${NDK_LIBS_OUT}/arm64-v8a"
+    if [ "${NDK_DEBUG:-0}" = "1" ]; then
+        NDK_BUILD_FLAGS="NDK_DEBUG=1"
+    else
+        NDK_BUILD_FLAGS=""
+    fi
+    ${ANDROID_NDK}/ndk-build -j 2 -C jni ${NDK_BUILD_FLAGS}
+    popd
+    touch VTERM_BUILT
+}
+
 # Set up error handling
 trap fail_handler ERR
 
@@ -657,6 +717,7 @@ build)
 #    done
     build_freerdp
     build_moonlight
+    build_vterm
     ;;
 clean)
     shift
