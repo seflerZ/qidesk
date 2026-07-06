@@ -639,6 +639,22 @@ public final class ExtraKeysView extends GridLayout {
         return true;
     }
 
+    /**
+     * Immediately deactivate a special button (toggle off in the UI) unless
+     * it is locked. Used by the SSH keyboard's one-shot modifier auto-release:
+     * after a key consumes the on-screen Ctrl/Alt, the button is deactivated
+     * so the UI matches the keyboard state. Idempotent; does NOT fire the
+     * {@link IExtraKeysView#onExtraKeySpecialButtonState} callback (the caller
+     * has already cleared the keyboard's on-screen meta state).
+     */
+    public void deactivateSpecialButton(SpecialButton specialButton) {
+        SpecialButtonState state = mSpecialButtons.get(specialButton);
+        if (state == null || !state.isCreated) return;
+        if (state.isActive && !state.isLocked) {
+            state.setIsActive(false);
+        }
+    }
+
     public MaterialButton createSpecialButton(String buttonKey, boolean needUpdate) {
         SpecialButtonState state = mSpecialButtons.get(SpecialButton.valueOf(buttonKey));
         if (state == null) return null;

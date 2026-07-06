@@ -247,9 +247,9 @@ public class SshConnectionInitializer extends ConnectionInitializer {
         renderer.setGridSizeListener((cols, rows) -> {
             if (sshTerminal != null) sshTerminal.resizePty(cols, rows);
         });
-        // Phase 3.7: getTermSession() now returns SshTermStateMachine
-        // (libvterm wrapper) instead of the AAR's TermSession.
-        ((RemoteSshKeyboard) canvas.keyboard).setTermSession(renderer.getTermSession());
+        // NOTE: The keyboard's termSession cannot be set here because the
+        // renderer hasn't opened yet (stateMachine is null). It is wired in
+        // openRenderer() below, which is called from start().
     }
 
     @Override
@@ -258,6 +258,10 @@ public class SshConnectionInitializer extends ConnectionInitializer {
         canvas.waitUntilInflated();
         canvas.reallocateDrawable(canvas.displayRect.width(), canvas.displayRect.height());
         openRenderer();
+        // Wire the keyboard to the newly-created libvterm state machine.
+        // This must happen AFTER openRenderer() because stateMachine is only
+        // instantiated inside SshTerminalRenderer.open().
+        ((RemoteSshKeyboard) canvas.keyboard).setTermSession(renderer.getTermSession());
         canvas.onConnectionSuccess();
 
         // Spawn the SSH-Connect thread. It runs in parallel with the
@@ -617,13 +621,12 @@ public class SshConnectionInitializer extends ConnectionInitializer {
             renderer.setGridSizeListener((cols, rows) -> {
                 if (sshTerminal != null) sshTerminal.resizePty(cols, rows);
             });
-            // Phase 3.7: renderer.getTermSession() now returns
-            // SshTermStateMachine (libvterm wrapper) instead of the
-            // AAR's TermSession. The keyboard's setTermSession
-            // signature is updated to match in Step 6.
-            ((RemoteSshKeyboard) canvas.keyboard).setTermSession(renderer.getTermSession());
 
             openRenderer();
+            // Phase 3.7: renderer.getTermSession() now returns
+            // SshTermStateMachine (libvterm wrapper) instead of the
+            // AAR's TermSession. It is only available AFTER openRenderer().
+            ((RemoteSshKeyboard) canvas.keyboard).setTermSession(renderer.getTermSession());
             // Restart heartbeat against the new renderer; the old
             // heartbeatRunnable self-reposts via canvas.handler so its
             // closure is safe across rebuilds, but we explicitly stop

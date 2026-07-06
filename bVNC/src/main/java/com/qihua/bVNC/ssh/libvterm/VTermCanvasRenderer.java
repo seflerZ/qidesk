@@ -79,35 +79,53 @@ public final class VTermCanvasRenderer {
         int cols = sm.getCols();
         int rows = sm.getRows();
 
-        // 1. Background — whole surface
-        canvas.drawColor(BG_COLOR);
-
-        // 2. Iterate cells
+        // We deliberately do NOT clear the whole bitmap first. renderInto
+        // runs on the SSH-Paint thread while DrawWorker reads the same
+        // mbitmap on its own thread (UltraCompactBitmapDrawable.draw ->
+        // canvas.drawBitmap(mbitmap)), with no synchronization between
+        // them. A global drawColor(BG) followed by a 10-30 ms cell-by-cell
+        // redraw lets DrawWorker snapshot a half-cleared (blank) frame —
+        // that is the flicker on every keystroke (each echoed byte fires
+        // sshUpdateRunnable -> renderInto). Instead, each cell paints its
+        // own background rectangle first, so a concurrent read only ever
+        // sees a mix of previous-frame and current-frame cells, both
+        // fully rendered. Stale content in a now-empty cell is cleared
+        // by that cell's own bg fill. The padding around the grid was
+        // seeded BG by SshTerminalRenderer.seedBackground and is never
+        // touched here, so it stays BG.
         for (int row = 0; row < rows; row++) {
-            float baselineY = paddingPx + (row + 1) * charHeight
-                    - textPaint.getFontMetrics().descent;
+            float cellTop = paddingPx + row * charHeight;
+            float cellBottom = paddingPx + (row + 1) * charHeight;
+            float baselineY = cellBottom - textPaint.getFontMetrics().descent;
             for (int col = 0; col < cols; col++) {
                 SshTermStateMachine.TermCell cell = sm.getCell(row, col);
                 if (cell == null) continue;
+                // Gap cell: second column of a double-width CJK char
+                // (libvterm marks it chars[0]==0xFFFFFFFF, which becomes
+                // jint -1). Its area is already covered by the primary
+                // cell's bg fill + wide glyph; skip it so we don't
+                // overdraw the wide glyph's right half.
+                if (cell.codepoint == -1) continue;
+
                 float cellLeft = paddingPx + col * charWidth;
                 float cellRight = cellLeft + charWidth * Math.max(1, cell.width);
 
-                // Background fill if non-default
+                // Always fill bg — clears stale content from the previous
+                // frame without a global clear.
+                int bgFill;
                 if ((cell.attrs & ATTR_REVERSE) != 0) {
                     // reverse video: swap fg/bg
-                    bgPaint.setColor(cell.fg == DEFAULT_FG ? DEFAULT_FG : cell.fg);
-                    canvas.drawRect(cellLeft, paddingPx + row * charHeight,
-                                    cellRight, paddingPx + (row + 1) * charHeight,
-                                    bgPaint);
+                    bgFill = (cell.fg == DEFAULT_FG) ? DEFAULT_FG : cell.fg;
                 } else if (cell.bg != DEFAULT_BG) {
-                    bgPaint.setColor(cell.bg);
-                    canvas.drawRect(cellLeft, paddingPx + row * charHeight,
-                                    cellRight, paddingPx + (row + 1) * charHeight,
-                                    bgPaint);
+                    bgFill = cell.bg;
+                } else {
+                    bgFill = BG_COLOR;
                 }
+                bgPaint.setColor(bgFill);
+                canvas.drawRect(cellLeft, cellTop, cellRight, cellBottom, bgPaint);
 
                 // Glyph
-                if (cell.codepoint != 0) {
+                if (cell.codepoint > 0) {
                     int fgColor = (cell.attrs & ATTR_REVERSE) != 0
                             ? (cell.bg == DEFAULT_BG ? DEFAULT_FG : cell.bg)
                             : (cell.fg == DEFAULT_FG ? DEFAULT_FG : cell.fg);
@@ -123,10 +141,9 @@ public final class VTermCanvasRenderer {
                 }
 
                 // Underline
-                if ((cell.attrs & ATTR_UNDERLINE) != 0 && cell.codepoint != 0) {
+                if ((cell.attrs & ATTR_UNDERLINE) != 0 && cell.codepoint > 0) {
                     underlinePaint.setColor(textPaint.getColor());
-                    float underlineY = paddingPx + (row + 1) * charHeight
-                            - Math.max(1f, fontSizePx / 14f);
+                    float underlineY = cellBottom - Math.max(1f, fontSizePx / 14f);
                     canvas.drawLine(cellLeft, underlineY, cellRight, underlineY, underlinePaint);
                 }
             }

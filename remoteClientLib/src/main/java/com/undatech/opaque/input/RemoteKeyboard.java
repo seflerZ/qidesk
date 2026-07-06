@@ -218,6 +218,40 @@ public abstract class RemoteKeyboard {
         return onScreenMetaState | lastDownMetaState;
     }
 
+    /**
+     * Notified when on-screen modifiers should auto-release after a key
+     * (one-shot behavior). The SSH keyboard calls this after a key consumes
+     * an on-screen Ctrl/Alt/Shift/Meta so the extra-keys bar toggle button
+     * is deactivated in the UI.
+     */
+    public interface OnScreenModsAutoReset {
+        void autoResetOnScreenMods();
+    }
+
+    private OnScreenModsAutoReset onScreenModsAutoReset;
+
+    public void setOnScreenModsAutoReset(OnScreenModsAutoReset r) {
+        this.onScreenModsAutoReset = r;
+    }
+
+    /**
+     * Clear all on-screen modifier toggles and notify the listener to
+     * deactivate the extra-keys UI buttons. Called by the SSH keyboard
+     * after a key consumes on-screen modifiers — gives one-shot behavior
+     * (tap Ctrl, press one key, Ctrl auto-releases), matching RDP's
+     * {@code resetModifierKeysAfterInput}. Hardware-held modifiers live
+     * in the KeyEvent's own metaState and are unaffected.
+     */
+    protected void resetOnScreenModsAfterInput() {
+        onScreenCtrlOff();
+        onScreenAltOff();
+        onScreenShiftOff();
+        onScreenSuperOff();
+        if (onScreenModsAutoReset != null) {
+            onScreenModsAutoReset.autoResetOnScreenMods();
+        }
+    }
+
     public void setAfterMenu(boolean value) {
         afterMenu = value;
     }

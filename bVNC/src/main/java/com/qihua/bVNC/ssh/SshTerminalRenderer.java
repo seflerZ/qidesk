@@ -99,6 +99,8 @@ public class SshTerminalRenderer {
         currentCols = cols;
         currentRows = rows;
         stateMachine = new SshTermStateMachine(cols, rows);
+        // Wire libvterm's generated input bytes back to the SSH channel's stdin.
+        stateMachine.setOutputStream(channel.getTerminalOut());
         // Reader thread: drains SSH bytes from channel.getTerminalIn()
         // into the libvterm state machine. Runs until close().
         // (SshShellChannel.getTerminalIn() returns an InputStream
@@ -118,8 +120,7 @@ public class SshTerminalRenderer {
                         if (n > 0) {
                             totalRead += n;
                             Log.i(TAG, "readerThread: read n=" + n + " total=" + totalRead
-                                    + " firstByte=0x" + Integer.toHexString(readBuffer[0] & 0xff)
-                                    + " lastByte=0x" + Integer.toHexString(readBuffer[n-1] & 0xff));
+                                    + " bytes=" + formatBytes(readBuffer, n));
                             if (stateMachine != null) {
                                 stateMachine.write(readBuffer, 0, n);
                             }
@@ -213,5 +214,35 @@ public class SshTerminalRenderer {
 
     private int paddingPx() {
         return Math.max(0, Math.round(PADDING_DP * density));
+    }
+
+    /**
+     * Format up to 256 bytes for logging: printable ASCII as-is, common
+     * control chars as named escapes (\r \n \t \e \a \b), everything else
+     * as \xNN. Used by the reader thread to see exactly what the remote
+     * shell is emitting (zsh completion sequences, cursor moves, etc.).
+     */
+    private static String formatBytes(byte[] buf, int len) {
+        int n = Math.min(len, 256);
+        StringBuilder sb = new StringBuilder(n * 2);
+        for (int i = 0; i < n; i++) {
+            int b = buf[i] & 0xff;
+            switch (b) {
+                case 0x07: sb.append("\\a"); break;
+                case 0x08: sb.append("\\b"); break;
+                case 0x09: sb.append("\\t"); break;
+                case 0x0a: sb.append("\\n"); break;
+                case 0x0d: sb.append("\\r"); break;
+                case 0x1b: sb.append("\\e"); break;
+                default:
+                    if (b >= 0x20 && b < 0x7f) {
+                        sb.append((char) b);
+                    } else {
+                        sb.append(String.format("\\x%02x", b));
+                    }
+            }
+        }
+        if (len > n) sb.append("...(+").append(len - n).append(")");
+        return sb.toString();
     }
 }

@@ -180,6 +180,7 @@ static int vterm_bell(void *user) { return 1; }
 - 构造时量 `charWidth = paint.measureText("M")` / `charHeight = descent-ascent`
 - CJK 宽字符:`cell.width == 2` 时画两个 cell 宽,下一个 col 跳过
 - 光标:反色方块(可换下划线 / 竖条)
+- **不要做全局 `canvas.drawColor(BG)` 清屏** —— 逐 cell 填自己的 bg。原因见 [§14.1](#141-ssh-输入闪烁--renderinto-与-drawworker-的-bitmap-读写竞态2026-07-05):`renderInto`(SSH-Paint 线程)写的 `mbitmap` 正是 `DrawWorker` 读的目标,全清 + 慢重绘会让 `DrawWorker` 读到空白帧 → 输入闪烁
 
 ## 6. 折叠屏 / paint HandlerThread 沿用
 
@@ -324,5 +325,36 @@ target_link_libraries(vterm PRIVATE log)
   - `SshTerminalRenderer.java`:`bVNC/src/main/java/com/qihua/bVNC/ssh/SshTerminalRenderer.java`
   - `SshConnectionInitializer.java`:`bVNC/src/main/java/com/qihua/bVNC/connection/SshConnectionInitializer.java`(0 改)
   - `SshShellChannel.java`:`bVNC/src/main/java/com/qihua/bVNC/ssh/SshShellChannel.java`(0 改)
+
+## 14. 实现踩坑记录
+
+### 14.1 SSH 输入闪烁 — renderInto 与 DrawWorker 的 bitmap 读写竞态(2026-07-05)
+
+**现象**:SSH 连接下,每次按键输入时屏幕闪烁;空闲时不闪。
+
+**根因**:`VTermCanvasRenderer.render()` 每帧先 `canvas.drawColor(BG_COLOR)` 把整个 `mbitmap` 清空,再逐 cell 重绘(10–30ms)。`renderInto` 跑在 **SSH-Paint HandlerThread**(`SshConnectionInitializer.paintThread`),而 `DrawWorker` 线程同时通过 `UltraCompactBitmapDrawable.draw()` → `canvas.drawBitmap(data.mbitmap, …)` 读**同一张** `mbitmap`(`DrawWorker.java:127-129`),两者**无任何同步**。
+
+每次按键 → 服务端回显 → reader 线程 `onUpdate.run()` → `sshUpdateRunnable` → `postPaintToBackground()` → `renderInto` 全清 + 重绘。在这个 10–30ms 窗口内,`DrawWorker` 一旦读到刚被 `drawColor` 清空、还没重绘完的 bitmap,就把一帧空白/半残画面 blit 到 SurfaceView → 闪烁。空闲时不闪,是因为心跳(`HEARTBEAT_INTERVAL_MS=200ms`)只在 >1s 无 paint 时才触发(`heartbeatRunnable` 里 `sinceLast > 1000` 判断),而按键时每键都触发一次这个竞态。
+
+为什么 VNC/RDP 同样走 `DrawWorker` 却不闪:它们的 decoder 走 `AbstractBitmapData.imageRect()` 增量写像素(且 `synchronized(mbitmap)` 逐行),不全清;`DrawWorker` 中途读到的最坏只是"部分像素已更新",不会出现整片空白帧。SSH 的 `renderInto` 是**唯一**对 `mbitmap` 做"全清 + 整屏重绘"的写者,所以只有 SSH 闪。
+
+**修复**(`VTermCanvasRenderer.render()`):去掉全局 `canvas.drawColor(BG_COLOR)`,改成**逐 cell 填充自己的 bg**:
+
+- 每个 cell 先填自己的 bg 矩形(清掉上一帧残留),再画字符。一个 cell 只在"填 bg → 画字"之间有微秒级空窗,且是 cell 局部的,不是全屏的。
+- 并发读最坏只看到"上一帧 + 本帧"的 cell 混合,**两帧都是完整渲染的**,不再出现空白闪。
+- grid 外的 padding 区域由 `SshTerminalRenderer.seedBackground()` 预填 BG,render 不碰,保持 BG。
+
+**配套:gap cell 必须跳过**。libvterm 对双宽 CJK 字符的第二列返回 `chars[0]==0xFFFFFFFF`,JNI `nativeGetCell` 转成 `jint` 即 `-1`(`vterm_jni.c:482`)。原来"只在非默认 bg 时填 bg"的逻辑碰巧没填 gap cell(它的 bg 是默认的),所以没覆盖宽字符右半边;改成"逐 cell 必填 bg"后,必须显式 `if (cell.codepoint == -1) continue;` 跳过 gap cell,否则它的 bg 填充会覆盖前一个 cell 宽字符的右半边。
+
+**通用教训**:`renderInto` 写的 `mbitmap` 正是 `DrawWorker` 读的目标,这是 SurfaceView 双线程渲染的经典 tearing 源。两条出路:
+
+1. **逐 cell 自清**(本方案,0 额外内存,只改 render 内部)——消除全清导致的空白帧,残留最坏是 cell 级 tearing,肉眼基本不可见。
+2. **scratch bitmap + 一次性 blit**(更重)——render 到离屏 bitmap,再 `drawBitmap` 一次性 blit 到 `mbitmap`,把竞态窗口从 10–30ms 缩到 ~1-2ms。后续若仍见 tearing 再升级。
+
+**不要**在 `DrawWorker.draw()` 加 `synchronized(mbitmap)` —— 它服务所有协议(VNC/RDP/SPICE/SSH),加锁会拖慢全局绘制路径,且 `imageRect` 已用该锁做逐行写,语义上跟整屏渲染的锁粒度不匹配。
+
+**关键代码**:`bVNC/src/main/java/com/qihua/bVNC/ssh/libvterm/VTermCanvasRenderer.java:render()`
+
+**相关 memory**:`project_ssh_paint_off_main_thread.md`(renderInto 必须离主线程)—— 那条解决的是"主线程阻塞丢键",本条解决的是"背景线程仍与 DrawWorker 竞态",两者是同一渲染路径上先后暴露的两层问题。
   - `TermRenderHelper.java`:`remoteClientLib/src/main/java/jackpal/androidterm/emulatorview/TermRenderHelper.java`(待删)
   - 计划:`/home/sefler/.claude/plans/giggly-booping-wigderson.md`

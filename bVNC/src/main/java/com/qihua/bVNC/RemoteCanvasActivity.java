@@ -74,6 +74,7 @@ import android.view.View.OnTouchListener;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ListView;
@@ -545,6 +546,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 
             @Override
             public void onExtraKeySpecialButtonState(String key, boolean down) {
+                ensureOnScreenModsAutoResetRegistered();
                 KeyEvent evt;
                 switch (key) {
                     case "SHIFT":
@@ -585,6 +587,26 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         canvas.setProgressDialog(touchpad.getProgressDialog());
 
         Log.d(TAG, "OnCreate complete");
+    }
+
+    /**
+     * Wire the keyboard's one-shot on-screen-modifier auto-reset to the
+     * extra-keys bar: after a key consumes an on-screen Ctrl/Alt/Shift/Meta,
+     * the toggle button is deactivated in the UI (not just in the keyboard's
+     * internal onScreenMetaState). Idempotent; called from
+     * {@link #onExtraKeySpecialButtonState} on every toggle so it wires up
+     * the moment both the keyboard (created asynchronously in
+     * startConnection) and the extra-keys bar exist.
+     */
+    private void ensureOnScreenModsAutoResetRegistered() {
+        com.undatech.opaque.input.RemoteKeyboard kb = canvas != null ? canvas.getKeyboard() : null;
+        if (kb == null || extraKeysView == null) return;
+        kb.setOnScreenModsAutoReset(() -> {
+            extraKeysView.deactivateSpecialButton(SpecialButton.CTRL);
+            extraKeysView.deactivateSpecialButton(SpecialButton.ALT);
+            extraKeysView.deactivateSpecialButton(SpecialButton.SHIFT);
+            extraKeysView.deactivateSpecialButton(SpecialButton.META);
+        });
     }
 
     public void readSpecialKeysState() {
@@ -1920,6 +1942,10 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         android.util.Log.i(TAG, "Showing keyboard and hiding action bar");
 
         Utils.showKeyboard(this, touchpad);
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm != null) {
+            imm.restartInput(touchpad);
+        }
         softKeyboardUp = true;
     }
 
