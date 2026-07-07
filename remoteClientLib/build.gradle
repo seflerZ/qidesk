@@ -29,46 +29,22 @@ android {
         minSdkVersion project.getProperties().get("SDK_VERSION")
         ndk.abiFilters 'arm64-v8a'
         multiDexEnabled true
-        // Phase 3.7: native build is done via ndk-build (mirrors the
-        // moonlight-core pattern). See remoteClientLib/jni/Android.mk
-        // which dispatches into libs/vterm_jni/Android.mk. We don't
-        // declare an externalNativeBuild block here at all — ndk-build
-        // is wired in via the per-buildType blocks below.
     }
-
-    // Phase 3.7: native libs (libvterm.so, libvterm_jni.so) are built
-    // by the project's ndk-build setup under remoteClientLib/jni/.
-    // Output lands in $ProjectPath/build/intermediates/ndkBuild/...
-    // AGP picks them up automatically and packages into the AAR's
-    // jni/<abi>/ folder; no jniLibs/ directory needed in src/main/.
 
     namespace 'com.undatech.remoteClientLib'
 
     useLibrary 'org.apache.http.legacy'
-
-    // Phase 3.7: libvterm.so + libvterm_jni.so are PRE-BUILT by
-    // docker-compose (which runs `prepare_project.sh build` →
-    // `ndk-build -C remoteClientLib/jni` via bVNC/prepare_project.sh
-    // line 116). Output lands in
-    // remoteClientLib/src/main/jniLibs/arm64-v8a/. AGP packages those
-    // automatically as native libraries — we do NOT register
-    // externalNativeBuild here, because that would force AGP to
-    // re-run ndk-build from jni/Android.mk every APK build and
-    // reproduce the path-resolution issues I hit during initial
-    // Phase 3.7. Just rebuild via
-    // `sudo docker-compose -f docker/docker-compose.yml up` and AS
-    // will pick up the new .so files next time it packages.
 
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
         }
-        // Phase 3.7: libvterm.so / vterm_jni.so need jniDebuggable=true so
-        // Android Studio's Debugger knows to launch lldb-server against
-        // the native libraries. Without this, "Debug" hangs on "Loading
-            // debugger…" then crashes (NDK 27 lldb-server attach failure).
-        // Mirrors remoteClientLib/jni/libs/deps/FreeRDP/.../freeRDPCore/
+        // jniDebuggable=true: required so Android Studio's Debugger
+        // launches lldb-server against libvterm.so + libvterm_jni.so.
+        // Without this, "Debug" hangs on "Loading debugger…" then
+        // crashes (NDK 27 lldb-server attach failure). Mirrors
+        // remoteClientLib/jni/libs/deps/FreeRDP/.../freeRDPCore/
         // build.gradle (line 19-22).
         debug {
             jniDebuggable true
@@ -96,12 +72,10 @@ dependencies {
     implementation group: 'commons-validator', name: 'commons-validator', version: '1.7'
     implementation 'androidx.appcompat:appcompat:1.4.1'
 
-    // Phase 3.7: Android-Terminal-Emulator AAR removed. The terminal
-    // state machine is now libvterm (vendored at jni/libs/deps/libvterm/)
-    // accessed via JNI bridge at jni/src/vterm_jni.c. The .so files
-    // (libvterm.so, libvterm_jni.so) are PRE-BUILT by docker-compose via
-    // build-deps.sh's build_vterm(), which runs ndk-build and drops the
-    // output into src/main/jniLibs/arm64-v8a/. AGP picks them up
-    // automatically — no externalNativeBuild block is declared on this
-    // module (otherwise AS would re-trigger ndk-build every APK build).
+    // SSH terminal state machine: libvterm, exposed to Java via the
+    // JNI bridge at jni/src/vterm_jni.c. The .so files (libvterm.so,
+    // libvterm_jni.so) are pre-built by build-deps.sh's build_vterm()
+    // into src/main/jniLibs/arm64-v8a/. AGP packages those
+    // automatically — no externalNativeBuild block declared here
+    // (otherwise AS would re-trigger ndk-build every APK build).
 }

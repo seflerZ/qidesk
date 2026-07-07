@@ -1,4 +1,4 @@
-// Phase 3.7 Step 3: JNI bridge to libvterm (neovim/libvterm v0.3.3).
+// JNI bridge to libvterm.
 //
 // All native methods declared in
 // com.qihua.bVNC.ssh.libvterm.SshTermStateMachine.

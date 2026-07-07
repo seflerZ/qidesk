@@ -25,9 +25,9 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
         }
-        // Phase 3.7: app module also needs jniDebuggable=true so AS
-        // launches lldb-server correctly when Debug is selected.
-        // Mirrors remoteClientLib/jni/libs/deps/FreeRDP/.../freeRDPCore/
+        // app module also needs jniDebuggable=true so AS launches
+        // lldb-server correctly when Debug is selected. Mirrors
+        // remoteClientLib/jni/libs/deps/FreeRDP/.../freeRDPCore/
         // build.gradle (line 19-22).
         debug {
             jniDebuggable true

@@ -22,7 +22,7 @@
 
 ## SSH terminal: libvterm 不是 AGP module(SSH Phase 3.7)
 
-`remoteClientLib/jni/libs/deps/libvterm/` 在 `settings.gradle` **没有** `include ':...:libvterm'`,虽然 FreeRDP / moonlight-android / Android-Terminal-Emulator 都是 module。这是 by design,不要"修正"它:
+`remoteClientLib/jni/libs/deps/libvterm/` 在 `settings.gradle` **没有** `include ':...:libvterm'`,虽然 FreeRDP / moonlight-android 是 module。这是 by design,不要"修正"它:
 
 - FreeRDP / Moonlight 是**完整 AGP 项目**(`build.gradle` + `AndroidManifest.xml` + Java/Kotlin 类),我们通过 `implementation project(':remoteClientLib:jni:libs:deps:FreeRDP:...')` 拿它们的 Java API
 - libvterm **没有 Java API**,纯 C,只通过 `remoteClientLib/src/main/jni/vterm_jni.c` 这一个 JNI 桥暴露 native 方法给 `:bVNC` 调,Java 端在 `bVNC/src/main/java/com/qihua/bVNC/ssh/libvterm/SshTermStateMachine.java`
@@ -30,6 +30,8 @@
 - `remoteClientLib/build.gradle` **没有** `externalNativeBuild` 块——刻意避免 AS 每次打包重跑 ndk-build 时的路径解析坑(见 build.gradle:32-37 注释)
 
 **为什么不是 module**:AGP module 需要 Java surface 暴露给上游,libvterm 没东西暴露——它只是源码,被 ndk-build 直接编,产物走 jniLibs 打包路径。如果以后 libvterm 需要暴露 Java API(比如 Phase 4+ 加 OSC 52 helper),那时再考虑提升为 module。
+
+**历史背景**:Phase 3.7 之前 SSH 终端用的是 `Android-Terminal-Emulator` AAR(jackpal/androidterm 2014 fork),在 `settings.gradle` 里 `:emulatorview` 是 module,源码在 `remoteClientLib/jni/libs/deps/Android-Terminal-Emulator/`。AAR 状态机有缺陷(CSI ? 47 h/l 切 alt buffer 不清 mAltBuffer、OSC 52/鼠标 SGR 未实现、11 年未维护),Phase 3.7 替换为 libvterm。整个 `Android-Terminal-Emulator/` 目录已在 Phase 3.7 完成后删除(7.1M),`settings.gradle` 也移除了 `:emulatorview` include。如果在 git history 里见到,那是历史。
 
 **编译入口**:
 - 一键:`cd remoteClientLib/jni/libs && ./build-deps.sh build`(依次跑 build_freerdp → build_moonlight → build_vterm,各看 `*_BUILT` sentinel 短路)
