@@ -623,14 +623,48 @@ build_freerdp() {
     touch FREERDP_BUILT
 }
 
-# Phase 3.7: libvterm.so + libvterm_jni.so are built by the ndk-build
-# invocation in bVNC/prepare_project.sh (the "if PRJ matches libs..."
-# branch, line 116), which `cd`s into remoteClientLib/ and runs
-# `ndk-build -j 2` against the dispatcher Android.mk there. That
-# dispatcher (remoteClientLib/jni/Android.mk) explicitly includes
-# libs/vterm_jni/Android.mk. We do NOT add a separate build_vterm()
-# here — the prepare_project.sh path already covers it and avoids
-# the NDK_PROJECT_PATH / cwd confusion that bit me when I tried.
+# Phase 3.7: libvterm (terminal state machine used by the SSH
+# feature, replacing the abandoned Android-Terminal-Emulator AAR).
+# Same shape as build_moonlight: clone/refresh the source under
+# deps/libvterm, then run the project's ndk-build from the project
+# root (remoteClientLib/) so the dispatcher jni/Android.mk pulls in
+# libs/vterm_jni/Android.mk. vterm_jni's Android.mk references
+# ../deps/libvterm/src/*.c — that path resolves directly to the real
+# git checkout at deps/libvterm/ (no symlink layer needed; deps/
+# is the canonical location, like deps/FreeRDP and deps/moonlight-
+# android/).
+build_vterm() {
+    if [ -f VTERM_BUILT ]
+    then
+      echo ; echo
+      echo "libvterm was previously built. Remove $(realpath VTERM_BUILT) if you want to rebuild it."
+      echo ; echo
+      return
+    fi
+    pushd deps
+    basedir="$(pwd)"
+    if [ ! -d ${libvterm_build}/.git/ ]
+    then
+        rm -rf ${libvterm_build}/
+        git clone ${libvterm_url} ${libvterm_build}
+    fi
+    pushd ${libvterm_build}
+    git fetch
+    git checkout ${libvterm_ver}
+    git reset --hard
+    popd
+    # Build: invoke the project's ndk-build from remoteClientLib/
+    # so the dispatcher jni/Android.mk includes libs/vterm_jni/Android.mk
+    # and links libvterm.so + libvterm_jni.so. Output goes to
+    # remoteClientLib/src/main/jniLibs/arm64-v8a/ via Application.mk
+    # rules — same path AGP packages into the AAR.
+    pushd "${basedir}/../.."
+    echo "Running ndk-build from $(pwd)..."
+    ${ANDROID_NDK}/ndk-build -j 2
+    popd
+    popd
+    touch VTERM_BUILT
+}
 
 # Set up error handling
 trap fail_handler ERR
@@ -666,6 +700,7 @@ build)
 #    done
     build_freerdp
     build_moonlight
+    build_vterm
     ;;
 clean)
     shift
