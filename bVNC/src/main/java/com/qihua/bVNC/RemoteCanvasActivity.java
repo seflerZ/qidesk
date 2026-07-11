@@ -228,6 +228,12 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     private GestureLibrary gestureLibrary;
     private GestureActionLibrary gestureActionLibrary;
     private float lastPanDist = 0f;
+    // SSH IME debounce state — see sshImeResizeRunnable below for why
+    // these exist. Cleared when the activity is destroyed to avoid a
+    // stale resize firing after the SSH session has been torn down.
+    private int sshImeTargetH = -1;
+    private boolean sshImeIsShow = false;
+    private Runnable sshImeResizeRunnable;
     private ExtraKeysView extraKeysView;
     private int keyboardHeight;
     // 记录当前连接已显示过的输入模式提示，避免重复显示
@@ -440,6 +446,28 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         }
 
         KeyBoardListenerHelper helper = new KeyBoardListenerHelper(this);
+        // SSH IME reflow must be debounced — KeyBoardListenerHelper fires
+        // on every layout pass, which means 10-20 fires during the
+        // ~200 ms IME show/hide animation. Each fire reallocates mbitmap
+        // (and sends a winch to the remote PTY), so firing on every
+        // intermediate frame produces visible flicker + a storm of
+        // remote TIOCSWINSZ events. We keep the latest target height in
+        // sshImeTargetH and run the actual resize 250 ms after the last
+        // layout pass (i.e. when the IME has settled).
+        sshImeResizeRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (canvas == null || canvas.connection == null
+                        || canvas.connInitializer == null) {
+                    return;
+                }
+                if (canvas.connection.getConnectionType() != Constants.CONN_TYPE_SSH) {
+                    return;
+                }
+                canvas.connInitializer.onSoftKeyboardChanged(
+                        sshImeIsShow, sshImeTargetH);
+            }
+        };
         helper.setOnKeyBoardChangeListener((isShow, keyBoardHeight) -> {
             // in external display mode, no need to handle soft keyboard changes
             if (canvas.isOutDisplay()) {
@@ -461,10 +489,17 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             // initializer's resize path instead — it reflows the
             // grid by reallocating mbitmap at r.bottom and lets the
             // gridSizeListener send a TIOCSWINSZ to the remote PTY.
+            //
+            // Debounce the SSH branch (see sshImeResizeRunnable above):
+            // record the latest target height + isShow and post the
+            // resize for after the IME animation settles.
             if (canvas.connection != null
                     && canvas.connection.getConnectionType() == Constants.CONN_TYPE_SSH
                     && canvas.connInitializer != null) {
-                canvas.connInitializer.onSoftKeyboardChanged(isShow, r.bottom);
+                sshImeIsShow = isShow;
+                sshImeTargetH = r.bottom;
+                handler.removeCallbacks(sshImeResizeRunnable);
+                handler.postDelayed(sshImeResizeRunnable, 250L);
                 this.keyboardHeight = keyBoardHeight;
                 return;
             }
@@ -1744,6 +1779,13 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     @Override
     protected void onDestroy() {
         super.onDestroy();
+
+        // Cancel any pending SSH IME resize — the SSH session is about
+        // to be torn down by disconnectAndClose() and a stale resize
+        // would race with that.
+        if (handler != null && sshImeResizeRunnable != null) {
+            handler.removeCallbacks(sshImeResizeRunnable);
+        }
 
         // already called when handling BACK_BUTTON
         disconnectAndClose();
