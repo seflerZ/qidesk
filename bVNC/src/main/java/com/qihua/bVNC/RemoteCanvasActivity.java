@@ -452,6 +452,23 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             rootView.getWindowVisibleDisplayFrame(r);
             getWindow().getDecorView().getWindowVisibleDisplayFrame(re);
 
+            // SSH has no backing image to pan — RemoteSshPointer is a
+            // no-op (pointerY=0), the scaler is null (zoomFactor=1),
+            // and there's no overflow region for scrollTo() to reveal.
+            // The RDP pan model below would compute a negative
+            // panDistance and short-circuit, leaving the terminal
+            // hidden under the IME. Route SSH through the connection
+            // initializer's resize path instead — it reflows the
+            // grid by reallocating mbitmap at r.bottom and lets the
+            // gridSizeListener send a TIOCSWINSZ to the remote PTY.
+            if (canvas.connection != null
+                    && canvas.connection.getConnectionType() == Constants.CONN_TYPE_SSH
+                    && canvas.connInitializer != null) {
+                canvas.connInitializer.onSoftKeyboardChanged(isShow, r.bottom);
+                this.keyboardHeight = keyBoardHeight;
+                return;
+            }
+
             // the absoluteYPosition is in image's coordinate system. if positive, the image on the screen will move upward
             float pointerYPos = (canvas.pointer.getY() - canvas.absoluteYPosition) * canvas.getZoomFactor();
 

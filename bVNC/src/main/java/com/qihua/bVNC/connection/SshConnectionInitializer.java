@@ -608,10 +608,22 @@ public class SshConnectionInitializer extends ConnectionInitializer {
      * rather than restarting.
      */
     private void resizeSSHFramebuffer() {
+        resizeSSHFramebuffer(canvas.displayRect.height());
+    }
+
+    /**
+     * Resize the SSH framebuffer to {@code overrideHeight} (in pixels)
+     * instead of {@link android.graphics.Rect#height()} of the display.
+     * Used by {@link #onSoftKeyboardChanged(boolean, int)} to reflow the
+     * grid to fit above the IME — see that method for the rationale.
+     */
+    private void resizeSSHFramebuffer(int overrideHeight) {
         lifecycleLock.lock();
         try {
             int w = canvas.displayRect.width();
-            int h = canvas.displayRect.height();
+            // Clamp to >= 1 so we never hand 0 (or negative) to
+            // reallocateDrawable, which would NPE on Bitmap.createBitmap.
+            int h = Math.max(1, overrideHeight);
             int fbW = Math.max(1, (int) (w * Constants.SSH_SMART_RESOLUTION_FACTOR));
             int fbH = Math.max(1, (int) (h * Constants.SSH_SMART_RESOLUTION_FACTOR));
 
@@ -666,5 +678,50 @@ public class SshConnectionInitializer extends ConnectionInitializer {
         } finally {
             lifecycleLock.unlock();
         }
+    }
+
+    /**
+     * IME visibility changed. SSH has no backing image to pan, so the
+     * RDP/VNC pan-the-remote-image model in {@code RemoteCanvasActivity}'s
+     * {@code KeyBoardListenerHelper} listener is a no-op for SSH (the
+     * pointer is a no-op {@link com.qihua.bVNC.input.RemoteSshPointer},
+     * the scaler is null, and there is no overflow region to scroll
+     * into). Instead, we reflow the terminal grid by reallocating
+     * mbitmap at the IME-aware available height — the next
+     * {@link SshTerminalRenderer#renderInto} detects the new cols/rows,
+     * fires {@link SshTermStateMachine#setSize}, and the gridSizeListener
+     * registered in {@link #initialize} calls
+     * {@link com.qihua.bVNC.ssh.SshTerminalConnection#resizePty}, which
+     * sends a {@code window-change} to the remote PTY. The remote TUI
+     * (vim, htop, Claude Code, …) reflows to fit the new dimensions,
+     * and the local mbitmap mirrors it. The user sees the grid shrink
+     * to fit above the IME — exactly the "content pushed up" effect.
+     *
+     * <p>{@code availableHeight} is the bottom of
+     * {@code getWindowVisibleDisplayFrame()} in pixels, which the
+     * activity already computes in its IME listener — it's the
+     * post-IME window height in window coordinates, not the full
+     * display rect height.
+     *
+     * <p>Called from {@code RemoteCanvasActivity}'s IME listener when
+     * {@code conn.getConnectionType() == Constants.CONN_TYPE_SSH}; the
+     * RDP path is bypassed for SSH.
+     */
+    @Override
+    public void onSoftKeyboardChanged(boolean isShow, int availableHeight) {
+        if (canvas == null || canvas.rfbconn == null || renderer == null) {
+            return;
+        }
+        int targetH = isShow
+                ? Math.max(1, availableHeight)
+                : (canvas.displayRect != null
+                        ? Math.max(1, canvas.displayRect.height())
+                        : Math.max(1, availableHeight));
+        Log.i(TAG, "onSoftKeyboardChanged: isShow=" + isShow
+                + " availableHeight=" + availableHeight
+                + " targetH=" + targetH
+                + " currentH=" + (canvas.bitmapData != null && canvas.bitmapData.mbitmap != null
+                        ? canvas.bitmapData.mbitmap.getHeight() : -1));
+        resizeSSHFramebuffer(targetH);
     }
 }
