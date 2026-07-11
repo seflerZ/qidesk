@@ -124,10 +124,23 @@ static int jni_movecursor(VTermPos pos, VTermPos oldpos, int visible, void *user
     return 1;
 }
 
-// settermprop: ignore. libvterm sends these for OSC sequences; we
-// don't act on title/icon-name changes (Phase 4+ could route to UI).
+// settermprop: we mostly ignore OSC-style title/icon-name changes
+// (Phase 4+ could route to UI). The one we DO care about is
+// VTERM_PROP_ALTSCREEN: libvterm flips screen->buffer here but only
+// fires damagerect on ENTER (via erase()); on LEAVE the buffer swap
+// happens silently with no damage, so the previous alt-screen frame
+// stays painted — that's the "Claude Code TUI doesn't clear the
+// existing scrollback" symptom. Force a full-screen damage in both
+// directions so Java's takeDirtyRows triggers renderInto.
 static int jni_settermprop(VTermProp prop, VTermValue *val, void *user) {
-    (void) prop; (void) val; (void) user;
+    if (prop == VTERM_PROP_ALTSCREEN) {
+        jhandle_t *h = (jhandle_t *) user;
+        VTermRect full = {
+            .start_row = 0, .end_row = h->rows,
+            .start_col = 0, .end_col = h->cols,
+        };
+        jni_damage(full, h);
+    }
     return 1;
 }
 
