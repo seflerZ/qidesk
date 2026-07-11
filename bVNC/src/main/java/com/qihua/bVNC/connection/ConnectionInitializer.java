@@ -38,23 +38,4 @@ public abstract class ConnectionInitializer {
     public abstract void start(RemoteCanvas canvas) throws Exception;
 
     public abstract void onDisplayRectChanged(Display display);
-
-    /**
-     * Soft keyboard visibility changed. Default is a no-op — RDP / VNC /
-     * SPICE / NVStream already have protocol-agnostic image-pan handling
-     * in {@code RemoteCanvasActivity}. SSH overrides this because the
-     * terminal grid has no overflow to pan; instead it reflows the grid
-     * by resizing mbitmap to {@code availableHeight} (which
-     * {@code SshTerminalRenderer.renderInto} notices and reports back as
-     * a {@code TIOCSWINSZ} via {@code SshTerminalConnection.resizePty}).
-     *
-     * @param isShow         true if the IME just became visible
-     * @param availableHeight the visible display frame bottom in pixels
-     *                        (window height minus IME height, in window
-     *                        coordinates) — the SSH initializer uses this
-     *                        as the new bitmap height so the grid reflows
-     *                        to fit above the keyboard
-     */
-    public void onSoftKeyboardChanged(boolean isShow, int availableHeight) {
-    }
 }
