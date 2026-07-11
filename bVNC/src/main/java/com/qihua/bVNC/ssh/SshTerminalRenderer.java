@@ -108,9 +108,6 @@ public class SshTerminalRenderer {
             int bg = ctx.getResources().getColor(com.qihua.bVNC.R.color.ssh_terminal_bg, ctx.getTheme());
             Log.i(TAG, "applyTheme: pushing fg=0x" + Integer.toHexString(fg) + " bg=0x" + Integer.toHexString(bg));
             stateMachine.setDefaultColors(fg, bg);
-            // 16-colour ANSI palette — order matches the libvterm
-            // indexed colour indices (0..7 normal, 8..15 bright)
-            // so \e[31m picks up the new red etc.
             int[] palette = new int[] {
                 ctx.getResources().getColor(com.qihua.bVNC.R.color.ssh_terminal_black,  ctx.getTheme()), // 0
                 ctx.getResources().getColor(com.qihua.bVNC.R.color.ssh_terminal_red,    ctx.getTheme()), // 1
@@ -131,21 +128,25 @@ public class SshTerminalRenderer {
             };
             stateMachine.setPalette(palette);
             Log.i(TAG, "applyTheme: pushed 16-colour palette");
+        }
+    }
 
-            // Force a fresh OSC 10/11 round-trip so the remote shell
-            // (zsh prompts, etc.) re-picks its contrast colour against
-            // the new theme. libvterm's jni_osc responds to these
-            // queries with the latest g_default_*_argb, which we just
-            // set above, and the response is fed back through SSH
-            // stdin by SshTermStateMachine.write()'s post-write
-            // drainOutput.
-            try {
-                stateMachine.write(new byte[] { 0x1B, ']', '1', '0', ';', '?', 0x07 }, 0, 7);
-                stateMachine.write(new byte[] { 0x1B, ']', '1', '1', ';', '?', 0x07 }, 0, 7);
-                Log.i(TAG, "applyTheme: emitted OSC 10/11 ?  for theme re-query");
-            } catch (Throwable t) {
-                Log.w(TAG, "applyTheme: OSC re-query write failed", t);
-            }
+    /**
+     * Emit OSC 10/11 query bytes through the state machine so the
+     * remote shell re-picks its contrast colour against the current
+     * theme. Call this AFTER the SSH connection is live — calling
+     * it during startup (before the SSH handshake completes) sends
+     * raw bytes into the output buffer that end up on the wire as
+     * garbled text.
+     */
+    public void queryShellTheme() {
+        if (stateMachine == null) return;
+        try {
+            stateMachine.write(new byte[] { 0x1B, ']', '1', '0', ';', '?', 0x07 }, 0, 7);
+            stateMachine.write(new byte[] { 0x1B, ']', '1', '1', ';', '?', 0x07 }, 0, 7);
+            Log.i(TAG, "queryShellTheme: emitted OSC 10/11 ?");
+        } catch (Throwable t) {
+            Log.w(TAG, "queryShellTheme: OSC re-query write failed", t);
         }
     }
 

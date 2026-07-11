@@ -265,19 +265,6 @@ public class SshConnectionInitializer extends ConnectionInitializer {
         // no-op and DrawWorker skipped setMatrix entirely.
         sshScaler = new SshTerminalScaling();
         sshScaler.attachTo(canvas);
-
-        // Push the current AppCompat day/night theme into the SSH
-        // terminal at connect time. onConfigurationChanged only
-        // fires when the uiMode flips; if the activity was already
-        // dark when the SSH session opens, no applyTheme() has run
-        // yet and the renderer would keep its hardcoded Solarized
-        // defaults until the user toggles the theme. Reading the
-        // context directly here mirrors what the activity does on
-        // a flip, so a fresh SSH connection lands in the active
-        // theme from the first paint.
-        if (renderer != null) {
-            renderer.applyTheme();
-        }
     }
 
     @Override
@@ -286,6 +273,16 @@ public class SshConnectionInitializer extends ConnectionInitializer {
         canvas.waitUntilInflated();
         canvas.reallocateDrawable(canvas.displayRect.width(), canvas.displayRect.height());
         openRenderer();
+        // Push the current AppCompat theme into the newly-created
+        // stateMachine. initialize() already called applyTheme() for
+        // VTermCanvasRenderer (palette + seedBackground), but at that
+        // point stateMachine was null so the JNI defaults and OSC
+        // query were skipped. Run again now so the first SSH
+        // connection lands in the right theme from byte zero, not
+        // just after the next uiMode flip.
+        if (renderer != null) {
+            renderer.applyTheme();
+        }
         // Wire the keyboard to the newly-created libvterm state machine.
         // This must happen AFTER openRenderer() because stateMachine is only
         // instantiated inside SshTerminalRenderer.open().
@@ -499,6 +496,20 @@ public class SshConnectionInitializer extends ConnectionInitializer {
             canvas.reDraw(0, 0,
                     canvas.bitmapData.mbitmap.getWidth(),
                     canvas.bitmapData.mbitmap.getHeight());
+        }
+    }
+
+    /**
+     * Trigger OSC 10/11 queries through the live SSH connection
+     * so the remote shell re-picks its contrast colour. Safe to
+     * call from {@code RemoteCanvasActivity} on theme flips —
+     * at that point the SSH connection is fully established and
+     * the input pipe won't deliver garbled bytes into the shell
+     * startup banner.
+     */
+    public void queryShellTheme() {
+        if (renderer != null) {
+            renderer.queryShellTheme();
         }
     }
 

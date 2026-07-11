@@ -170,14 +170,32 @@ public final class VTermCanvasRenderer {
             int safeCol = Math.max(0, Math.min(cur.col, cols - 1));
             int safeRow = Math.max(0, Math.min(cur.row, rows - 1));
             SshTermStateMachine.TermCell cursorCell = sm.getCell(safeRow, safeCol);
-            // Match the same translation paintCell does, so the
-            // cursor block flips palette with the rest of the grid
-            // when the cell under it carries the legacy default
-            // colour.
-            int cursorColor = (cursorCell == null
-                    || cursorCell.fg == defaultFg
-                    || cursorCell.fg == LEGACY_DEFAULT_FG)
-                    ? defaultFg : cursorCell.fg;
+            // Translate the cursor's colour using the same logic as
+            // paintCell: map legacy default fg/bg RGB onto the current
+            // theme, and honour reverse video (\e[7m) so the cursor
+            // block renders in the displayed foreground of the cell
+            // it covers, not the original fg. Without the reverse
+            // check, zsh completion menus (which grey out their items
+            // and \e[7m the selected one) would show the cursor in
+            // the completion-hint grey instead of the cell's actual
+            // displayed foreground (the reversed-out background).
+            int cursorColor = defaultFg; // fallback when cell is null
+            if (cursorCell != null) {
+                int cellFg = (cursorCell.fg == defaultFg
+                        || cursorCell.fg == LEGACY_DEFAULT_FG)
+                        ? defaultFg : cursorCell.fg;
+                int cellBg = (cursorCell.bg == defaultBg
+                        || cursorCell.bg == LEGACY_DEFAULT_BG)
+                        ? defaultBg : cursorCell.bg;
+                if ((cursorCell.attrs & ATTR_REVERSE) != 0) {
+                    // reverse video: the displayed fg is actually
+                    // the cell's bg colour
+                    cursorColor = (cellBg == defaultBg)
+                            ? defaultFg : cellBg;
+                } else {
+                    cursorColor = cellFg;
+                }
+            }
             cursorPaint.setColor(cursorColor);
             float cx = paddingPx + safeCol * charWidth;
             float cy = paddingPx + safeRow * charHeight;

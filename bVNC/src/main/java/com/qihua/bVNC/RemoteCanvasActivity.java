@@ -1412,8 +1412,15 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         // already reads the fresh palette from the context.
         if (canvas.connInitializer
                 instanceof com.qihua.bVNC.connection.SshConnectionInitializer) {
-            ((com.qihua.bVNC.connection.SshConnectionInitializer) canvas.connInitializer)
-                    .applyTheme();
+            com.qihua.bVNC.connection.SshConnectionInitializer init =
+                    (com.qihua.bVNC.connection.SshConnectionInitializer) canvas.connInitializer;
+            init.applyTheme();
+            // After the palette is in place, poke the remote shell
+            // so it re-queries OSC 10/11 and recalculates its
+            // prompt colours. Safe here — the SSH connection is
+            // live and the pipe won't spew garbled bytes into the
+            // shell startup.
+            init.queryShellTheme();
         }
     }
 
