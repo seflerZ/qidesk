@@ -649,7 +649,6 @@ build_vterm() {
         git clone ${libvterm_url} ${libvterm_build}
     fi
     pushd ${libvterm_build}
-    git fetch
     git checkout ${libvterm_ver}
     git reset --hard
     popd

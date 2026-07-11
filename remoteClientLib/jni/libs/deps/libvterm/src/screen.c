@@ -1058,6 +1058,11 @@ void vterm_screen_set_reflow(VTermScreen *screen, bool reflow)
   vterm_screen_enable_reflow(screen, reflow);
 }
 
+VTermState *vterm_screen_get_state(VTermScreen *screen)
+{
+  return screen->state;
+}
+
 void vterm_screen_enable_altscreen(VTermScreen *screen, int altscreen)
 {
   if(!screen->buffers[BUFIDX_ALTSCREEN] && altscreen) {

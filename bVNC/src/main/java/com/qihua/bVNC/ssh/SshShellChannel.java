@@ -76,6 +76,9 @@ public class SshShellChannel {
     private volatile Session session;
     private volatile boolean running;
 
+    /** Called on readPump EOF — the remote shell exited (exit / Ctrl+D). */
+    private Runnable onDisconnect;
+
     public SshShellChannel() throws IOException {
         terminalIn = new PipedInputStream(PIPE_SIZE);
         terminalInSink = new PipedOutputStream();
@@ -95,6 +98,11 @@ public class SshShellChannel {
     /** TermSession.setTermOut — bytes written here go to the remote shell's stdin. */
     public OutputStream getTerminalOut() {
         return terminalOutSink;
+    }
+
+    /** Called when the remote shell exits (readPump gets EOF). */
+    public void setOnDisconnect(Runnable r) {
+        this.onDisconnect = r;
     }
 
     /**
@@ -166,11 +174,10 @@ public class SshShellChannel {
             }
             if (n < 0) {
                 Log.i(TAG, "readPump: stdout returned -1 (remote end closed)");
-                // Same reasoning as IOException: don't kill TermSession.
-                try { Thread.sleep(100); } catch (InterruptedException ie) {
-                    return;
+                if (onDisconnect != null) {
+                    onDisconnect.run();
                 }
-                continue;
+                break;
             }
             try {
                 terminalInSink.write(buf, 0, n);

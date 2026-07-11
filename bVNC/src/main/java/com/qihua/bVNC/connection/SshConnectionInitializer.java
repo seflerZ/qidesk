@@ -244,6 +244,14 @@ public class SshConnectionInitializer extends ConnectionInitializer {
         //    The context is needed for loading the terminal font (Sarasa Mono
         //    SC Nerd) from APK assets.
         channel = new SshShellChannel();
+        // When the remote shell exits (exit / Ctrl+D, SSH session ends),
+        // navigate back to the main connection list instead of leaving
+        // the user staring at a dead canvas.
+        channel.setOnDisconnect(() -> {
+            if (canvas != null && canvas.handler != null && canvas.activity != null) {
+                canvas.handler.post(canvas.activity::disconnectAndClose);
+            }
+        });
         renderer = new SshTerminalRenderer(density, channel, ctx);
         // Forward grid-size changes to the remote PTY so the shell's
         // line editor knows the new dimensions. Trilead's resizePTY is

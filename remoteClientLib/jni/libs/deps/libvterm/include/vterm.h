@@ -566,6 +566,11 @@ void vterm_screen_enable_reflow(VTermScreen *screen, bool reflow);
 
 void vterm_screen_enable_altscreen(VTermScreen *screen, int altscreen);
 
+// Expose VTermScreen's underlying VTermState so JNI code can
+// register OSC fallback handlers without accessing the private
+// struct (VTermScreen is forward-declared in this header).
+VTermState *vterm_screen_get_state(VTermScreen *screen);
+
 typedef enum {
   VTERM_DAMAGE_CELL,    /* every cell */
   VTERM_DAMAGE_ROW,     /* entire rows */
