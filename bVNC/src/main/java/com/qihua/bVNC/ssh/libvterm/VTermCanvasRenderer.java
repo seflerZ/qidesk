@@ -134,8 +134,8 @@ public final class VTermCanvasRenderer {
                     textPaint.setTextSkewX((cell.attrs & ATTR_ITALIC) != 0 ? -0.25f : 0f);
                     // Char-to-glyph: TextPaint.drawText takes a String, codepoint
                     // may be surrogate-pair. Build a 1-char string.
-                    String s = new String(Character.toChars(cell.codepoint));
-                    canvas.drawText(s, cellLeft, baselineY, textPaint);
+                    String str = new String(Character.toChars(cell.codepoint));
+                    canvas.drawText(str, cellLeft, baselineY, textPaint);
                     textPaint.setFakeBoldText(false);
                     textPaint.setTextSkewX(0f);
                 }
