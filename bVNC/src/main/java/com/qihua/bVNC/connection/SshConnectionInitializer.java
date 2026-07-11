@@ -717,23 +717,11 @@ public class SshConnectionInitializer extends ConnectionInitializer {
                 : (canvas.displayRect != null
                         ? Math.max(1, canvas.displayRect.height())
                         : Math.max(1, availableHeight));
-        // Skip the rebuild if the target height matches the current
-        // bitmap within a few pixels — debounce in the activity layer
-        // collapses the IME animation into one resize, but layout can
-        // still ripple a few pixels after the IME settles. Rebuilding
-        // for a 1-3 pixel delta would only cost one full reallocate +
-        // remote TIOCSWINSZ for no visible change.
-        int currentH = canvas.bitmapData != null && canvas.bitmapData.mbitmap != null
-                ? canvas.bitmapData.mbitmap.getHeight() : -1;
-        if (currentH > 0 && Math.abs(currentH - targetH) < 4) {
-            Log.i(TAG, "onSoftKeyboardChanged: targetH=" + targetH
-                    + " ~= currentH=" + currentH + ", skipping");
-            return;
-        }
         Log.i(TAG, "onSoftKeyboardChanged: isShow=" + isShow
                 + " availableHeight=" + availableHeight
                 + " targetH=" + targetH
-                + " currentH=" + currentH);
+                + " currentH=" + (canvas.bitmapData != null && canvas.bitmapData.mbitmap != null
+                        ? canvas.bitmapData.mbitmap.getHeight() : -1));
         resizeSSHFramebuffer(targetH);
     }
 }
