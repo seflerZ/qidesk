@@ -237,36 +237,6 @@ public final class SshTermStateMachine {
         }
     }
 
-    /**
-     * Roll the libvterm viewport up by {@code rows} rows. After this
-     * call, the top {@code rows} rows of the viewport contain garbage
-     * (libvterm 0.3.3's internal buffer is exactly the viewport size
-     * and does not retain scrolled-off content). {@link
-     * SshTerminalRenderer#renderInto} paints those rows as BG so the
-     * user sees a clean "scrollback" header instead of garbage chars.
-     * No-op if rows <= 0 or the state machine hasn't opened yet.
-     */
-    public void scrollUp(int rows) {
-        if (rows <= 0) return;
-        synchronized (this) {
-            nativeScrollUp(nativeHandle, rows);
-        }
-    }
-
-    /**
-     * Roll the libvterm viewport down by {@code rows} rows. Symmetric
-     * to {@link #scrollUp}; the top {@code rows} rows again become
-     * garbage that renderInto paints as BG. Used to walk back from
-     * scrollback toward the live screen — the user must accept the
-     * BG header until the remote shell redraws those rows itself.
-     */
-    public void scrollDown(int rows) {
-        if (rows <= 0) return;
-        synchronized (this) {
-            nativeScrollDown(nativeHandle, rows);
-        }
-    }
-
     public void destroy() {
         synchronized (this) {
             if (nativeHandle != 0) {
@@ -328,8 +298,6 @@ public final class SshTermStateMachine {
     private static native int   nativeTakeDirtyRows(long h, int[] outRows);
     private static native TermCell  nativeGetCell(long h, int row, int col);
     private static native CursorInfo nativeGetCursor(long h);
-    private static native void  nativeScrollUp(long h, int rows);
-    private static native void  nativeScrollDown(long h, int rows);
     private static native void  nativeDestroy(long h);
     private static native void  nativeSetDefaultColors(long h, int fgArgb, int bgArgb);
     private static native void  nativeSetPalette(int[] palette);

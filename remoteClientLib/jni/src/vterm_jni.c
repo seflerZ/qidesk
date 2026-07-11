@@ -121,6 +121,7 @@ static int jni_movecursor(VTermPos pos, VTermPos oldpos, int visible, void *user
     h->cursor_row = pos.row;
     h->cursor_col = pos.col;
     h->cursor_visible = visible;
+    LOGI("movecursor: row=%d col=%d visible=%d", pos.row, pos.col, visible);
     return 1;
 }
 
@@ -317,13 +318,7 @@ Java_com_qihua_bVNC_ssh_libvterm_SshTermStateMachine_nativeCreate(
     vterm_output_set_callback(h->vt, jni_output_callback, h);
 
     h->vts = vterm_obtain_screen(h->vt);
-    // Order MUST match include/vterm.h VTermScreenCallbacks. We do
-    // NOT register sb_pushline / sb_popline / sb_clear — scrollback
-    // is driven from Java via nativeScrollUp / nativeScrollDown,
-    // which call vterm_scroll_rect directly. libvterm itself does
-    // not retain scrolled-off rows (screen.c buffers[2] holds only the
-    // current viewport); the rows "scrolled off the top" become
-    // garbage in the viewport, which renderInto paints as BG.
+    // Order MUST match include/vterm.h VTermScreenCallbacks.
     h->screen_callbacks.damage     = jni_damage;
     h->screen_callbacks.moverect   = jni_moverect;
     h->screen_callbacks.movecursor = jni_movecursor;
@@ -680,7 +675,7 @@ Java_com_qihua_bVNC_ssh_libvterm_SshTermStateMachine_nativeGetCell(
 }
 
 // Build a TermCell Java object from a VTermScreenCell. Shared by
-// nativeGetCell (live grid) and nativeGetScrollbackCell (ring). The
+// nativeGetCell (live grid). The
 // `cell` is read-only here — VTermScreenCell is a POD aggregate
 // (chars[6]=uint32_t, attrs bitfield, fg/bg VTermColor with three
 // uint8_t + a type tag), no deep-copy needed because Java only stores
@@ -727,56 +722,6 @@ Java_com_qihua_bVNC_ssh_libvterm_SshTermStateMachine_nativeGetCursor(
     (*env)->SetBooleanField(env, obj, fvis, h->cursor_visible ? JNI_TRUE : JNI_FALSE);
 
     return obj;
-}
-
-// Roll the libvterm viewport up by `rows` rows. After this call,
-// vterm_screen_get_cell sees the (rows, rows-1) range shifted into
-// (0, rows-2); rows 0..rows-1 of the viewport contain whatever
-// libvterm's moverect_internal memmoved into them (see screen.c:239)
-// — typically garbage because libvterm's buffers[2] is exactly the
-// viewport size. renderInto paints those N rows as BG so the user sees
-// a clean "scrollback" header.
-JNIEXPORT void JNICALL
-Java_com_qihua_bVNC_ssh_libvterm_SshTermStateMachine_nativeScrollUp(
-        JNIEnv *env, jclass clazz, jlong handle, jint rows) {
-    (void) clazz;
-    if (rows <= 0) return;
-    jhandle_t *h = getHandle(env, handle);
-    if (!h || !h->vts) return;
-    if (rows > h->rows) rows = h->rows;
-    VTermRect rect = {
-        .start_row = 0, .end_row = h->rows,
-        .start_col = 0, .end_col = h->cols,
-    };
-    // libvterm 0.3.3 vterm_scroll_rect unconditionally invokes the
-    // eraserect callback (vterm.c:371) — passing NULL here SIGSEGVs
-    // at PC=0. We feed libvterm's own moverect_internal /
-    // erase_internal (declared extern in libvterm's screen.h after
-    // our fork's patch; see deps/libvterm/src/screen.c).
-    extern int moverect_internal(VTermRect dest, VTermRect src, void *user);
-    extern int erase_internal(VTermRect rect, int selective, void *user);
-    vterm_scroll_rect(rect, rows, 0, moverect_internal, erase_internal, h->vts);
-}
-
-// Roll the libvterm viewport down by `rows` rows. Symmetric to
-// nativeScrollUp. The top `rows` rows become garbage — renderInto
-// draws them as BG. To get back to the live screen the user must
-// accept the BG header until the remote shell redraws.
-JNIEXPORT void JNICALL
-Java_com_qihua_bVNC_ssh_libvterm_SshTermStateMachine_nativeScrollDown(
-        JNIEnv *env, jclass clazz, jlong handle, jint rows) {
-    (void) clazz;
-    if (rows <= 0) return;
-    jhandle_t *h = getHandle(env, handle);
-    if (!h || !h->vts) return;
-    if (rows > h->rows) rows = h->rows;
-    VTermRect rect = {
-        .start_row = 0, .end_row = h->rows,
-        .start_col = 0, .end_col = h->cols,
-    };
-    extern int moverect_internal(VTermRect dest, VTermRect src, void *user);
-    extern int erase_internal(VTermRect rect, int selective, void *user);
-    vterm_scroll_rect(rect, -rows, 0, moverect_internal, erase_internal, h->vts);
 }
 
 JNIEXPORT void JNICALL
