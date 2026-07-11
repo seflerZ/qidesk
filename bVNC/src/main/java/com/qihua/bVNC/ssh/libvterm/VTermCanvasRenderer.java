@@ -1,9 +1,12 @@
 package com.qihua.bVNC.ssh.libvterm;
 
+import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.text.TextPaint;
+
+import com.qihua.bVNC.R;
 
 /**
  * Renders the libvterm state machine's grid to an Android Canvas.
@@ -17,11 +20,30 @@ import android.text.TextPaint;
  * {@link TextPaint} and {@link Paint} instances.
  */
 public final class VTermCanvasRenderer {
-    /** Solarized base03 — matches SshTerminalRenderer's BG_COLOR. */
-    private static final int BG_COLOR = 0xFF002B36;
-    /** Solarized base0 — default foreground. */
-    private static final int DEFAULT_FG = 0xFF839496;
-    private static final int DEFAULT_BG = 0xFF002B36;
+    /** Background paint colour — sourced from {@code ssh_terminal_bg}
+     *  so the SSH terminal follows the AppCompat day/night theme. */
+    private int bgColor;
+    /** libvterm's VTERM_COLOR_IS_DEFAULT_FG → argb mapping. */
+    private int defaultFg;
+    /** libvterm's VTERM_COLOR_IS_DEFAULT_BG → argb mapping (matches bgColor by convention). */
+    private int defaultBg;
+
+    /**
+     * Original (Solarized) default fg/bg, used to remap cells that
+     * libvterm painted with raw RGB instead of the VTERM_COLOR_DEFAULT_FG
+     * flag. libvterm 0.3.3 has no public cell-setter API, so when the
+     * AppCompat day/night theme flips the cells the remote program
+     * already painted stay in the old theme unless we translate at
+     * the output: any cell whose raw fg/bg ARGB matches one of
+     * {@code LEGACY_DEFAULT_FG} / {@code LEGACY_DEFAULT_BG} is treated
+     * as a "default-flavoured" cell and painted with the new
+     * {@code defaultFg} / {@code defaultBg} instead. Cells the
+     * remote program explicitly painted with a non-default colour
+     * (red, green, syntax highlight) pass through unchanged because
+     * they don't match the legacy ARGB.
+     */
+    private static final int LEGACY_DEFAULT_FG = 0xFF839496; // Solarized base0
+    private static final int LEGACY_DEFAULT_BG = 0xFF002B36; // Solarized base03
 
     private static final int ATTR_BOLD      = 1;
     private static final int ATTR_ITALIC    = 2;
@@ -43,7 +65,7 @@ public final class VTermCanvasRenderer {
     /** Cell height in pixels, valid after construction. */
     public final int charHeight;
 
-    public VTermCanvasRenderer(int fontSizePx, int paddingPx, Typeface typeface) {
+    public VTermCanvasRenderer(int fontSizePx, int paddingPx, Typeface typeface, Context ctx) {
         this.fontSizePx = fontSizePx;
         this.paddingPx = paddingPx;
         this.typeface = typeface;
@@ -67,6 +89,45 @@ public final class VTermCanvasRenderer {
 
         this.cursorPaint = new Paint();
         cursorPaint.setStyle(Paint.Style.FILL);
+
+        // Read the theme-driven defaults from resources. The SSH
+        // initializer calls setPalette() again on theme flips so the
+        // values-night/ variant takes over without restarting the
+        // renderer.
+        if (ctx != null) {
+            this.bgColor = ctx.getResources().getColor(R.color.ssh_terminal_bg, ctx.getTheme());
+            this.defaultFg = ctx.getResources().getColor(R.color.ssh_terminal_fg, ctx.getTheme());
+            this.defaultBg = this.bgColor;
+        } else {
+            // Fallback for legacy call sites that pre-date the Context
+            // argument (kept until callers are migrated). Solarized
+            // hardcoded so the renderer doesn't crash if used bare.
+            this.bgColor = 0xFF002B36;
+            this.defaultFg = 0xFF839496;
+            this.defaultBg = 0xFF002B36;
+        }
+    }
+
+    /**
+     * Update the renderer's bg / default-fg / default-bg from a Context.
+     * Called from {@code SshConnectionInitializer} when the AppCompat
+     * night mode flips (e.g. user changes the theme, or system day/
+     * night flips on Android 10+). The {@link SshTerminalRenderer}
+     * also rebuilds the mbitmap via {@code seedBackground} so the
+     * freshly-coloured cells show on next paint.
+     */
+    public void setPalette(Context ctx) {
+        if (ctx == null) return;
+        int newBg = ctx.getResources().getColor(R.color.ssh_terminal_bg, ctx.getTheme());
+        int newFg = ctx.getResources().getColor(R.color.ssh_terminal_fg, ctx.getTheme());
+        android.util.Log.i("VTermCanvasRenderer",
+                "setPalette: bg=0x" + Integer.toHexString(newBg)
+                + " fg=0x" + Integer.toHexString(newFg)
+                + " (old bg=0x" + Integer.toHexString(bgColor)
+                + " fg=0x" + Integer.toHexString(defaultFg) + ")");
+        this.bgColor = newBg;
+        this.defaultFg = newFg;
+        this.defaultBg = this.bgColor;
     }
 
     /**
@@ -99,53 +160,7 @@ public final class VTermCanvasRenderer {
             float baselineY = cellBottom - textPaint.getFontMetrics().descent;
             for (int col = 0; col < cols; col++) {
                 SshTermStateMachine.TermCell cell = sm.getCell(row, col);
-                if (cell == null) continue;
-                // Gap cell: second column of a double-width CJK char
-                // (libvterm marks it chars[0]==0xFFFFFFFF, which becomes
-                // jint -1). Its area is already covered by the primary
-                // cell's bg fill + wide glyph; skip it so we don't
-                // overdraw the wide glyph's right half.
-                if (cell.codepoint == -1) continue;
-
-                float cellLeft = paddingPx + col * charWidth;
-                float cellRight = cellLeft + charWidth * Math.max(1, cell.width);
-
-                // Always fill bg — clears stale content from the previous
-                // frame without a global clear.
-                int bgFill;
-                if ((cell.attrs & ATTR_REVERSE) != 0) {
-                    // reverse video: swap fg/bg
-                    bgFill = (cell.fg == DEFAULT_FG) ? DEFAULT_FG : cell.fg;
-                } else if (cell.bg != DEFAULT_BG) {
-                    bgFill = cell.bg;
-                } else {
-                    bgFill = BG_COLOR;
-                }
-                bgPaint.setColor(bgFill);
-                canvas.drawRect(cellLeft, cellTop, cellRight, cellBottom, bgPaint);
-
-                // Glyph
-                if (cell.codepoint > 0) {
-                    int fgColor = (cell.attrs & ATTR_REVERSE) != 0
-                            ? (cell.bg == DEFAULT_BG ? DEFAULT_FG : cell.bg)
-                            : (cell.fg == DEFAULT_FG ? DEFAULT_FG : cell.fg);
-                    textPaint.setColor(fgColor);
-                    textPaint.setFakeBoldText((cell.attrs & ATTR_BOLD) != 0);
-                    textPaint.setTextSkewX((cell.attrs & ATTR_ITALIC) != 0 ? -0.25f : 0f);
-                    // Char-to-glyph: TextPaint.drawText takes a String, codepoint
-                    // may be surrogate-pair. Build a 1-char string.
-                    String str = new String(Character.toChars(cell.codepoint));
-                    canvas.drawText(str, cellLeft, baselineY, textPaint);
-                    textPaint.setFakeBoldText(false);
-                    textPaint.setTextSkewX(0f);
-                }
-
-                // Underline
-                if ((cell.attrs & ATTR_UNDERLINE) != 0 && cell.codepoint > 0) {
-                    underlinePaint.setColor(textPaint.getColor());
-                    float underlineY = cellBottom - Math.max(1f, fontSizePx / 14f);
-                    canvas.drawLine(cellLeft, underlineY, cellRight, underlineY, underlinePaint);
-                }
+                paintCell(canvas, cell, col, cellTop, cellBottom, baselineY);
             }
         }
 
@@ -155,12 +170,107 @@ public final class VTermCanvasRenderer {
             int safeCol = Math.max(0, Math.min(cur.col, cols - 1));
             int safeRow = Math.max(0, Math.min(cur.row, rows - 1));
             SshTermStateMachine.TermCell cursorCell = sm.getCell(safeRow, safeCol);
-            int cursorColor = cursorCell != null && cursorCell.fg != DEFAULT_FG
-                    ? cursorCell.fg : DEFAULT_FG;
+            // Match the same translation paintCell does, so the
+            // cursor block flips palette with the rest of the grid
+            // when the cell under it carries the legacy default
+            // colour.
+            int cursorColor = (cursorCell == null
+                    || cursorCell.fg == defaultFg
+                    || cursorCell.fg == LEGACY_DEFAULT_FG)
+                    ? defaultFg : cursorCell.fg;
             cursorPaint.setColor(cursorColor);
             float cx = paddingPx + safeCol * charWidth;
             float cy = paddingPx + safeRow * charHeight;
             canvas.drawRect(cx, cy, cx + charWidth, cy + charHeight, cursorPaint);
+        }
+    }
+
+    /**
+     * Paint a single scrollback row onto {@code canvas}, starting at
+     * {@code cellTop} (pixels, top of the row). Reads cells from
+     * {@code sm.getScrollbackCell(rowIndex, col)} — rowIndex 0 is the
+     * oldest row still in the ring.
+     *
+     * <p>Unlike {@link #render}, no cursor is drawn and no gap-cell
+     * skip is needed: scrollback rows are pushed by libvterm as whole
+     * rows (memcpy in jni_sb_pushline), so codepoint==-1 (second half
+     * of a CJK double-width) cannot occur in the ring. The per-cell
+     * bg fill + drawText logic is identical to {@link #render}; only
+     * the cell source differs.
+     */
+    /**
+     * Paint one cell: bg fill + glyph + underline. Used by
+     * {@link #render}. The cell's column within the row is {@code col};
+     * its glyph's left edge is {@code paddingPx + col * charWidth}.
+     * Returns early on null (out-of-range row/col) and on gap cells
+     * (codepoint == -1 = second column of a double-width CJK char).
+     */
+    private void paintCell(Canvas canvas, SshTermStateMachine.TermCell cell,
+                           int col, float cellTop, float cellBottom, float baselineY) {
+        if (cell == null) return;
+        // Gap cell: second column of a double-width CJK char
+        // (libvterm marks it chars[0]==0xFFFFFFFF, which becomes
+        // jint -1). Its area is already covered by the primary
+        // cell's bg fill + wide glyph; skip it so we don't
+        // overdraw the wide glyph's right half.
+        if (cell.codepoint == -1) return;
+
+        float cellLeft = paddingPx + col * charWidth;
+        float cellRight = cellLeft + charWidth * Math.max(1, cell.width);
+
+        // Translate raw-RGB cells whose colour happens to match
+        // the *original* (Solarized) default into "this is a default-
+        // flavoured cell" — then the rest of the bg / glyph logic
+        // maps them onto the current theme's defaultFg/defaultBg
+        // without us having to teach libvterm 0.3.3 about theme
+        // flips.
+        int cellFg = (cell.fg == defaultFg || cell.fg == LEGACY_DEFAULT_FG)
+                ? defaultFg : cell.fg;
+        int cellBg = (cell.bg == defaultBg || cell.bg == LEGACY_DEFAULT_BG)
+                ? defaultBg : cell.bg;
+        android.util.Log.d("VTermCanvasRenderer",
+                "paintCell: cell.fg=0x" + Integer.toHexString(cell.fg)
+                + " cell.bg=0x" + Integer.toHexString(cell.bg)
+                + " -> cellFg=0x" + Integer.toHexString(cellFg)
+                + " cellBg=0x" + Integer.toHexString(cellBg)
+                + " (defaultFg=0x" + Integer.toHexString(defaultFg)
+                + " defaultBg=0x" + Integer.toHexString(defaultBg) + ")");
+
+        // Always fill bg — clears stale content from the previous
+        // frame without a global clear.
+        int bgFill;
+        if ((cell.attrs & ATTR_REVERSE) != 0) {
+            // reverse video: swap fg/bg
+            bgFill = (cellFg == defaultFg) ? defaultFg : cellFg;
+        } else if (cellBg != defaultBg) {
+            bgFill = cellBg;
+        } else {
+            bgFill = bgColor;
+        }
+        bgPaint.setColor(bgFill);
+        canvas.drawRect(cellLeft, cellTop, cellRight, cellBottom, bgPaint);
+
+        // Glyph
+        if (cell.codepoint > 0) {
+            int fgColor = (cell.attrs & ATTR_REVERSE) != 0
+                    ? (cellBg == defaultBg ? defaultFg : cellBg)
+                    : (cellFg == defaultFg ? defaultFg : cellFg);
+            textPaint.setColor(fgColor);
+            textPaint.setFakeBoldText((cell.attrs & ATTR_BOLD) != 0);
+            textPaint.setTextSkewX((cell.attrs & ATTR_ITALIC) != 0 ? -0.25f : 0f);
+            // Char-to-glyph: TextPaint.drawText takes a String, codepoint
+            // may be surrogate-pair. Build a 1-char string.
+            String str = new String(Character.toChars(cell.codepoint));
+            canvas.drawText(str, cellLeft, baselineY, textPaint);
+            textPaint.setFakeBoldText(false);
+            textPaint.setTextSkewX(0f);
+        }
+
+        // Underline
+        if ((cell.attrs & ATTR_UNDERLINE) != 0 && cell.codepoint > 0) {
+            underlinePaint.setColor(textPaint.getColor());
+            float underlineY = cellBottom - Math.max(1f, fontSizePx / 14f);
+            canvas.drawLine(cellLeft, underlineY, cellRight, underlineY, underlinePaint);
         }
     }
 }

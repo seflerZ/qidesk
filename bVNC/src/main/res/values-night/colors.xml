@@ -19,5 +19,27 @@
     <color name="extraKeysButtonBackgroundColor">@color/gesture_overlay</color>
     <color name="extraKeysButtonActiveBackgroundColor">@color/black_overlay</color>
 
+    <!-- SSH terminal palette — One Half Dark-my. Picked up
+         automatically when the AppCompat night mode is on (the
+         existing NightMode enum drives values-night/ selection). See
+         values/colors.xml for the full rationale on these names. -->
+    <color name="ssh_terminal_bg">#FF282C34</color>
+    <color name="ssh_terminal_fg">#FFDCDFE4</color>
+    <color name="ssh_terminal_black">#FF3D444F</color>
+    <color name="ssh_terminal_red">#FFE06C75</color>
+    <color name="ssh_terminal_green">#FF98C379</color>
+    <color name="ssh_terminal_yellow">#FFE5C07B</color>
+    <color name="ssh_terminal_blue">#FF61AFEF</color>
+    <color name="ssh_terminal_purple">#FFC678DD</color>
+    <color name="ssh_terminal_cyan">#FF56B6C2</color>
+    <color name="ssh_terminal_white">#FFDCDFE4</color>
+    <color name="ssh_terminal_bright_black">#FF636C80</color>
+    <color name="ssh_terminal_bright_red">#FFE06C75</color>
+    <color name="ssh_terminal_bright_green">#FF98C379</color>
+    <color name="ssh_terminal_bright_yellow">#FFE5C07B</color>
+    <color name="ssh_terminal_bright_blue">#FF61AFEF</color>
+    <color name="ssh_terminal_bright_purple">#FFC678DD</color>
+    <color name="ssh_terminal_bright_cyan">#FF56B6C2</color>
+    <color name="ssh_terminal_bright_white">#FFDCDFE4</color>
 
 </resources>

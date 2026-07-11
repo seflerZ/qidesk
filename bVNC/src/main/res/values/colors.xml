@@ -23,4 +23,30 @@
     <color name="dot_matrix_inactive">#55333333</color>
     <color name="dot_matrix_active">#88999999</color>
 
+    <!-- SSH terminal palette — One Half Light-my. The default fg/bg
+         are what libvterm reports as VTERM_COLOR_IS_DEFAULT_FG/BG;
+         VTermCanvasRenderer uses them for empty cells + reverse video.
+         The 16 ANSI colors are forwarded to libvterm via JNI in
+         SshTerminalConnection so terminal programs (htop, vim, etc.)
+         pick up the theme too. Override in values-night/colors.xml
+         for the dark variant. -->
+    <color name="ssh_terminal_bg">#FFF2F2F2</color>
+    <color name="ssh_terminal_fg">#FF383A42</color>
+    <color name="ssh_terminal_black">#FFFFFFFF</color>
+    <color name="ssh_terminal_red">#FFC9817D</color>
+    <color name="ssh_terminal_green">#FF71946B</color>
+    <color name="ssh_terminal_yellow">#FFABA288</color>
+    <color name="ssh_terminal_blue">#FF69A5C7</color>
+    <color name="ssh_terminal_purple">#FFAD8AB5</color>
+    <color name="ssh_terminal_cyan">#FF076E82</color>
+    <color name="ssh_terminal_white">#FF000000</color>
+    <color name="ssh_terminal_bright_black">#FF8C8C8C</color>
+    <color name="ssh_terminal_bright_red">#FFBF5D64</color>
+    <color name="ssh_terminal_bright_green">#FF81A667</color>
+    <color name="ssh_terminal_bright_yellow">#FFA6893D</color>
+    <color name="ssh_terminal_bright_blue">#FF4C88BA</color>
+    <color name="ssh_terminal_bright_purple">#FFA664BA</color>
+    <color name="ssh_terminal_bright_cyan">#FF4B9EA8</color>
+    <color name="ssh_terminal_bright_white">#FF474747</color>
+
 </resources>

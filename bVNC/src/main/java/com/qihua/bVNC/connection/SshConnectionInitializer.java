@@ -113,8 +113,6 @@ public class SshConnectionInitializer extends ConnectionInitializer {
                 long now = System.currentTimeMillis();
                 long sinceLast = now - lastPaintAt;
                 if (sinceLast > 1000) {
-                    Log.i(TAG, "paint stats: " + paintCounter + " paints in last "
-                            + sinceLast + " ms (heartbeat)");
                     paintCounter = 0;
                     lastPaintAt = now;
                 }
@@ -462,6 +460,99 @@ public class SshConnectionInitializer extends ConnectionInitializer {
      */
     public int getCursorPixelY() {
         return renderer != null ? renderer.getCursorPixelY() : 0;
+    }
+
+    /**
+     * Re-apply the AppCompat day/night palette to the SSH terminal.
+     * Called from {@code RemoteCanvasActivity.onConfigurationChanged}
+     * when the uiMode flips (system night-mode toggle or the user
+     * picking a different theme). The renderer's
+     * {@code applyTheme} updates the in-process palette (VTermCanvasRenderer's
+     * bgColor / defaultFg / defaultBg), pushes the new ARGB into
+     * libvterm via JNI, and reseeds the mbitmap so the next paint
+     * shows the new colours. Safe to call before
+     * {@link #start} — it no-ops until the renderer is created.
+     */
+    public void applyTheme() {
+        if (renderer == null) return;
+        renderer.applyTheme();
+        // Reseed the mbitmap with the new background so the user
+        // sees the flip immediately rather than waiting for the
+        // next byte from the remote shell.
+        if (canvas != null && canvas.bitmapData != null
+                && canvas.bitmapData.mbitmap != null
+                && !canvas.bitmapData.mbitmap.isRecycled()) {
+            renderer.seedBackground(canvas.bitmapData.mbitmap);
+            canvas.reDraw(0, 0,
+                    canvas.bitmapData.mbitmap.getWidth(),
+                    canvas.bitmapData.mbitmap.getHeight());
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // SSH scrollback
+    //
+    // Driven by RemoteSshPointer.scrollUp / scrollDown (which converts
+    // any of: two-finger swipe via InputHandlerTouchpad.doScroll,
+    // mouse wheel / trackball via InputHandlerGeneric.sendScrollEvents,
+    // physical keyboard arrows via Remote*Keyboard) into a row delta
+    // here. The delta drives libvterm's vterm_scroll_rect via
+    // SshTermStateMachine.scrollUp / scrollDown. libvterm 0.3.3 does
+    // NOT retain scrolled-off content — after vterm_scroll_rect the
+    // top viewport rows contain garbage from libvterm's moverect
+    // memmove (screen.c moverect_internal). We track how many rows
+    // are garbage in viewportGarbageRows so the renderer can fill
+    // them with BG instead of painting garbage chars. We do NOT pan
+    // anything in the mbitmap and we do NOT keep a ring buffer; this
+    // is purely a paint hint.
+    // ------------------------------------------------------------------
+
+    /** Cap of how many rows we let the user scroll up. Past this
+     *  limit further scroll-up events are no-ops. */
+    private static final int MAX_SCROLLBACK_ROWS = 50;
+
+    /**
+     * Number of viewport rows at the top that are garbage from
+     * libvterm's scroll-in-place memmove. NOT a pan offset — the
+     * mbitmap is never translated by this code path. The renderer
+     * uses this only to fill the top N rows with BG before the
+     * normal viewport paint, hiding the garbage.
+     */
+    private int viewportGarbageRows = 0;
+
+    /**
+     * Scroll the libvterm viewport by a signed row delta and update
+     * the renderer's garbage-row counter so the next paint fills the
+     * freshly-rolled-into rows with BG.
+     *
+     * <p>This calls libvterm's {@link SshTermStateMachine#scrollUp} /
+     * {@link SshTermStateMachine#scrollDown} which invoke
+     * {@code vterm_scroll_rect} on the native side. libvterm 0.3.3
+     * memmoves the viewport buffer in place; the top
+     * {@code viewportGarbageRows} rows contain garbage that the
+     * renderer paints as BG. The viewport contents read via
+     * {@code vterm_screen_get_cell} below the garbage header are the
+     * scrolled history — no ring buffer required.
+     *
+     * @param rowDelta signed rows: positive = scroll up into history,
+     *                 negative = scroll down toward live.
+     */
+    public void sshScrollbackPan(int rowDelta) {
+        if (rowDelta == 0) return;
+        if (renderer == null || renderer.getTermSession() == null) return;
+        if (rowDelta > 0) {
+            int room = MAX_SCROLLBACK_ROWS - viewportGarbageRows;
+            if (room <= 0) return;
+            if (rowDelta > room) rowDelta = room;
+            renderer.getTermSession().scrollUp(rowDelta);
+            viewportGarbageRows += rowDelta;
+        } else {
+            int back = Math.min(-rowDelta, viewportGarbageRows);
+            if (back <= 0) return;
+            renderer.getTermSession().scrollDown(back);
+            viewportGarbageRows -= back;
+        }
+        renderer.setViewportGarbageRows(viewportGarbageRows, sshUpdateRunnable);
     }
 
     /**

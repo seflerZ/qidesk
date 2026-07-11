@@ -1384,6 +1384,37 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             handler.postDelayed(this::correctAfterRotation, 300);
         } catch (Exception ignored) {
         }
+
+        // The Android night-mode change comes through here as a
+        // uiMode flip. The SSH terminal palette tracks the AppCompat
+        // day/night theme by reading from values/colors.xml +
+        // values-night/colors.xml on every paint, but we have to
+        // explicitly push the new ARGB to libvterm (via JNI) and
+        // re-seed the mbitmap — otherwise the new colours are only
+        // applied to cells the user touches after the flip.
+        if ((newConfig.uiMode & Configuration.UI_MODE_NIGHT_MASK)
+                != Configuration.UI_MODE_NIGHT_UNDEFINED) {
+            applyTerminalTheme();
+        }
+    }
+
+    private void applyTerminalTheme() {
+        if (canvas == null || canvas.connInitializer == null) return;
+        if (canvas.connection == null
+                || canvas.connection.getConnectionType() != Constants.CONN_TYPE_SSH) {
+            return;
+        }
+        Log.i(TAG, "applyTerminalTheme: SSH detected, calling applyTheme");
+        // Route through the SSH initializer so the right renderer
+        // gets notified. SshConnectionInitializer.applyTheme is
+        // a no-op until openRenderer() has created the renderer;
+        // before that, the renderer's first paint after open
+        // already reads the fresh palette from the context.
+        if (canvas.connInitializer
+                instanceof com.qihua.bVNC.connection.SshConnectionInitializer) {
+            ((com.qihua.bVNC.connection.SshConnectionInitializer) canvas.connInitializer)
+                    .applyTheme();
+        }
     }
 
     private void correctAfterRotation() {

@@ -3,6 +3,7 @@ package com.qihua.bVNC.ssh;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.util.Log;
 
@@ -33,8 +34,6 @@ import java.io.IOException;
 public class SshTerminalRenderer {
     private static final String TAG = "SshTerminalRenderer";
 
-    private static final int BG_COLOR = 0xFF002B36; // Solarized base03
-
     /** Inset on all four sides of the grid, in dp. */
     private static final float PADDING_DP = 8f;
 
@@ -42,6 +41,11 @@ public class SshTerminalRenderer {
     private final SshShellChannel channel;
     /** Terminal font (Sarasa Mono SC Nerd + Nerd PUA-A + CJK). */
     private final Typeface terminalTypeface;
+    /** Activity context — used to resolve the theme-driven palette
+     *  ({@code ssh_terminal_bg}/{@code ssh_terminal_fg}) on each paint
+     *  so day/night flips in AppCompat reach the seed background without
+     *  needing to recreate the renderer. */
+    private final Context ctx;
     private final byte[] readBuffer = new byte[4096];
 
     private SshTermStateMachine stateMachine;
@@ -55,9 +59,26 @@ public class SshTerminalRenderer {
     /** Background thread that drains SSH bytes into the state machine. */
     private Thread readerThread;
 
+    /**
+     * Number of viewport rows at the top that are garbage from
+     * libvterm's scroll-in-place memmove. NOT a pan offset — the
+     * mbitmap is never translated by this code path. The renderer
+     * fills this many rows with BG to hide the garbage. Set by
+     * {@link com.qihua.bVNC.connection.SshConnectionInitializer}
+     * via {@link #setViewportGarbageRows}.
+     */
+    private int viewportGarbageRows = 0;
+
+    /** Paint used to fill the top N rows when scrolled into scrollback.
+     *  Held separately from {@code VTermCanvasRenderer.bgPaint} (which
+     *  the renderer mutates per-cell) so its color stays stable across
+     *  the BG draw. */
+    private Paint bgHeaderPaint;
+
     public SshTerminalRenderer(float density, SshShellChannel channel, Context ctx) throws IOException {
         this.density = density;
         this.channel = channel;
+        this.ctx = ctx;
         this.terminalTypeface = ctx != null
                 ? TermFontFactory.load(ctx.getAssets())
                 : Typeface.MONOSPACE;
@@ -66,7 +87,71 @@ public class SshTerminalRenderer {
     /** Initialise the target bitmap with our background colour. */
     public void seedBackground(Bitmap target) {
         if (target == null || target.isRecycled()) return;
-        target.eraseColor(BG_COLOR);
+        target.eraseColor(currentBgColor());
+    }
+
+    /**
+     * Resolve the current bg from resources so that AppCompat day/night
+     * flips show up on the next {@link #seedBackground}. Falls back to
+     * Solarized base03 if the context is unavailable (legacy call
+     * sites). Also re-applies the palette to the canvas renderer if it's
+     * been built — that keeps {@code DEFAULT_FG}/{@code DEFAULT_BG} in
+     * sync with the live theme.
+     */
+    public void applyTheme() {
+        Log.i(TAG, "applyTheme: ctx=" + (ctx != null) + " canvasRenderer=" + (canvasRenderer != null) + " stateMachine=" + (stateMachine != null));
+        if (canvasRenderer != null) {
+            canvasRenderer.setPalette(ctx);
+        }
+        if (stateMachine != null && ctx != null) {
+            int fg = ctx.getResources().getColor(com.qihua.bVNC.R.color.ssh_terminal_fg, ctx.getTheme());
+            int bg = ctx.getResources().getColor(com.qihua.bVNC.R.color.ssh_terminal_bg, ctx.getTheme());
+            Log.i(TAG, "applyTheme: pushing fg=0x" + Integer.toHexString(fg) + " bg=0x" + Integer.toHexString(bg));
+            stateMachine.setDefaultColors(fg, bg);
+            // 16-colour ANSI palette — order matches the libvterm
+            // indexed colour indices (0..7 normal, 8..15 bright)
+            // so \e[31m picks up the new red etc.
+            int[] palette = new int[] {
+                ctx.getResources().getColor(com.qihua.bVNC.R.color.ssh_terminal_black,  ctx.getTheme()), // 0
+                ctx.getResources().getColor(com.qihua.bVNC.R.color.ssh_terminal_red,    ctx.getTheme()), // 1
+                ctx.getResources().getColor(com.qihua.bVNC.R.color.ssh_terminal_green,  ctx.getTheme()), // 2
+                ctx.getResources().getColor(com.qihua.bVNC.R.color.ssh_terminal_yellow, ctx.getTheme()), // 3
+                ctx.getResources().getColor(com.qihua.bVNC.R.color.ssh_terminal_blue,   ctx.getTheme()), // 4
+                ctx.getResources().getColor(com.qihua.bVNC.R.color.ssh_terminal_purple, ctx.getTheme()), // 5
+                ctx.getResources().getColor(com.qihua.bVNC.R.color.ssh_terminal_cyan,   ctx.getTheme()), // 6
+                ctx.getResources().getColor(com.qihua.bVNC.R.color.ssh_terminal_white,  ctx.getTheme()), // 7
+                ctx.getResources().getColor(com.qihua.bVNC.R.color.ssh_terminal_bright_black,  ctx.getTheme()), // 8
+                ctx.getResources().getColor(com.qihua.bVNC.R.color.ssh_terminal_bright_red,    ctx.getTheme()), // 9
+                ctx.getResources().getColor(com.qihua.bVNC.R.color.ssh_terminal_bright_green,  ctx.getTheme()), // 10
+                ctx.getResources().getColor(com.qihua.bVNC.R.color.ssh_terminal_bright_yellow, ctx.getTheme()), // 11
+                ctx.getResources().getColor(com.qihua.bVNC.R.color.ssh_terminal_bright_blue,   ctx.getTheme()), // 12
+                ctx.getResources().getColor(com.qihua.bVNC.R.color.ssh_terminal_bright_purple, ctx.getTheme()), // 13
+                ctx.getResources().getColor(com.qihua.bVNC.R.color.ssh_terminal_bright_cyan,   ctx.getTheme()), // 14
+                ctx.getResources().getColor(com.qihua.bVNC.R.color.ssh_terminal_bright_white,  ctx.getTheme()), // 15
+            };
+            stateMachine.setPalette(palette);
+            Log.i(TAG, "applyTheme: pushed 16-colour palette");
+
+            // Force a fresh OSC 10/11 round-trip so the remote shell
+            // (zsh prompts, etc.) re-picks its contrast colour against
+            // the new theme. libvterm's jni_osc responds to these
+            // queries with the latest g_default_*_argb, which we just
+            // set above, and the response is fed back through SSH
+            // stdin by SshTermStateMachine.write()'s post-write
+            // drainOutput.
+            try {
+                stateMachine.write(new byte[] { 0x1B, ']', '1', '0', ';', '?', 0x07 }, 0, 7);
+                stateMachine.write(new byte[] { 0x1B, ']', '1', '1', ';', '?', 0x07 }, 0, 7);
+                Log.i(TAG, "applyTheme: emitted OSC 10/11 ?  for theme re-query");
+            } catch (Throwable t) {
+                Log.w(TAG, "applyTheme: OSC re-query write failed", t);
+            }
+        }
+    }
+
+    private int currentBgColor() {
+        if (ctx == null) return 0xFF002B36; // Solarized base03 fallback
+        return ctx.getResources().getColor(com.qihua.bVNC.R.color.ssh_terminal_bg, ctx.getTheme());
     }
 
     /** Notified when {@link #renderInto} detects cols/rows changed. */
@@ -93,7 +178,10 @@ public class SshTerminalRenderer {
     public void open(int initialPxW, int initialPxH, Runnable onUpdate) {
         int fontSizePx = fontSizePx();
         int pad = paddingPx();
-        canvasRenderer = new VTermCanvasRenderer(fontSizePx, pad, terminalTypeface);
+        canvasRenderer = new VTermCanvasRenderer(fontSizePx, pad, terminalTypeface, ctx);
+        bgHeaderPaint = new Paint();
+        bgHeaderPaint.setStyle(Paint.Style.FILL);
+        bgHeaderPaint.setColor(currentBgColor());
         int cols = Math.max(20, (initialPxW - 2 * pad) / (int) canvasRenderer.charWidth);
         int rows = Math.max(10, (initialPxH - 2 * pad) / canvasRenderer.charHeight);
         currentCols = cols;
@@ -174,7 +262,42 @@ public class SshTerminalRenderer {
             }
         }
         if (stateMachine != null) {
+            int n = viewportGarbageRows;
+            // Fill the top `n` rows of the mbitmap with BG. After
+            // nativeScrollUp called libvterm's vterm_scroll_rect, those
+            // rows contain garbage from libvterm's moverect memmove
+            // (libvterm 0.3.3's buffer is exactly the viewport size; it
+            // does NOT retain scrolled-off content). Painting BG hides
+            // the garbage and gives the user a clean "scrollback
+            // header". The remaining viewport rows render normally via
+            // VTermCanvasRenderer.
+            if (n > 0 && bgHeaderPaint != null) {
+                bgHeaderPaint.setColor(currentBgColor());
+                c.drawRect(0f, 0f, target.getWidth(),
+                        pad + n * canvasRenderer.charHeight,
+                        bgHeaderPaint);
+            }
             canvasRenderer.render(stateMachine, c);
+        }
+    }
+
+    /**
+     * Set how many viewport rows at the top are garbage from
+     * libvterm's scroll-in-place memmove. Caller (typically
+     * {@code SshConnectionInitializer}) must have already invoked
+     * {@link SshTermStateMachine#scrollUp} /
+     * {@link SshTermStateMachine#scrollDown} on the native side;
+     * this just records the garbage-row count and triggers a repaint
+     * so the BG header reflects the new viewport state. NOT a pan —
+     * the mbitmap position never changes.
+     */
+    public void setViewportGarbageRows(int n, Runnable sshUpdateRunnable) {
+        if (n < 0) n = 0;
+        int smRows = stateMachine != null ? stateMachine.getRows() : 0;
+        if (smRows > 0 && n > smRows) n = smRows;
+        if (n != viewportGarbageRows) {
+            viewportGarbageRows = n;
+            if (sshUpdateRunnable != null) sshUpdateRunnable.run();
         }
     }
 

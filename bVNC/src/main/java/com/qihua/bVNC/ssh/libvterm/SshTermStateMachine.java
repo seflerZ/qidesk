@@ -56,24 +56,59 @@ public final class SshTermStateMachine {
         if (cols < 1 || rows < 1) {
             throw new IllegalArgumentException("cols/rows must be >= 1, got " + cols + "x" + rows);
         }
-        nativeSetSize(nativeHandle, cols, rows);
+        synchronized (this) {
+            nativeSetSize(nativeHandle, cols, rows);
+        }
+    }
+
+    /**
+     * Push the AppCompat day/night theme's default fg/bg to libvterm
+     * so {@link #nativeGetCell} returns the right ARGB when a cell
+     * uses the terminal's default colour. The values are stored as
+     * globals in vterm_jni.c and apply to all subsequent
+     * nativeGetCell calls (no per-handle state). The caller
+     * (SshTerminalRenderer.applyTheme) re-invokes this whenever
+     * the activity's night mode flips.
+     */
+    public void setDefaultColors(int fgArgb, int bgArgb) {
+        nativeSetDefaultColors(nativeHandle, fgArgb, bgArgb);
+    }
+
+    /**
+     * Push the AppCompat day/night theme's 16-colour ANSI palette to
+     * libvterm so indexed cells (\e[31m red etc.) render in the new
+     * theme's red/green/etc. instead of libvterm's hardcoded
+     * Solarized fallback. Length must be exactly 16 — order is
+     * black, red, green, yellow, blue, magenta, cyan, white,
+     * brightBlack, brightRed, ..., brightWhite.
+     */
+    public void setPalette(int[] palette) {
+        if (palette == null || palette.length < 16) return;
+        nativeSetPalette(palette);
     }
 
     public int getCols() {
-        return nativeGetCols(nativeHandle);
+        synchronized (this) {
+            return nativeGetCols(nativeHandle);
+        }
     }
 
     public int getRows() {
-        return nativeGetRows(nativeHandle);
+        synchronized (this) {
+            return nativeGetRows(nativeHandle);
+        }
     }
 
     /** Feed SSH bytes into the terminal state machine. */
     public void write(byte[] data, int offset, int len) {
         if (len <= 0) return;
-        nativeWrite(nativeHandle, data, offset, len);
-        // Drain any output libvterm generated in response (e.g. replies to
-        // terminal queries) and forward it to the SSH channel's stdin.
-        byte[] out = nativeDrainOutput(nativeHandle);
+        byte[] out;
+        synchronized (this) {
+            nativeWrite(nativeHandle, data, offset, len);
+            // Drain any output libvterm generated in response (e.g. replies to
+            // terminal queries) and forward it to the SSH channel's stdin.
+            out = nativeDrainOutput(nativeHandle);
+        }
         if (out != null && out.length > 0 && outputSink != null) {
             try {
                 outputSink.write(out);
@@ -106,7 +141,10 @@ public final class SshTermStateMachine {
      * codepoint and pass them here instead.
      */
     public void writeInput(int codepoint, int mods) {
-        byte[] out = nativeWriteInput(nativeHandle, codepoint, mods);
+        byte[] out;
+        synchronized (this) {
+            out = nativeWriteInput(nativeHandle, codepoint, mods);
+        }
         if (out != null && out.length > 0 && outputSink != null) {
             try {
                 outputSink.write(out);
@@ -126,7 +164,10 @@ public final class SshTermStateMachine {
      * {@code KEY_*} / {@code MOD_*} constants below.
      */
     public void writeKey(int vtermKey, int mods) {
-        byte[] out = nativeWriteKey(nativeHandle, vtermKey, mods);
+        byte[] out;
+        synchronized (this) {
+            out = nativeWriteKey(nativeHandle, vtermKey, mods);
+        }
         if (out != null && out.length > 0 && outputSink != null) {
             try {
                 outputSink.write(out);
@@ -166,7 +207,9 @@ public final class SshTermStateMachine {
 
     /** True if any row is dirty since the last {@link #takeDirtyRows}. */
     public boolean pollDirty() {
-        return nativePollDirty(nativeHandle);
+        synchronized (this) {
+            return nativePollDirty(nativeHandle);
+        }
     }
 
     /**
@@ -175,23 +218,61 @@ public final class SshTermStateMachine {
      * false until libvterm reports new damage.
      */
     public int takeDirtyRows(int[] outRows) {
-        return nativeTakeDirtyRows(nativeHandle, outRows);
+        synchronized (this) {
+            return nativeTakeDirtyRows(nativeHandle, outRows);
+        }
     }
 
     /** Read the cell at (row, col). */
     public TermCell getCell(int row, int col) {
-        return nativeGetCell(nativeHandle, row, col);
+        synchronized (this) {
+            return nativeGetCell(nativeHandle, row, col);
+        }
     }
 
     /** Read cursor position + visibility. */
     public CursorInfo getCursor() {
-        return nativeGetCursor(nativeHandle);
+        synchronized (this) {
+            return nativeGetCursor(nativeHandle);
+        }
+    }
+
+    /**
+     * Roll the libvterm viewport up by {@code rows} rows. After this
+     * call, the top {@code rows} rows of the viewport contain garbage
+     * (libvterm 0.3.3's internal buffer is exactly the viewport size
+     * and does not retain scrolled-off content). {@link
+     * SshTerminalRenderer#renderInto} paints those rows as BG so the
+     * user sees a clean "scrollback" header instead of garbage chars.
+     * No-op if rows <= 0 or the state machine hasn't opened yet.
+     */
+    public void scrollUp(int rows) {
+        if (rows <= 0) return;
+        synchronized (this) {
+            nativeScrollUp(nativeHandle, rows);
+        }
+    }
+
+    /**
+     * Roll the libvterm viewport down by {@code rows} rows. Symmetric
+     * to {@link #scrollUp}; the top {@code rows} rows again become
+     * garbage that renderInto paints as BG. Used to walk back from
+     * scrollback toward the live screen — the user must accept the
+     * BG header until the remote shell redraws those rows itself.
+     */
+    public void scrollDown(int rows) {
+        if (rows <= 0) return;
+        synchronized (this) {
+            nativeScrollDown(nativeHandle, rows);
+        }
     }
 
     public void destroy() {
-        if (nativeHandle != 0) {
-            nativeDestroy(nativeHandle);
-            nativeHandle = 0;
+        synchronized (this) {
+            if (nativeHandle != 0) {
+                nativeDestroy(nativeHandle);
+                nativeHandle = 0;
+            }
         }
     }
 
@@ -247,5 +328,9 @@ public final class SshTermStateMachine {
     private static native int   nativeTakeDirtyRows(long h, int[] outRows);
     private static native TermCell  nativeGetCell(long h, int row, int col);
     private static native CursorInfo nativeGetCursor(long h);
+    private static native void  nativeScrollUp(long h, int rows);
+    private static native void  nativeScrollDown(long h, int rows);
     private static native void  nativeDestroy(long h);
+    private static native void  nativeSetDefaultColors(long h, int fgArgb, int bgArgb);
+    private static native void  nativeSetPalette(int[] palette);
 }

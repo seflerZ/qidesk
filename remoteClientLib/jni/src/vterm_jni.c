@@ -199,8 +199,63 @@ static int jni_csi(const char *leader, const long *args, int argcount,
     return 0;
 }
 
+// Current default fg/bg the SSH terminal palette is using. The
+// theme-aware setters are nativeSetDefaultColors and
+// nativeSetPalette; OSC 10/11 query responses (below) read
+// from g_default_fg_argb so the answer stays in sync with
+// whatever's on screen. Forward-declared here so the OSC
+// callback (which is registered early in VTerm state machine
+// setup) can refer to it; nativeSetDefaultColors /
+// nativeSetPalette sit further down the file.
+static int g_default_fg_argb = 0xFF839496;  // Solarized base0
+static int g_default_bg_argb = 0xFF002B36;  // Solarized base03
+
+// OSC query response. The remote shell (notably zsh's
+// `osc_support` and several prompt themes) sends
+//   \e]10;?\a  or  \e]11;?\a
+// to ask the terminal for its current default fg/bg, then
+// re-picks a contrast-friendly prompt colour. Without a real
+// reply, those prompts stay in their dark-mode default forever
+// and look out of place on a light-themed terminal. We answer
+// the same RGB the renderer is using on screen (g_default_*_argb
+// from nativeSetDefaultColors), in xterm's "rgb:RRRR/GGGG/BBBB"
+// 16-bit-per-channel form. The reply is pushed into jni_output_callback
+// so it travels back over SSH as if the user typed it on the
+// terminal — no extra plumbing needed.
+static void emit_osc_color_reply(jhandle_t *h, int command, int argb) {
+    int r = (argb >> 16) & 0xFF;
+    int g = (argb >>  8) & 0xFF;
+    int b =  argb        & 0xFF;
+    char reply[64];
+    int n = snprintf(reply, sizeof(reply),
+                     "\x1B]%d;rgb:%04x/%04x/%04x\x1B\\",
+                     command, r * 257, g * 257, b * 257);
+    if (n > 0) {
+        jni_output_callback(reply, (size_t) n, h);
+    }
+}
+
 static int jni_osc(int command, VTermStringFragment frag, void *user) {
-    (void) command; (void) frag; (void) user;
+    jhandle_t *h = (jhandle_t *) user;
+    if (command == 10 || command == 11) {
+        // The fragment is a short literal "?": libvterm splits OSC
+        // payloads at the ; boundary so the body ("?", or the
+        // actual colour spec) is what reaches us. Anything other
+        // than "?" is the shell trying to SET the colour, not
+        // query it — we accept it silently and let g_default_*_argb
+        // track whatever the application prefers (Windows Terminal
+        // ignores the SET path on Windows because the OS owns the
+        // theme; we follow the same convention).
+        if (frag.len == 1 && frag.str && frag.str[0] == '?') {
+            int argb = command == 10 ? g_default_fg_argb : g_default_bg_argb;
+            __android_log_print(ANDROID_LOG_INFO, "vterm_jni",
+                "OSC %d ?  ->  rgb: 0x%08X", command, argb);
+            emit_osc_color_reply(h, command, argb);
+            return 1;
+        }
+        return 0; // SET — drop on the floor
+    }
+    (void) frag;
     return 0;
 }
 
@@ -262,7 +317,13 @@ Java_com_qihua_bVNC_ssh_libvterm_SshTermStateMachine_nativeCreate(
     vterm_output_set_callback(h->vt, jni_output_callback, h);
 
     h->vts = vterm_obtain_screen(h->vt);
-    // Order MUST match include/vterm.h VTermScreenCallbacks.
+    // Order MUST match include/vterm.h VTermScreenCallbacks. We do
+    // NOT register sb_pushline / sb_popline / sb_clear — scrollback
+    // is driven from Java via nativeScrollUp / nativeScrollDown,
+    // which call vterm_scroll_rect directly. libvterm itself does
+    // not retain scrolled-off rows (screen.c buffers[2] holds only the
+    // current viewport); the rows "scrolled off the top" become
+    // garbage in the viewport, which renderInto paints as BG.
     h->screen_callbacks.damage     = jni_damage;
     h->screen_callbacks.moverect   = jni_moverect;
     h->screen_callbacks.movecursor = jni_movecursor;
@@ -271,6 +332,21 @@ Java_com_qihua_bVNC_ssh_libvterm_SshTermStateMachine_nativeCreate(
     h->screen_callbacks.resize     = jni_resize;
     vterm_screen_set_callbacks(h->vts, &h->screen_callbacks, h);
     vterm_screen_enable_altscreen(h->vts, 1);
+
+    // VTermStateFallbacks handles OSC commands that on_osc()
+    // doesn't recognise by hand (i.e. anything other than
+    // OSC 0/1/2/52). OSC 10/11 fall in that bucket — without
+    // registering jni_osc here, the OSC 11 query the remote
+    // shell sends (e.g. zsh's osc_support / osc_watcher) is
+    // silently dropped, so the shell never learns the
+    // terminal's current bg colour and stuck with whatever
+    // default it had at startup. Register the OSC slot only —
+    // control/csi/dcs/apc/pm/sos all use the same handler
+    // signature and could be added if needed.
+    static const VTermStateFallbacks state_fallbacks = {
+        .osc = jni_osc,
+    };
+    vterm_state_set_unrecognised_fallbacks(vterm_screen_get_state(h->vts), &state_fallbacks, h);
 
     // Initialise the VTermState. vterm_obtain_screen() creates the state
     // object but does NOT run vterm_state_reset(); without it the G0/G1/G2/G3
@@ -450,7 +526,7 @@ Java_com_qihua_bVNC_ssh_libvterm_SshTermStateMachine_nativeTakeDirtyRows(
 }
 
 // Map VTermScreenCellAttrs to our packed int bits. See Java docs.
-static int packAttrs(VTermScreenCellAttrs *a) {
+static int packAttrs(const VTermScreenCellAttrs *a) {
     int bits = 0;
     if (a->bold)      bits |= 1;
     if (a->italic)    bits |= 2;
@@ -476,16 +552,117 @@ static int packAttrs(VTermScreenCellAttrs *a) {
 // Order matters: VTERM_COLOR_IS_DEFAULT_FG/BG must be checked BEFORE
 // convert, because vterm_screen_convert_color_to_rgb clears those flag
 // bits (it does `type &= VTERM_COLOR_TYPE_MASK`).
-static int colorToRgb(VTermScreen *screen, VTermColor *c) {
-    if (VTERM_COLOR_IS_DEFAULT_FG(c)) return 0xFF839496;  // Solarized base0
-    if (VTERM_COLOR_IS_DEFAULT_BG(c)) return 0xFF002B36;  // Solarized base03
-    // Resolve indexed → RGB via libvterm's standard palette. No-op for
-    // already-RGB colours (just clears metadata flags).
-    vterm_screen_convert_color_to_rgb(screen, c);
+//
+// DEFAULT fg/bg are runtime-settable so the AppCompat day/night theme
+// can drive them — Java calls nativeSetDefaultColors on theme flip,
+// then SshTermStateMachine.nativeGetCell returns the new ARGB instead
+// of the hardcoded Solarized values. Initial values match the
+// legacy Solarized fallback so connections opened before the
+// SshConnectionInitializer.applyTheme() call still get a sensible
+// colour.
+
+// ANSI 16-colour palette. libvterm 0.3.3 has its own hardcoded
+// 16-colour table that vterm_screen_convert_color_to_rgb uses to
+// translate indexed cells (\e[31m etc.). That table is fixed
+// regardless of the SSH terminal's actual default. We override
+// it: Java calls nativeSetPalette to push the AppCompat
+// day/night theme's 16 colours here, then colorToRgb looks
+// them up by index when it sees an indexed cell. The fallback
+// values mirror the original Solarized palette so connections
+// opened before the first applyTheme still see a sensible
+// colour.
+static int g_palette[16] = {
+    0xFF000000, // 0  black
+    0xFFDC322F, // 1  red (Solarized red)
+    0xFF859900, // 2  green
+    0xFFB58900, // 3  yellow
+    0xFF268BD2, // 4  blue
+    0xFFD33682, // 5  magenta
+    0xFF2AA198, // 6  cyan
+    0xFFEEE8D5, // 7  white (Solarized base2)
+    0xFF002B36, // 8  bright black   (Solarized base03)
+    0xFFCB4B16, // 9  bright red     (Solarized orange)
+    0xFF586E75, // 10 bright green   (Solarized base01)
+    0xFF657B83, // 11 bright yellow  (Solarized base00)
+    0xFF839496, // 12 bright blue    (Solarized base0)
+    0xFF6C71C4, // 13 bright magenta (Solarized violet)
+    0xFF93A1A1, // 14 bright cyan    (Solarized base1)
+    0xFFFDF6E3, // 15 bright white   (Solarized base3)
+};
+
+// c is const-qualified because the cells vterm_screen_get_cell
+// hands us are read-only; we still need to convert indexed → RGB
+// for the non-default branch, so cast away const there.
+static int colorToRgb(VTermScreen *screen, const VTermColor *c) {
+    if (VTERM_COLOR_IS_DEFAULT_FG(c)) return g_default_fg_argb;
+    if (VTERM_COLOR_IS_DEFAULT_BG(c)) return g_default_bg_argb;
+    if (VTERM_COLOR_IS_INDEXED(c)) {
+        int idx = c->indexed.idx;
+        if (idx >= 0 && idx < 16) {
+            return g_palette[idx];
+        }
+    }
+    // RGB cell or out-of-range index — let libvterm normalise the
+    // metadata flags, then return the raw RGB. Cast away const
+    // because libvterm's prototype for this fn isn't const-correct
+    // even though it logically only mutates the metadata flags.
+    vterm_screen_convert_color_to_rgb(screen, (VTermColor *) c);
     return (0xFF << 24) | ((c->rgb.red   & 0xFF) << 16)
                          | ((c->rgb.green & 0xFF) << 8)
                          |  (c->rgb.blue  & 0xFF);
 }
+
+// Called by Java when AppCompat day/night theme flips. Updates the
+// two static globals that `colorToRgb` consults when a cell carries
+// VTERM_COLOR_DEFAULT_FG/BG. libvterm 0.3.3 does NOT expose a
+// public API to write cell internals — VTermScreen is forward-
+// declared in vterm.h and `buffers[0]` is only visible inside
+// screen.c — so we can't recolour cells that were already painted
+// with raw RGB. The mbitmap seed (SshTerminalRenderer.seedBackground)
+// and the Java-side defaultFg/defaultBg (VTermCanvasRenderer) follow
+// the new theme immediately, so newly-drawn cells and the padding
+// ring look right; cells the remote program wrote earlier in raw
+// RGB will keep their old colour until the remote program paints
+// them again. The Android fallback of forcing a redraw via
+// SshConnectionInitializer.applyTheme (canvas.reDraw after seed) is
+// what flips the visible canvas to the new palette.
+JNIEXPORT void JNICALL
+Java_com_qihua_bVNC_ssh_libvterm_SshTermStateMachine_nativeSetDefaultColors(
+        JNIEnv *env, jclass clazz, jlong handle, jint fgArgb, jint bgArgb) {
+    (void) clazz;
+    jhandle_t *h = getHandle(env, handle);
+    int oldFg = g_default_fg_argb;
+    int oldBg = g_default_bg_argb;
+    g_default_fg_argb = (int) fgArgb;
+    g_default_bg_argb = (int) bgArgb;
+    __android_log_print(ANDROID_LOG_INFO, "vterm_jni",
+                        "nativeSetDefaultColors: handle=%p vts=%p oldFg=0x%08X->0x%08X oldBg=0x%08X->0x%08X",
+                        (void*) handle, h ? (void*) h->vts : NULL,
+                        oldFg, g_default_fg_argb, oldBg, g_default_bg_argb);
+}
+
+// Push the AppCompat day/night theme's 16-colour palette so
+// indexed cells (\e[31m red, etc.) use the new theme's red/green/etc.
+// instead of libvterm's hardcoded Solarized defaults.
+JNIEXPORT void JNICALL
+Java_com_qihua_bVNC_ssh_libvterm_SshTermStateMachine_nativeSetPalette(
+        JNIEnv *env, jclass clazz, jintArray palette) {
+    (void) clazz;
+    if (!palette) return;
+    jsize len = (*env)->GetArrayLength(env, palette);
+    if (len > 16) len = 16;
+    jint *arr = (*env)->GetIntArrayElements(env, palette, NULL);
+    if (!arr) return;
+    for (jsize i = 0; i < len; i++) {
+        g_palette[i] = (int) arr[i];
+    }
+    (*env)->ReleaseIntArrayElements(env, palette, arr, JNI_ABORT);
+}
+
+// Forward declaration so nativeGetCell below can call marshallTermCell
+// before its full definition further down.
+static jobject marshallTermCell(JNIEnv *env, VTermScreen *screen,
+                                 const VTermScreenCell *cell);
 
 JNIEXPORT jobject JNICALL
 Java_com_qihua_bVNC_ssh_libvterm_SshTermStateMachine_nativeGetCell(
@@ -499,23 +676,33 @@ Java_com_qihua_bVNC_ssh_libvterm_SshTermStateMachine_nativeGetCell(
     VTermPos pos = { .row = row, .col = col };
     VTermScreenCell cell;
     vterm_screen_get_cell(h->vts, pos, &cell);
+    return marshallTermCell(env, h->vts, &cell);
+}
 
-    // Build TermCell Java object
+// Build a TermCell Java object from a VTermScreenCell. Shared by
+// nativeGetCell (live grid) and nativeGetScrollbackCell (ring). The
+// `cell` is read-only here — VTermScreenCell is a POD aggregate
+// (chars[6]=uint32_t, attrs bitfield, fg/bg VTermColor with three
+// uint8_t + a type tag), no deep-copy needed because Java only stores
+// the packed ints.
+static jobject marshallTermCell(JNIEnv *env, VTermScreen *screen,
+                                 const VTermScreenCell *cell) {
     jclass cls = (*env)->FindClass(env, "com/qihua/bVNC/ssh/libvterm/SshTermStateMachine$TermCell");
     if (!cls) return NULL;
     jmethodID ctor = (*env)->GetMethodID(env, cls, "<init>", "()V");
     jobject obj = (*env)->NewObject(env, cls, ctor);
+    if (!obj) return NULL;
     jfieldID fcp = (*env)->GetFieldID(env, cls, "codepoint", "I");
     jfieldID fwid = (*env)->GetFieldID(env, cls, "width", "I");
     jfieldID ffg = (*env)->GetFieldID(env, cls, "fg", "I");
     jfieldID fbg = (*env)->GetFieldID(env, cls, "bg", "I");
     jfieldID fattrs = (*env)->GetFieldID(env, cls, "attrs", "I");
 
-    (*env)->SetIntField(env, obj, fcp, (jint) cell.chars[0]);
-    (*env)->SetIntField(env, obj, fwid, cell.width);
-    (*env)->SetIntField(env, obj, ffg, colorToRgb(h->vts, &cell.fg));
-    (*env)->SetIntField(env, obj, fbg, colorToRgb(h->vts, &cell.bg));
-    (*env)->SetIntField(env, obj, fattrs, packAttrs(&cell.attrs));
+    (*env)->SetIntField(env, obj, fcp, (jint) cell->chars[0]);
+    (*env)->SetIntField(env, obj, fwid, cell->width);
+    (*env)->SetIntField(env, obj, ffg, colorToRgb(screen, &cell->fg));
+    (*env)->SetIntField(env, obj, fbg, colorToRgb(screen, &cell->bg));
+    (*env)->SetIntField(env, obj, fattrs, packAttrs(&cell->attrs));
 
     return obj;
 }
@@ -540,6 +727,56 @@ Java_com_qihua_bVNC_ssh_libvterm_SshTermStateMachine_nativeGetCursor(
     (*env)->SetBooleanField(env, obj, fvis, h->cursor_visible ? JNI_TRUE : JNI_FALSE);
 
     return obj;
+}
+
+// Roll the libvterm viewport up by `rows` rows. After this call,
+// vterm_screen_get_cell sees the (rows, rows-1) range shifted into
+// (0, rows-2); rows 0..rows-1 of the viewport contain whatever
+// libvterm's moverect_internal memmoved into them (see screen.c:239)
+// — typically garbage because libvterm's buffers[2] is exactly the
+// viewport size. renderInto paints those N rows as BG so the user sees
+// a clean "scrollback" header.
+JNIEXPORT void JNICALL
+Java_com_qihua_bVNC_ssh_libvterm_SshTermStateMachine_nativeScrollUp(
+        JNIEnv *env, jclass clazz, jlong handle, jint rows) {
+    (void) clazz;
+    if (rows <= 0) return;
+    jhandle_t *h = getHandle(env, handle);
+    if (!h || !h->vts) return;
+    if (rows > h->rows) rows = h->rows;
+    VTermRect rect = {
+        .start_row = 0, .end_row = h->rows,
+        .start_col = 0, .end_col = h->cols,
+    };
+    // libvterm 0.3.3 vterm_scroll_rect unconditionally invokes the
+    // eraserect callback (vterm.c:371) — passing NULL here SIGSEGVs
+    // at PC=0. We feed libvterm's own moverect_internal /
+    // erase_internal (declared extern in libvterm's screen.h after
+    // our fork's patch; see deps/libvterm/src/screen.c).
+    extern int moverect_internal(VTermRect dest, VTermRect src, void *user);
+    extern int erase_internal(VTermRect rect, int selective, void *user);
+    vterm_scroll_rect(rect, rows, 0, moverect_internal, erase_internal, h->vts);
+}
+
+// Roll the libvterm viewport down by `rows` rows. Symmetric to
+// nativeScrollUp. The top `rows` rows become garbage — renderInto
+// draws them as BG. To get back to the live screen the user must
+// accept the BG header until the remote shell redraws.
+JNIEXPORT void JNICALL
+Java_com_qihua_bVNC_ssh_libvterm_SshTermStateMachine_nativeScrollDown(
+        JNIEnv *env, jclass clazz, jlong handle, jint rows) {
+    (void) clazz;
+    if (rows <= 0) return;
+    jhandle_t *h = getHandle(env, handle);
+    if (!h || !h->vts) return;
+    if (rows > h->rows) rows = h->rows;
+    VTermRect rect = {
+        .start_row = 0, .end_row = h->rows,
+        .start_col = 0, .end_col = h->cols,
+    };
+    extern int moverect_internal(VTermRect dest, VTermRect src, void *user);
+    extern int erase_internal(VTermRect rect, int selective, void *user);
+    vterm_scroll_rect(rect, -rows, 0, moverect_internal, erase_internal, h->vts);
 }
 
 JNIEXPORT void JNICALL
