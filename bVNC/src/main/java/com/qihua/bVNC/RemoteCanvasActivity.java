@@ -480,16 +480,30 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             }
 
             float pointerYPos;
-            if (isSsh && canvas.connInitializer
-                    instanceof com.qihua.bVNC.connection.SshConnectionInitializer) {
+            if (isSsh) {
                 pointerYPos = ((com.qihua.bVNC.connection.SshConnectionInitializer) canvas.connInitializer).getCursorPixelY();
             } else {
                 pointerYPos = (canvas.pointer.getY() - canvas.absoluteYPosition) * canvas.getZoomFactor();
             }
 
-            float panDistance = (pointerYPos + keyBoardHeight - canvas.getHeight() + extraKeysView.getHeight()) / canvas.getZoomFactor();
+            float panDistance = pointerYPos + keyBoardHeight - canvas.getHeight();
             if (isShow && panDistance > 0) {
-                // this pan be force because the extra panning added above may exceed the visible desktop height(in image's resolution)
+                // Undo the previous pan (if any) before applying the
+                // new one. The IME listener fires many times during
+                // the keyboard's show/hide animation (KeyBoardListenerHelper
+                // is an OnGlobalLayoutListener), and each fire would
+                // otherwise add its panDistance to absoluteYPosition,
+                // compounding across animation frames. RDP doesn't see
+                // this because FitToScreenScaling's clamp
+                // (y + vH > h → y = h - vH) limits absoluteYPosition to
+                // the bottom of the larger-than-viewport mbitmap; SSH's
+                // mbitmap is exactly the canvas size, so the clamp has
+                // no slack and the accumulation goes straight to the
+                // top of the screen as "extra" push. Reversing first
+                // makes each fire an idempotent delta against the last.
+                if (lastPanDist > 0) {
+                    canvas.relativePan(0, -lastPanDist, false);
+                }
                 lastPanDist = panDistance;
                 canvas.relativePan(0, panDistance, true);
             }

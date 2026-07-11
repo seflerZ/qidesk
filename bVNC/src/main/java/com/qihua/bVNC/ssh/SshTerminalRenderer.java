@@ -224,10 +224,16 @@ public class SshTerminalRenderer {
         if (c == null) {
             return 0;
         }
-        // row + 1 because we want the bottom of the cursor's cell, not
-        // the top — RDP's pointerYPos also uses the bottom of the
-        // cursor row, so the formula stays dimensionally consistent.
-        return (c.row + 1) * canvasRenderer.charHeight;
+        // Bottom of the cursor's cell, not the centre. The RDP pan
+        // formula wants pointerYPos to be the pixel position of "the
+        // row the user is interacting with", so that
+        // panDistance = pointerYPos + keyboardHeight - canvas.getHeight()
+        // pushes the row to exactly keyboardHeight pixels below the
+        // screen top — i.e. just above the keyboard. The cursor's
+        // centre (row * charHeight + charHeight/2) under-counted by
+        // half a cell and left the terminal content sitting one row
+        // below the keyboard top.
+        return (c.row + 2) * canvasRenderer.charHeight;
     }
 
     public void close() {

@@ -1,6 +1,7 @@
 package com.qihua.bVNC.connection;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Rect;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -79,7 +80,7 @@ public class SshConnectionInitializer extends ConnectionInitializer {
     private SshTerminalRenderer renderer;
     /** 1:1 scaler that gives SSH the same canvas-pan pipeline as RDP/VNC.
      *  See {@link com.qihua.bVNC.ssh.SshTerminalScaling} for the rationale
-     *  and {@link #resizeSSHFramebuffer(int)} for the re-attach path. */
+     *  and {@link #resizeSSHFramebuffer} for the re-attach path. */
     private SshTerminalScaling sshScaler;
 
     /**
@@ -464,47 +465,31 @@ public class SshConnectionInitializer extends ConnectionInitializer {
     }
 
     /**
-     * IME visibility changed. SSH has no backing image to pan into
-     * — the mbitmap is exactly the canvas size, so the RDP-style pan
-     * (translate mbitmap up by keyboardHeight) would push the top
-     * {@code keyboardHeight} pixels of terminal content off-screen.
+     * IME visibility changed. SSH delegates the actual push-up to the
+     * RDP pan formula in {@code RemoteCanvasActivity}'s
+     * {@code KeyBoardListenerHelper} listener (with the libvterm cursor
+     * Y substituted for pointerYPos), so this method is a no-op.
      *
-     * <p>Fix: grow the mbitmap vertically by the IME height so it has
-     * a transparent "backup region" above the terminal rows. The
-     * remote PTY stays at its original size (no TIOCSWINSZ, no TUI
-     * reflow), and {@link SshTerminalRenderer#renderInto} detects the
-     * new mbitmap height as larger than stateMachine.getRows() and
-     * leaves the extra rows as the seedBackground colour — the same
-     * role RDP's larger-than-viewport mbitmap plays for its own IME
-     * push-up. Once the mbitmap has that headroom, the RDP pan
-     * formula pushes the (now transparent) top region off-screen
-     * instead of real terminal content, while the bottom transparent
-     * region slides under the IME.
+     * <p>Earlier revisions grew the mbitmap by keyboardHeight on IME-up
+     * to create a transparent "backup region" the pan could push off-
+     * screen. That introduced a visible black flash because
+     * Bitmap.createBitmap returned a transparent bitmap, the SSH-Paint
+     * thread was stopped and restarted, and the DrawWorker drew the
+     * new (transparent → seedBackground) mbitmap for 1–3 frames before
+     * SSH-Paint repainted. Keeping the mbitmap at displayRect size
+     * means the RDP pan just translates a stable bitmap — no realloc,
+     * no paint-thread restart, no flash. The trade-off is that the
+     * top keyboardHeight rows of real terminal content slide off-screen
+     * (RDP does the same — RDP's "sacrifice" is its larger-than-viewport
+     * mbitmap, SSH just accepts it directly on the terminal grid).
      */
     @Override
     public void onSoftKeyboardChanged(boolean isShow, int availableHeight) {
-        if (canvas == null || canvas.displayRect == null) {
-            return;
-        }
-        int displayH = canvas.displayRect.height();
-        if (displayH <= 0) return;
-        // availableHeight = bottom of getWindowVisibleDisplayFrame() =
-        // window height minus IME height when IME is up.
-        // keyboardHeight = displayH - availableHeight.
-        int keyboardHeight = Math.max(0, displayH - availableHeight);
-        int targetBitmapH;
-        if (isShow && keyboardHeight > 0) {
-            targetBitmapH = displayH + keyboardHeight;
-        } else {
-            targetBitmapH = displayH;
-        }
-        Log.i(TAG, "onSoftKeyboardChanged: isShow=" + isShow
-                + " keyboardHeight=" + keyboardHeight
-                + " targetBitmapH=" + targetBitmapH
-                + " currentBitmapH=" + (canvas.bitmapData != null
-                        && canvas.bitmapData.mbitmap != null
-                        ? canvas.bitmapData.mbitmap.getHeight() : -1));
-        resizeSSHFramebuffer(targetBitmapH);
+        // Intentionally empty — see the comment above. The RDP pan
+        // formula in RemoteCanvasActivity handles the actual push-up;
+        // this hook exists so the activity can call back into the SSH
+        // initializer for any future per-IME logic without needing a
+        // second instanceof check.
     }
 
     @Override
@@ -681,7 +666,7 @@ public class SshConnectionInitializer extends ConnectionInitializer {
         lifecycleLock.lock();
         try {
             int w = canvas.displayRect.width();
-            int h = canvas.displayRect.height();
+            int h = Math.max(1, canvas.displayRect.height());
             int fbW = Math.max(1, (int) (w * Constants.SSH_SMART_RESOLUTION_FACTOR));
             int fbH = Math.max(1, (int) (h * Constants.SSH_SMART_RESOLUTION_FACTOR));
 
