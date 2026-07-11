@@ -453,7 +453,25 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             getWindow().getDecorView().getWindowVisibleDisplayFrame(re);
 
             // the absoluteYPosition is in image's coordinate system. if positive, the image on the screen will move upward
-            float pointerYPos = (canvas.pointer.getY() - canvas.absoluteYPosition) * canvas.getZoomFactor();
+            //
+            // SSH has no real pointer — RemoteSshPointer is a no-op
+            // (pointerY = 0). Substitute the libvterm cursor's bottom
+            // pixel as the "where the user is typing" coordinate so
+            // the RDP formula produces a meaningful panDistance. With
+            // SSH_SMART_RESOLUTION_FACTOR = 1 and the SshTerminalScaling
+            // installed by SshConnectionInitializer.initialize(),
+            // zoomFactor = 1 and the pan feeds DrawWorker's
+            // glCanvas.translate(-absoluteYPosition) on the next frame
+            // — the same machinery RDP uses to push the remote image
+            // up above the IME.
+            float pointerYPos;
+            if (canvas.connection != null
+                    && canvas.connection.getConnectionType() == Constants.CONN_TYPE_SSH
+                    && canvas.connInitializer instanceof com.qihua.bVNC.connection.SshConnectionInitializer) {
+                pointerYPos = ((com.qihua.bVNC.connection.SshConnectionInitializer) canvas.connInitializer).getCursorPixelY();
+            } else {
+                pointerYPos = (canvas.pointer.getY() - canvas.absoluteYPosition) * canvas.getZoomFactor();
+            }
 
             float panDistance = (pointerYPos + keyBoardHeight - canvas.getHeight() + extraKeysView.getHeight()) / canvas.getZoomFactor();
             if (isShow && panDistance > 0) {

@@ -76,6 +76,10 @@ public class SshConnectionInitializer extends ConnectionInitializer {
 
     private RemoteCanvas canvas;
     private SshTerminalRenderer renderer;
+    /** 1:1 scaler that gives SSH the same canvas-pan pipeline as RDP/VNC.
+     *  See {@link com.qihua.bVNC.ssh.SshTerminalScaling} for the rationale
+     *  and {@link #resizeSSHFramebuffer(int)} for the re-attach path. */
+    private SshTerminalScaling sshScaler;
 
     /**
      * 5 FPS heartbeat (200 ms) repaint. Phase 1 spec §10.6 argued for
@@ -250,6 +254,17 @@ public class SshConnectionInitializer extends ConnectionInitializer {
         // NOTE: The keyboard's termSession cannot be set here because the
         // renderer hasn't opened yet (stateMachine is null). It is wired in
         // openRenderer() below, which is called from start().
+        // Install a 1:1 scaler so the SSH terminal shares the same
+        // canvas rendering pipeline as RDP/VNC: DrawWorker reads
+        // canvas.scaler.getMatrix() to position mbitmap on the
+        // SurfaceView, and RemoteCanvas.relativePan() is allowed
+        // (isAbleToPan() = true) so the RDP-style IME push-up
+        // (RemoteCanvasActivity's KeyBoardListenerHelper pan formula)
+        // actually fires for SSH. Without a scaler the SSH IME was
+        // a dead path: canvas.scaler == null made absolutePan a
+        // no-op and DrawWorker skipped setMatrix entirely.
+        sshScaler = new SshTerminalScaling();
+        sshScaler.attachTo(canvas);
     }
 
     @Override
@@ -437,6 +452,16 @@ public class SshConnectionInitializer extends ConnectionInitializer {
      * re-opened the trilead session on rotation, which dropped the
      * running TUI program (e.g. Claude Code) on every screen rotation.
      */
+    /**
+     * Cursor Y in mbitmap pixels — feeds the RDP-equivalent pointer
+     * position into the IME push-up pan formula. See
+     * {@link com.qihua.bVNC.ssh.SshTerminalRenderer#getCursorPixelY()}
+     * for the computation.
+     */
+    public int getCursorPixelY() {
+        return renderer != null ? renderer.getCursorPixelY() : 0;
+    }
+
     @Override
     public void onDisplayRectChanged(Display display) {
         if (canvas.rfbconn == null) {
@@ -665,6 +690,15 @@ public class SshConnectionInitializer extends ConnectionInitializer {
             Log.e(TAG, "resizeSSHFramebuffer failed", e);
         } finally {
             lifecycleLock.unlock();
+        }
+
+        // re-attach scaler AFTER unlock so a slow attachTo doesn't
+        // hold the lifecycle lock. The mbitmap swap above doesn't
+        // touch canvas.scaler, but re-attachTo resets absoluteYPosition
+        // to 0 so a stale pan from before rotation doesn't leave the
+        // terminal scrolled off-screen on the new size.
+        if (sshScaler != null) {
+            sshScaler.attachTo(canvas);
         }
     }
 }

@@ -121,7 +121,7 @@ public abstract class AbstractScaling {
     void correctAfterRotation(RemoteCanvasActivity activity) {
     }
 
-    abstract int getDefaultHandlerId();
+    public abstract int getDefaultHandlerId();
 
     /**
      * True if this scale type allows panning of the image
@@ -134,7 +134,7 @@ public abstract class AbstractScaling {
      * @param mode Id of the input mode
      * @return True if the input mode is compatible with the scaling mode
      */
-    abstract boolean isValidInputMode(int mode);
+    public abstract boolean isValidInputMode(int mode);
 
     /**
      * Change the scaling and focus dynamically, as from a detected scale gesture

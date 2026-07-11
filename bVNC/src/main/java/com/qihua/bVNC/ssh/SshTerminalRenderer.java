@@ -191,6 +191,27 @@ public class SshTerminalRenderer {
         return currentRows;
     }
 
+    /**
+     * Y pixel of the libvterm cursor's bottom in mbitmap coordinates.
+     * Used by the SSH IME push-up path to substitute for the
+     * RDP-equivalent pointer.getY() in {@code RemoteCanvasActivity}'s
+     * IME listener pan formula. Returns 0 if the renderer hasn't
+     * opened yet (no state machine to query).
+     */
+    public int getCursorPixelY() {
+        if (stateMachine == null || canvasRenderer == null) {
+            return 0;
+        }
+        SshTermStateMachine.CursorInfo c = stateMachine.getCursor();
+        if (c == null) {
+            return 0;
+        }
+        // row + 1 because we want the bottom of the cursor's cell, not
+        // the top — RDP's pointerYPos also uses the bottom of the
+        // cursor row, so the formula stays dimensionally consistent.
+        return (c.row + 1) * canvasRenderer.charHeight;
+    }
+
     public void close() {
         if (closed) return;
         closed = true;
