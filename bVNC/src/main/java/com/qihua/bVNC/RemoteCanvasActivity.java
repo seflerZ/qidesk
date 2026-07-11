@@ -464,10 +464,24 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             // glCanvas.translate(-absoluteYPosition) on the next frame
             // — the same machinery RDP uses to push the remote image
             // up above the IME.
-            float pointerYPos;
-            if (canvas.connection != null
+            //
+            // SSH additionally grows the mbitmap by keyboardHeight
+            // when the IME is up (and shrinks it back when the IME
+            // hides) — see SshConnectionInitializer.onSoftKeyboardChanged
+            // — so the RDP pan can slide the (now transparent) top
+            // region off-screen instead of real terminal content. RDP/
+            // VNC have this headroom built-in via FitToScreenScaling;
+            // SSH achieves it on demand.
+            boolean isSsh = canvas.connection != null
                     && canvas.connection.getConnectionType() == Constants.CONN_TYPE_SSH
-                    && canvas.connInitializer instanceof com.qihua.bVNC.connection.SshConnectionInitializer) {
+                    && canvas.connInitializer != null;
+            if (isSsh) {
+                canvas.connInitializer.onSoftKeyboardChanged(isShow, r.bottom);
+            }
+
+            float pointerYPos;
+            if (isSsh && canvas.connInitializer
+                    instanceof com.qihua.bVNC.connection.SshConnectionInitializer) {
                 pointerYPos = ((com.qihua.bVNC.connection.SshConnectionInitializer) canvas.connInitializer).getCursorPixelY();
             } else {
                 pointerYPos = (canvas.pointer.getY() - canvas.absoluteYPosition) * canvas.getZoomFactor();

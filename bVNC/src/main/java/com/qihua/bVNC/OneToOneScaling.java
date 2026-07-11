@@ -50,7 +50,7 @@ class OneToOneScaling extends AbstractScaling {
      * @see com.qihua.bVNC.AbstractScaling#getDefaultHandlerId()
      */
     @Override
-    int getDefaultHandlerId() {
+    public int getDefaultHandlerId() {
         return R.id.itemInputTouchpad;
     }
 
@@ -66,13 +66,13 @@ class OneToOneScaling extends AbstractScaling {
      * @see com.qihua.bVNC.AbstractScaling#isValidInputMode(int)
      */
     @Override
-    boolean isValidInputMode(int mode) {
+    public boolean isValidInputMode(int mode) {
         return true;
     }
 
     /**
      * Call after scaling and matrix have been changed to resolve scrolling
-     * @param activity
+     * @param canvas canvas to be displayed
      */
     private void resolveZoom(RemoteCanvas canvas) {
         canvas.resetScroll();

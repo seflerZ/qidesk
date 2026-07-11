@@ -18,6 +18,7 @@ import com.qihua.bVNC.input.RemoteSshKeyboard;
 import com.qihua.bVNC.input.RemoteSshPointer;
 import com.qihua.bVNC.ssh.SshShellChannel;
 import com.qihua.bVNC.ssh.SshTerminalRenderer;
+import com.qihua.bVNC.ssh.SshTerminalScaling;
 import com.undatech.opaque.Connection;
 
 import java.util.concurrent.locks.ReentrantLock;
@@ -460,6 +461,50 @@ public class SshConnectionInitializer extends ConnectionInitializer {
      */
     public int getCursorPixelY() {
         return renderer != null ? renderer.getCursorPixelY() : 0;
+    }
+
+    /**
+     * IME visibility changed. SSH has no backing image to pan into
+     * — the mbitmap is exactly the canvas size, so the RDP-style pan
+     * (translate mbitmap up by keyboardHeight) would push the top
+     * {@code keyboardHeight} pixels of terminal content off-screen.
+     *
+     * <p>Fix: grow the mbitmap vertically by the IME height so it has
+     * a transparent "backup region" above the terminal rows. The
+     * remote PTY stays at its original size (no TIOCSWINSZ, no TUI
+     * reflow), and {@link SshTerminalRenderer#renderInto} detects the
+     * new mbitmap height as larger than stateMachine.getRows() and
+     * leaves the extra rows as the seedBackground colour — the same
+     * role RDP's larger-than-viewport mbitmap plays for its own IME
+     * push-up. Once the mbitmap has that headroom, the RDP pan
+     * formula pushes the (now transparent) top region off-screen
+     * instead of real terminal content, while the bottom transparent
+     * region slides under the IME.
+     */
+    @Override
+    public void onSoftKeyboardChanged(boolean isShow, int availableHeight) {
+        if (canvas == null || canvas.displayRect == null) {
+            return;
+        }
+        int displayH = canvas.displayRect.height();
+        if (displayH <= 0) return;
+        // availableHeight = bottom of getWindowVisibleDisplayFrame() =
+        // window height minus IME height when IME is up.
+        // keyboardHeight = displayH - availableHeight.
+        int keyboardHeight = Math.max(0, displayH - availableHeight);
+        int targetBitmapH;
+        if (isShow && keyboardHeight > 0) {
+            targetBitmapH = displayH + keyboardHeight;
+        } else {
+            targetBitmapH = displayH;
+        }
+        Log.i(TAG, "onSoftKeyboardChanged: isShow=" + isShow
+                + " keyboardHeight=" + keyboardHeight
+                + " targetBitmapH=" + targetBitmapH
+                + " currentBitmapH=" + (canvas.bitmapData != null
+                        && canvas.bitmapData.mbitmap != null
+                        ? canvas.bitmapData.mbitmap.getHeight() : -1));
+        resizeSSHFramebuffer(targetBitmapH);
     }
 
     @Override

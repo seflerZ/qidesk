@@ -51,7 +51,7 @@ class FitToScreenScaling extends AbstractScaling {
      * @see com.qihua.bVNC.AbstractScaling#getDefaultHandlerId()
      */
     @Override
-    int getDefaultHandlerId() {
+    public int getDefaultHandlerId() {
         return R.id.itemInputTouchpad;
     }
 
@@ -67,7 +67,7 @@ class FitToScreenScaling extends AbstractScaling {
      * @see com.qihua.bVNC.AbstractScaling#isValidInputMode(int)
      */
     @Override
-    boolean isValidInputMode(int mode) {
+    public boolean isValidInputMode(int mode) {
         return true;
     }
 

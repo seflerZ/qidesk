@@ -150,9 +150,27 @@ public class SshTerminalRenderer {
         if (cols != currentCols || rows != currentRows) {
             currentCols = cols;
             currentRows = rows;
-            if (stateMachine != null) stateMachine.setSize(cols, rows);
-            if (gridSizeListener != null) {
-                gridSizeListener.onGridSizeChanged(cols, rows);
+            if (stateMachine != null) {
+                int smCols = stateMachine.getCols();
+                int smRows = stateMachine.getRows();
+                // Only push a size change to the state machine when the
+                // mbitmap is SMALLER (or equal) than what the PTY is
+                // currently running at. When the mbitmap grows beyond
+                // the PTY — which happens on IME-up when
+                // resizeSSHFramebuffer adds a transparent backup
+                // region above the terminal rows — we keep the PTY at
+                // its current size. libvterm's getCell() returns null
+                // for out-of-range rows, and VTermCanvasRenderer skips
+                // null cells, so the extra bitmap rows just stay as the
+                // BG_COLOR seed that seedBackground paints, which is
+                // exactly what we want for the "overflow region" that
+                // the RDP-style IME pan eats into.
+                if (cols <= smCols && rows <= smRows) {
+                    stateMachine.setSize(cols, rows);
+                    if (gridSizeListener != null) {
+                        gridSizeListener.onGridSizeChanged(cols, rows);
+                    }
+                }
             }
         }
         if (stateMachine != null) {
