@@ -59,22 +59,6 @@ public class SshTerminalRenderer {
     /** Background thread that drains SSH bytes into the state machine. */
     private Thread readerThread;
 
-    /**
-     * Number of viewport rows at the top that are garbage from
-     * libvterm's scroll-in-place memmove. NOT a pan offset — the
-     * mbitmap is never translated by this code path. The renderer
-     * fills this many rows with BG to hide the garbage. Set by
-     * {@link com.qihua.bVNC.connection.SshConnectionInitializer}
-     * via {@link #setViewportGarbageRows}.
-     */
-    private int viewportGarbageRows = 0;
-
-    /** Paint used to fill the top N rows when scrolled into scrollback.
-     *  Held separately from {@code VTermCanvasRenderer.bgPaint} (which
-     *  the renderer mutates per-cell) so its color stays stable across
-     *  the BG draw. */
-    private Paint bgHeaderPaint;
-
     public SshTerminalRenderer(float density, SshShellChannel channel, Context ctx) throws IOException {
         this.density = density;
         this.channel = channel;
@@ -180,9 +164,6 @@ public class SshTerminalRenderer {
         int fontSizePx = fontSizePx();
         int pad = paddingPx();
         canvasRenderer = new VTermCanvasRenderer(fontSizePx, pad, terminalTypeface, ctx);
-        bgHeaderPaint = new Paint();
-        bgHeaderPaint.setStyle(Paint.Style.FILL);
-        bgHeaderPaint.setColor(currentBgColor());
         int cols = Math.max(20, (initialPxW - 2 * pad) / (int) canvasRenderer.charWidth);
         int rows = Math.max(10, (initialPxH - 2 * pad) / canvasRenderer.charHeight);
         currentCols = cols;
@@ -263,42 +244,7 @@ public class SshTerminalRenderer {
             }
         }
         if (stateMachine != null) {
-            int n = viewportGarbageRows;
-            // Fill the top `n` rows of the mbitmap with BG. After
-            // nativeScrollUp called libvterm's vterm_scroll_rect, those
-            // rows contain garbage from libvterm's moverect memmove
-            // (libvterm 0.3.3's buffer is exactly the viewport size; it
-            // does NOT retain scrolled-off content). Painting BG hides
-            // the garbage and gives the user a clean "scrollback
-            // header". The remaining viewport rows render normally via
-            // VTermCanvasRenderer.
-            if (n > 0 && bgHeaderPaint != null) {
-                bgHeaderPaint.setColor(currentBgColor());
-                c.drawRect(0f, 0f, target.getWidth(),
-                        pad + n * canvasRenderer.charHeight,
-                        bgHeaderPaint);
-            }
             canvasRenderer.render(stateMachine, c);
-        }
-    }
-
-    /**
-     * Set how many viewport rows at the top are garbage from
-     * libvterm's scroll-in-place memmove. Caller (typically
-     * {@code SshConnectionInitializer}) must have already invoked
-     * {@link SshTermStateMachine#scrollUp} /
-     * {@link SshTermStateMachine#scrollDown} on the native side;
-     * this just records the garbage-row count and triggers a repaint
-     * so the BG header reflects the new viewport state. NOT a pan —
-     * the mbitmap position never changes.
-     */
-    public void setViewportGarbageRows(int n, Runnable sshUpdateRunnable) {
-        if (n < 0) n = 0;
-        int smRows = stateMachine != null ? stateMachine.getRows() : 0;
-        if (smRows > 0 && n > smRows) n = smRows;
-        if (n != viewportGarbageRows) {
-            viewportGarbageRows = n;
-            if (sshUpdateRunnable != null) sshUpdateRunnable.run();
         }
     }
 

@@ -164,38 +164,28 @@ public final class VTermCanvasRenderer {
             }
         }
 
-        // 3. Cursor — simple solid block at fg color
+        // 3. Cursor — always paint our own block so the zombie
+        // Android system caret never shows through on the SSH
+        // canvas. zsh completion menus send \e[?25l (hide cursor)
+        // and \e[7m (reverse video) on the selected item; if we
+        // honour ?25l we leave a hole that the OS fills with its
+        // own theme-coloured caret. Instead we keep painting ours
+        // and let the reverse-video branch (below) pick a
+        // contrast-friendly colour against the highlighted cell.
         SshTermStateMachine.CursorInfo cur = sm.getCursor();
-        if (cur != null && cur.visible) {
+        if (cur != null) {
             int safeCol = Math.max(0, Math.min(cur.col, cols - 1));
             int safeRow = Math.max(0, Math.min(cur.row, rows - 1));
             SshTermStateMachine.TermCell cursorCell = sm.getCell(safeRow, safeCol);
-            // Translate the cursor's colour using the same logic as
-            // paintCell: map legacy default fg/bg RGB onto the current
-            // theme, and honour reverse video (\e[7m) so the cursor
-            // block renders in the displayed foreground of the cell
-            // it covers, not the original fg. Without the reverse
-            // check, zsh completion menus (which grey out their items
-            // and \e[7m the selected one) would show the cursor in
-            // the completion-hint grey instead of the cell's actual
-            // displayed foreground (the reversed-out background).
-            int cursorColor = defaultFg; // fallback when cell is null
-            if (cursorCell != null) {
-                int cellFg = (cursorCell.fg == defaultFg
-                        || cursorCell.fg == LEGACY_DEFAULT_FG)
-                        ? defaultFg : cursorCell.fg;
-                int cellBg = (cursorCell.bg == defaultBg
-                        || cursorCell.bg == LEGACY_DEFAULT_BG)
-                        ? defaultBg : cursorCell.bg;
-                if ((cursorCell.attrs & ATTR_REVERSE) != 0) {
-                    // reverse video: the displayed fg is actually
-                    // the cell's bg colour
-                    cursorColor = (cellBg == defaultBg)
-                            ? defaultFg : cellBg;
-                } else {
-                    cursorColor = cellFg;
-                }
-            }
+            // Always paint the cursor in the theme's default foreground
+            // colour. The cursor is a single-character block — it
+            // doesn't need to mirror the cell's formatting. Using
+            // cell.fg makes it blend into the underlying text on
+            // reverse-video cells (zsh completion menus), and trying
+            // to pick between cell.fg / cell.bg depending on attrs
+            // is fragile. defaultFg contrasts cleanly against
+            // any background the remote program can reasonably paint.
+            int cursorColor = defaultFg;
             cursorPaint.setColor(cursorColor);
             float cx = paddingPx + safeCol * charWidth;
             float cy = paddingPx + safeRow * charHeight;
