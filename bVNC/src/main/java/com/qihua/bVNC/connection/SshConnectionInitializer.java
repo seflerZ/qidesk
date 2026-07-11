@@ -265,6 +265,19 @@ public class SshConnectionInitializer extends ConnectionInitializer {
         // no-op and DrawWorker skipped setMatrix entirely.
         sshScaler = new SshTerminalScaling();
         sshScaler.attachTo(canvas);
+
+        // Push the current AppCompat day/night theme into the SSH
+        // terminal at connect time. onConfigurationChanged only
+        // fires when the uiMode flips; if the activity was already
+        // dark when the SSH session opens, no applyTheme() has run
+        // yet and the renderer would keep its hardcoded Solarized
+        // defaults until the user toggles the theme. Reading the
+        // context directly here mirrors what the activity does on
+        // a flip, so a fresh SSH connection lands in the active
+        // theme from the first paint.
+        if (renderer != null) {
+            renderer.applyTheme();
+        }
     }
 
     @Override
