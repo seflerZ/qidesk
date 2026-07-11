@@ -420,10 +420,22 @@ public class SshConnectionInitializer extends ConnectionInitializer {
     }
 
     /**
-     * displayRect changed (foldable fold/unfold, rotation). Rebuild the
-     * framebuffer, mbitmap, and renderer at the new size. Phase 1 / Phase 2
-     * accept that the screen contents are reset — a new trilead session
-     * is opened by the rebuild path's re-invocation of initialize/start.
+     * displayRect changed (foldable fold/unfold, rotation). Resize-only:
+     * keep the live SSH connection, the libvterm state machine, the
+     * renderer, and the SSH-Connect / SSH-Paint threads alive — only
+     * the bitmap dimensions and the {@link SshCommunicator}'s reported
+     * framebuffer size need to follow the new window. The next
+     * {@code canvas.reDraw()} (issued by {@code correctAfterRotation}
+     * 200 ms later, or naturally by the next input byte) calls into
+     * {@link SshTerminalRenderer#renderInto}, which detects the new
+     * cols/rows, fires {@code SshTermStateMachine.setSize(...)} on the
+     * libvterm state machine, and triggers the gridSizeListener that
+     * sends a {@code winch} to the remote PTY via
+     * {@link SshTerminalConnection#resizePty}.
+     *
+     * <p>The previous behaviour tore the entire SSH stack down and
+     * re-opened the trilead session on rotation, which dropped the
+     * running TUI program (e.g. Claude Code) on every screen rotation.
      */
     @Override
     public void onDisplayRectChanged(Display display) {
@@ -449,11 +461,14 @@ public class SshConnectionInitializer extends ConnectionInitializer {
         Log.i(TAG, "displayRect changed "
                 + oldRect.width() + "x" + oldRect.height()
                 + " -> " + newRect.width() + "x" + newRect.height()
-                + ", rebuilding SSH framebuffer");
+                + ", resizing SSH framebuffer (keeping SSH session alive)");
 
-        rebuildSSHFramebuffer();
+        resizeSSHFramebuffer();
 
-        canvas.bitmapData.frameBufferSizeChanged();
+        // correctAfterRotation calls canvas.reDraw(...) 200 ms later;
+        // that paints into the freshly seeded bitmap and triggers
+        // SshTerminalRenderer.renderInto -> stateMachine.setSize ->
+        // sshTerminal.resizePty (remote winch).
     }
 
     /**
@@ -576,11 +591,23 @@ public class SshConnectionInitializer extends ConnectionInitializer {
     }
 
     /**
-     * Recreate the SSH RemoteConnectable, the mbitmap, and the renderer at
-     * the current displayRect's size, then swap the new TermSession into the
-     * keyboard. Accepts that the visible grid is reset.
+     * Resize-only path invoked by {@link #onDisplayRectChanged} on rotation
+     * or fold/unfold. KEEPS the live SSH connection, the {@link SshShellChannel},
+     * the {@link SshTerminalRenderer}, the {@code SshTermStateMachine}, and the
+     * {@code SSH-Connect} / {@code SSH-Paint} / heartbeat threads alive — only
+     * the {@code mbitmap} (re-allocated at the new size and re-seeded with the
+     * Solarized BG) and the {@link SshCommunicator}'s reported framebuffer size
+     * are refreshed.
+     *
+     * <p>The next paint pass through {@link SshTerminalRenderer#renderInto}
+     * detects the new cols/rows, fires {@code stateMachine.setSize(cols, rows)}
+     * on libvterm, and triggers the gridSizeListener registered in
+     * {@link #initialize} which calls {@code sshTerminal.resizePty(cols, rows)}
+     * — the trilead call that sends a {@code TIOCSWINSZ} / SSH {@code window-change}
+     * to the remote PTY, so the TUI (vim, htop, Claude Code, …) reflows
+     * rather than restarting.
      */
-    private void rebuildSSHFramebuffer() {
+    private void resizeSSHFramebuffer() {
         lifecycleLock.lock();
         try {
             int w = canvas.displayRect.width();
@@ -588,63 +615,54 @@ public class SshConnectionInitializer extends ConnectionInitializer {
             int fbW = Math.max(1, (int) (w * Constants.SSH_SMART_RESOLUTION_FACTOR));
             int fbH = Math.max(1, (int) (h * Constants.SSH_SMART_RESOLUTION_FACTOR));
 
-            // 1. Tear down the old SSH session + channel + renderer.
-            //    Order: stop pumps → close renderer → terminate SSH.
+            // 1. Stop the SSH-Paint thread (it writes into the old mbitmap).
+            //    The SSH-Connect thread and the libvterm reader thread stay
+            //    alive — they don't touch the bitmap, they keep feeding
+            //    bytes into the state machine. SSH-VTerm-Reader in
+            //    SshTerminalRenderer is also safe: it only touches
+            //    stateMachine.write(), not the bitmap.
             stopPaintThread();
-            try {
-                if (channel != null) channel.close();
-            } catch (Throwable t) {
-                Log.w(TAG, "rebuild: channel.close failed", t);
-            }
-            closeRenderer();
-            try {
-                if (sshTerminal != null) sshTerminal.close();
-            } catch (Throwable t) {
-                Log.w(TAG, "rebuild: sshTerminal.close failed", t);
-            }
 
-            // 2. Build a fresh SshTerminalConnection + SshCommunicator (the
-            //    rebuild could happen mid-handshake; the old one might
-            //    never have completed). VNC-style fields, not SshXxx.
-            sshTerminal = new SshTerminalConnection(sshHost, sshPort, savedHostKey);
+            // 2. Swap in a fresh SshCommunicator reporting the new fbW/fbH.
+            //    It's a stub adapter (writePointerEvent / writeKeyEvent /
+            //    writeFramebufferUpdateRequest are all no-ops); the only
+            //    field that matters for SSH is its framebufferWidth/Height
+            //    pair, which is final and so requires a new instance.
+            //    setSshTerminalConnection re-injects the existing
+            //    SshTerminalConnection so close() still tears down the
+            //    right tunnel.
             SshCommunicator sshComm = new SshCommunicator(App.debugLog, canvas.handler, fbW, fbH);
             sshComm.setSshTerminalConnection(sshTerminal);
             canvas.rfbconn = sshComm;
-            canvas.reallocateDrawable(w, h);
 
             ((RemoteSshPointer) canvas.pointer).setProtocomm(canvas.rfbconn);
             ((RemoteSshKeyboard) canvas.keyboard).setRfb(canvas.rfbconn);
 
-            // 3. Build a fresh channel + renderer.
-            channel = new SshShellChannel();
-            renderer = new SshTerminalRenderer(density, channel, ctx);
-            renderer.setGridSizeListener((cols, rows) -> {
-                if (sshTerminal != null) sshTerminal.resizePty(cols, rows);
-            });
+            // 3. Reallocate the mbitmap at the new display size. The new
+            //    bitmap is uninitialised (transparent black) — seed the
+            //    BG so the first paint of empty cells isn't a black flash.
+            canvas.reallocateDrawable(w, h);
+            if (renderer != null && canvas.bitmapData != null && canvas.bitmapData.mbitmap != null) {
+                renderer.seedBackground(canvas.bitmapData.mbitmap);
+            }
 
-            openRenderer();
-            // Phase 3.7: renderer.getTermSession() now returns
-            // SshTermStateMachine (libvterm wrapper) instead of the
-            // AAR's TermSession. It is only available AFTER openRenderer().
-            ((RemoteSshKeyboard) canvas.keyboard).setTermSession(renderer.getTermSession());
-            // Restart heartbeat against the new renderer; the old
-            // heartbeatRunnable self-reposts via canvas.handler so its
-            // closure is safe across rebuilds, but we explicitly stop
-            // and start to be defensive.
-            stopHeartbeat();
-            startHeartbeat();
+            // 4. Restart the SSH-Paint thread (it was stopped in step 1).
+            //    The paint handler coalesces renderInto via
+            //    removeCallbacks + post, so the very next paintRunnable
+            //    will see the new bitmap dimensions, recompute cols/rows,
+            //    call stateMachine.setSize(...), and fire the
+            //    gridSizeListener → sshTerminal.resizePty(cols, rows).
+            ensurePaintThread();
+            postPaintToBackground();
 
-            // 4. Re-spawn the connect thread (the old one belongs to the
-            //    discarded session and would either have already
-            //    completed into a now-orphaned Session, or be still
-            //    running against a torn-down SSHConnection).
-            connectStarted = false;
-            shellReady = false;
-            connectThread = new Thread(this::doConnect, "SSH-Connect");
-            connectThread.setDaemon(false);
-            connectThread.start();
+            // 5. Trigger an immediate repaint so the user sees the new
+            //    layout without waiting for the next keystroke / heartbeat
+            //    tick. reDraw is a noop if isRunning is false (e.g. the
+            //    initializer has been disposed).
+            canvas.bitmapData.frameBufferSizeChanged();
+            canvas.reDraw(0, 0, w, h);
         } catch (Exception e) {
-            Log.e(TAG, "rebuildFramebuffer failed", e);
+            Log.e(TAG, "resizeSSHFramebuffer failed", e);
         } finally {
             lifecycleLock.unlock();
         }
