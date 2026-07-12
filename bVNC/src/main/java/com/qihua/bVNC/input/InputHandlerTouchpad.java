@@ -218,8 +218,6 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                                     pointer.middleButtonDown(getX(e), getY(e), meta);
                                 }
 
-                                activity.sendShortVibration();
-
                                 // make it nonzero to prevent being trigger again
                                 totalMoveX = 1f;
                                 totalMoveY = 1f;
@@ -616,7 +614,6 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             return Math.round(p.getX() + distanceX);
         }
 
-        dragX = e.getX();
         return p.getX();
     }
 
@@ -634,7 +631,6 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             return Math.round(p.getY() + distanceY);
         }
 
-        dragY = e.getY();
         return p.getY();
     }
 }

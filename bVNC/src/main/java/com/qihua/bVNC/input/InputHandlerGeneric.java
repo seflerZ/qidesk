@@ -504,6 +504,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
         dragMode = true;
 
+        activity.sendShortVibration();
+
         return true;
     }
 
