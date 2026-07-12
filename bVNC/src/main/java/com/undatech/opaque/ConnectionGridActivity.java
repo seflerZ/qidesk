@@ -63,7 +63,6 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.AppCompatImageButton;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
@@ -210,13 +209,11 @@ public class ConnectionGridActivity extends AppCompatActivity implements GetText
 //            }
 //        });
 
-        String nightMode = Utils.querySharedPreferenceString(this, Constants.themeModeType, "auto");
-        if ("light".equals(nightMode)) {
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
-        } else if ("night".equals(nightMode)) {
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
-        }
-        // else let the system decide
+        // Night mode is set in com.qihua.bVNC.App.onCreate (via
+        // applyThemeModeFromPrefs) on every cold start, so it is
+        // already in place before any activity is created. No need
+        // to repeat the AppCompatDelegate.setDefaultNightMode call
+        // here.
 
         editDefaultSettings = findViewById(R.id.actionEditDefaultSettings);
         editDefaultSettings.setOnClickListener(v -> editDefaultSettings(null));
