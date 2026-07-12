@@ -21,6 +21,7 @@ import com.qihua.bVNC.ssh.SshShellChannel;
 import com.qihua.bVNC.ssh.SshTerminalRenderer;
 import com.qihua.bVNC.ssh.SshTerminalScaling;
 import com.undatech.opaque.Connection;
+import com.undatech.opaque.DrawTask;
 
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -71,6 +72,14 @@ public class SshConnectionInitializer extends ConnectionInitializer {
         public void run() {
             if (!canvas.isRunning || canvas.bitmapData == null || canvas.rfbconn == null) {
                 return;
+            }
+            // New remote output arrived: snap scrollback to the live bottom so
+            // the user sees fresh output instead of staying parked in history.
+            // Standard terminal behaviour — scroll back again after output
+            // settles to inspect history.
+            if (renderer != null && renderer.getTermSession() != null
+                    && renderer.getTermSession().getScrollOffset() > 0) {
+                renderer.getTermSession().scrollToBottom();
             }
             paintAndRedraw();
         }
@@ -248,6 +257,12 @@ public class SshConnectionInitializer extends ConnectionInitializer {
         // navigate back to the main connection list instead of leaving
         // the user staring at a dead canvas.
         channel.setOnDisconnect(() -> {
+            // Full SSH cleanup: stop paint thread, close pipes+pumps,
+            // destroy state machine, tear down trilead connection.
+            // Must run BEFORE disconnectAndClose so the remote state
+            // is clean for the next connection.
+            teardown(canvas);
+            // Then close the activity on the main thread.
             if (canvas != null && canvas.handler != null && canvas.activity != null) {
                 canvas.handler.post(canvas.activity::disconnectAndClose);
             }
@@ -602,6 +617,14 @@ public class SshConnectionInitializer extends ConnectionInitializer {
         // the bitmap is (re)allocated, including fold/unfold rebuilds.
         renderer.seedBackground(canvas.bitmapData.mbitmap);
         renderer.open(w, h, sshUpdateRunnable);
+        // Wire scrollback: the pointer decodes scroll deltas into the state
+        // machine's view offset and requests a coalesced repaint per event.
+        // (setScrollback is idempotent across resizeSSHFramebuffer re-opens —
+        //  the same sm + repaint hook survive a fold/unfold.)
+        if (canvas.pointer instanceof RemoteSshPointer) {
+            ((RemoteSshPointer) canvas.pointer)
+                    .setScrollback(renderer.getTermSession(), this::postPaintToBackground);
+        }
         ensurePaintThread();
         postPaintToBackground();
     }
@@ -663,16 +686,18 @@ public class SshConnectionInitializer extends ConnectionInitializer {
             paintCounter++;
             try {
                 renderer.renderInto(canvas.bitmapData.mbitmap);
+                // reDraw schedules DrawTask onto DrawWorker (which paints
+                // mbitmap to the SurfaceView). Kept INSIDE the try so a
+                // teardown race (drawWorker nulled by onDestroy, rfbconn
+                // going null) can't throw and kill the SSH-Paint thread — a
+                // dead paint thread means no further rendering at all (the
+                // "terminal freezes / scroll does nothing" symptom).
+                canvas.reDraw(new DrawTask(0, 0,
+                        canvas.rfbconn.framebufferWidth(),
+                        canvas.rfbconn.framebufferHeight(), true));
             } catch (Throwable t) {
-                Log.w(TAG, "renderInto failed", t);
-                return;
+                Log.w(TAG, "paint failed", t);
             }
-            // reDraw schedules DrawTask onto DrawWorker (which paints
-            // mbitmap to the SurfaceView). It is thread-safe, so calling
-            // it from the paint thread is fine.
-            canvas.reDraw(0, 0,
-                    canvas.rfbconn.framebufferWidth(),
-                    canvas.rfbconn.framebufferHeight());
         }
     };
 

@@ -139,7 +139,23 @@ public final class VTermCanvasRenderer {
     public void render(SshTermStateMachine sm, Canvas canvas) {
         int cols = sm.getCols();
         int rows = sm.getRows();
-
+        // Atomic snapshot: offset, frac, and sbCount must be read under
+        // one lock so the render never sees a mismatched triple (e.g.
+        // offset==0 with frac==50 from a concurrent scrollByPixels that
+        // updated frac before offset). Also guards against sbCount drift:
+        // when the user is at the very top (offset >= sbCount) and new
+        // lines are pushed to the ring, sbCount grows but offset doesn't
+        // track it — topV = sbCount - offset becomes >0, so the viewport
+        // jumps (user sees newer lines instead of staying at the oldest).
+        // We detect that and pin offset=sbCount to keep topV==0.
+        SshTermStateMachine.ScrollViewState sv = sm.getScrollViewState();
+        int offset = sv.offset;
+        float frac = sv.frac;
+        int sbCount = sv.sbCount;
+        if (offset >= sbCount) {
+            offset = sbCount;
+            frac = 0f;
+        }
         // We deliberately do NOT clear the whole bitmap first. renderInto
         // runs on the SSH-Paint thread while DrawWorker reads the same
         // mbitmap on its own thread (UltraCompactBitmapDrawable.draw ->
@@ -154,58 +170,96 @@ public final class VTermCanvasRenderer {
         // by that cell's own bg fill. The padding around the grid was
         // seeded BG by SshTerminalRenderer.seedBackground and is never
         // touched here, so it stays BG.
-        for (int row = 0; row < rows; row++) {
-            float cellTop = paddingPx + row * charHeight;
-            float cellBottom = paddingPx + (row + 1) * charHeight;
+        // Virtual viewport: combined history space [0, sbCount+rows).
+        //   v in [0, sbCount)           → scrollback line v (0 = oldest)
+        //   v in [sbCount, sbCount+rows) → live grid row (v - sbCount)
+        // topV = sbCount - offset is the virtual line at the viewport's
+        // top edge when frac == 0; offset == 0 → topV == sbCount → live
+        // row 0, i.e. the normal non-scrolled view (identical to the old
+        // render). frac shifts content DOWN by frac px (older lines slide
+        // in from the top as you scroll back); that uncovers `frac` pixels
+        // at the very top, so we draw one extra row above (k = -1) to fill
+        // it. frac is 0 at both scroll extremes (clamped in scrollByPixels),
+        // so a fully-scrolled-back view never underflows to v = -1.
+        //
+        // Clip to the content region so the extra top row (and the
+        // fractional bottom of the last row) don't bleed their bg into
+        // the BG-seeded padding around the grid.
+        int topV = sbCount - offset;
+        boolean extraTop = frac > 0f;
+        int kStart = extraTop ? -1 : 0;
+        int saveCount = canvas.save();
+        canvas.clipRect(paddingPx, paddingPx,
+                canvas.getWidth() - paddingPx, canvas.getHeight() - paddingPx);
+        for (int k = kStart; k < rows; k++) {
+            int v = topV + k;
+            float cellTop = paddingPx + k * charHeight + frac;
+            float cellBottom = cellTop + charHeight;
             float baselineY = cellBottom - textPaint.getFontMetrics().descent;
             for (int col = 0; col < cols; col++) {
-                SshTermStateMachine.TermCell cell = sm.getCell(row, col);
+                SshTermStateMachine.TermCell cell = cellAt(sm, v, sbCount, rows, col);
                 paintCell(canvas, cell, col, cellTop, cellBottom, baselineY);
             }
         }
+        // Fill any gaps within the clip rect that the grid didn't cover.
+        // The cell loop draws rows × cols cells, but the content area is
+        // usually larger than the grid — the right margin (cols*charWidth <
+        // clipWidth) and the bottom margin (rows*charHeight < clipHeight)
+        // are never touched by paintCell. When frac > 0 the last row shifts
+        // down and its bg fill covers part of the bottom gap; when frac
+        // snaps back to 0 on the next frame those pixels are uncovered and
+        // show whatever the previous frame left (scrollback cells, partial
+        // glyphs). A single-drawRect fill of both gaps costs ~µs vs the
+        // 10-30 ms cell loop and prevents the "dirty data below last line"
+        // artifact. We fill even when frac==0 so the gap is never stale.
+        float clipRight = canvas.getWidth() - paddingPx;
+        float clipBottom = canvas.getHeight() - paddingPx;
+        float gridRight = paddingPx + cols * charWidth;
+        float gridBottom = paddingPx + rows * charHeight + frac;
+        bgPaint.setColor(bgColor);
+        if (gridRight < clipRight) {
+            canvas.drawRect(gridRight, paddingPx, clipRight, clipBottom, bgPaint);
+        }
+        if (gridBottom < clipBottom) {
+            canvas.drawRect(paddingPx, gridBottom, clipRight, clipBottom, bgPaint);
+        }
+        canvas.restoreToCount(saveCount);
 
-        // 3. Cursor — always paint our own block so the zombie
-        // Android system caret never shows through on the SSH
-        // canvas. zsh completion menus send \e[?25l (hide cursor)
-        // and \e[7m (reverse video) on the selected item; if we
-        // honour ?25l we leave a hole that the OS fills with its
-        // own theme-coloured caret. Instead we keep painting ours
-        // and let the reverse-video branch (below) pick a
-        // contrast-friendly colour against the highlighted cell.
-        SshTermStateMachine.CursorInfo cur = sm.getCursor();
-        if (cur != null) {
-            int safeCol = Math.max(0, Math.min(cur.col, cols - 1));
-            int safeRow = Math.max(0, Math.min(cur.row, rows - 1));
-            SshTermStateMachine.TermCell cursorCell = sm.getCell(safeRow, safeCol);
-            // Always paint the cursor in the theme's default foreground
-            // colour. The cursor is a single-character block — it
-            // doesn't need to mirror the cell's formatting. Using
-            // cell.fg makes it blend into the underlying text on
-            // reverse-video cells (zsh completion menus), and trying
-            // to pick between cell.fg / cell.bg depending on attrs
-            // is fragile. defaultFg contrasts cleanly against
-            // any background the remote program can reasonably paint.
-            int cursorColor = defaultFg;
-            cursorPaint.setColor(cursorColor);
-            float cx = paddingPx + safeCol * charWidth;
-            float cy = paddingPx + safeRow * charHeight;
-            canvas.drawRect(cx, cy, cx + charWidth, cy + charHeight, cursorPaint);
+        // Cursor — only when viewing the live screen. While parked in
+        // scrollback (offset > 0) the live cursor sits off-screen, so
+        // painting it would float a block over history content. The block
+        // is always defaultFg so it contrasts against any background the
+        // remote program can paint (zsh completion menus, reverse video).
+        if (offset == 0) {
+            SshTermStateMachine.CursorInfo cur = sm.getCursor();
+            if (cur != null) {
+                int safeCol = Math.max(0, Math.min(cur.col, cols - 1));
+                int safeRow = Math.max(0, Math.min(cur.row, rows - 1));
+                int cursorColor = defaultFg;
+                cursorPaint.setColor(cursorColor);
+                float cx = paddingPx + safeCol * charWidth;
+                float cy = paddingPx + safeRow * charHeight;
+                canvas.drawRect(cx, cy, cx + charWidth, cy + charHeight, cursorPaint);
+            }
         }
     }
 
     /**
-     * Paint a single scrollback row onto {@code canvas}, starting at
-     * {@code cellTop} (pixels, top of the row). Reads cells from
-     * {@code sm.getScrollbackCell(rowIndex, col)} — rowIndex 0 is the
-     * oldest row still in the ring.
-     *
-     * <p>Unlike {@link #render}, no cursor is drawn and no gap-cell
-     * skip is needed: scrollback rows are pushed by libvterm as whole
-     * rows (memcpy in jni_sb_pushline), so codepoint==-1 (second half
-     * of a CJK double-width) cannot occur in the ring. The per-cell
-     * bg fill + drawText logic is identical to {@link #render}; only
-     * the cell source differs.
+     * Map a virtual line index {@code v} to a cell: scrollback line v
+     * when {@code v < sbCount}, live grid row {@code (v - sbCount)}
+     * otherwise. Returns null for out-of-range (paintCell draws nothing
+     * for null — in practice cellAt always returns a cell because the
+     * render loop's v range stays within [0, sbCount+rows)).
      */
+    private SshTermStateMachine.TermCell cellAt(SshTermStateMachine sm,
+                                                int v, int sbCount, int rows, int col) {
+        if (v < 0) return null;
+        if (v < sbCount) return sm.getScrollbackCell(v, col);
+        int liveRow = v - sbCount;
+        if (liveRow >= rows) return null;
+        return sm.getCell(liveRow, col);
+    }
+
     /**
      * Paint one cell: bg fill + glyph + underline. Used by
      * {@link #render}. The cell's column within the row is {@code col};
@@ -215,7 +269,17 @@ public final class VTermCanvasRenderer {
      */
     private void paintCell(Canvas canvas, SshTermStateMachine.TermCell cell,
                            int col, float cellTop, float cellBottom, float baselineY) {
-        if (cell == null) return;
+        float cellLeft = paddingPx + col * charWidth;
+        if (cell == null) {
+            // Out-of-range — e.g. a scrollback line narrower than the current
+            // cols after a widen (nativeGetScrollbackCell returns null for col
+            // >= the line's stored width). Fill default bg so no stale pixels
+            // from a concurrent DrawWorker read leak through the uncovered cell
+            // (the per-cell-bg invariant that keeps the SSH canvas flicker-free).
+            bgPaint.setColor(bgColor);
+            canvas.drawRect(cellLeft, cellTop, cellLeft + charWidth, cellBottom, bgPaint);
+            return;
+        }
         // Gap cell: second column of a double-width CJK char
         // (libvterm marks it chars[0]==0xFFFFFFFF, which becomes
         // jint -1). Its area is already covered by the primary
@@ -223,7 +287,6 @@ public final class VTermCanvasRenderer {
         // overdraw the wide glyph's right half.
         if (cell.codepoint == -1) return;
 
-        float cellLeft = paddingPx + col * charWidth;
         float cellRight = cellLeft + charWidth * Math.max(1, cell.width);
 
         // Translate raw-RGB cells whose colour happens to match
@@ -236,13 +299,6 @@ public final class VTermCanvasRenderer {
                 ? defaultFg : cell.fg;
         int cellBg = (cell.bg == defaultBg || cell.bg == LEGACY_DEFAULT_BG)
                 ? defaultBg : cell.bg;
-        android.util.Log.d("VTermCanvasRenderer",
-                "paintCell: cell.fg=0x" + Integer.toHexString(cell.fg)
-                + " cell.bg=0x" + Integer.toHexString(cell.bg)
-                + " -> cellFg=0x" + Integer.toHexString(cellFg)
-                + " cellBg=0x" + Integer.toHexString(cellBg)
-                + " (defaultFg=0x" + Integer.toHexString(defaultFg)
-                + " defaultBg=0x" + Integer.toHexString(defaultBg) + ")");
 
         // Always fill bg — clears stale content from the previous
         // frame without a global clear.

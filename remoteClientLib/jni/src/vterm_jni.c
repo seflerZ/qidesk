@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <android/log.h>
+#include <pthread.h>
 
 #include "vterm.h"
 #include "vterm_keycodes.h"
@@ -27,6 +28,20 @@
 // dirty rows. 256 is enough for any sane terminal — a full-screen
 // redraw is at most ~256 rows on a foldable.
 #define MAX_DIRTY_ROWS 256
+
+// Scrollback ring capacity (lines). 10000 lines × ~80 cols × 48B ≈ 38MB.
+// Tunable; large enough that a long session rarely loses early history.
+#define SB_CAP 10000
+
+// One stored scrollback line. `cols` is the width when pushed; a line
+// pushed at 80 cols stays 80 wide after a resize to 120, and the
+// renderer truncates/pads to the current cols at read time. `cells` is
+// heap-owned (malloc'd in jni_sb_pushline, freed on pop/overwrite/clear/
+// destroy).
+typedef struct {
+    int             cols;
+    VTermScreenCell *cells;
+} sb_line_t;
 
 typedef struct {
     VTerm        *vt;
@@ -61,6 +76,19 @@ typedef struct {
     char         *output_buf;
     size_t        output_len;
     size_t        output_cap;
+    // Scrollback ring. libvterm 0.3.3 does NOT retain lines that scroll
+    // off the top of the primary screen — it hands each scrolled-off row
+    // to the sb_pushline callback (screen.c:sb_pushline_from_row) and
+    // forgets it. We store those rows here so the Java renderer can
+    // paint history above the live grid. sb_pushline runs on the
+    // SSH-VTerm-Reader thread (inside nativeWrite→vterm_input_write);
+    // reads (nativeGetScrollbackCell/Count) run on the SSH-Paint thread
+    // — sb_lock serialises them.
+    sb_line_t      *sb_ring;     // sb_cap slots, circular
+    int             sb_cap;      // max lines (constant = SB_CAP)
+    int             sb_count;    // lines currently stored
+    int             sb_head;     // index of the OLDEST line
+    pthread_mutex_t sb_lock;
 } jhandle_t;
 
 // Damage callback: called by libvterm when cells in [start_row,
@@ -287,6 +315,84 @@ static int jni_sos(VTermStringFragment frag, void *user) {
 // Helper: extract jhandle_t from a Java long. JNI guarantees that
 // pointer-sized long fits; on 32-bit ABIs we'd need a different
 // scheme, but we only build arm64-v8a.
+// --- Scrollback callbacks (VTermScreenCallbacks.sb_*) ---
+// libvterm calls these on the SSH-VTerm-Reader thread (inside
+// nativeWrite → vterm_input_write → screen scroll / resize). They
+// store / return primary-screen rows that scrolled off the top.
+//
+// sb_pushline: libvterm hands us `cols` ready-to-memcpy VTermScreenCell
+// (it filled screen->sb_buffer via vterm_screen_get_cell first, see
+// screen.c:sb_pushline_from_row). We append to the ring; if full we
+// drop the OLDEST line (overwrite its slot and advance sb_head).
+static int jni_sb_pushline(int cols, const VTermScreenCell *cells, void *user) {
+    jhandle_t *h = (jhandle_t *) user;
+    pthread_mutex_lock(&h->sb_lock);
+    int slot;
+    if (h->sb_count < h->sb_cap) {
+        slot = (h->sb_head + h->sb_count) % h->sb_cap;
+        h->sb_count++;
+    } else {
+        // Ring full: reuse the oldest slot, free its old cells first.
+        slot = h->sb_head;
+        free(h->sb_ring[slot].cells);
+        h->sb_head = (h->sb_head + 1) % h->sb_cap;
+    }
+    VTermScreenCell *copy = (VTermScreenCell *) malloc(sizeof(VTermScreenCell) * cols);
+    if (copy) {
+        memcpy(copy, cells, sizeof(VTermScreenCell) * cols);
+    }
+    h->sb_ring[slot].cols  = cols;
+    h->sb_ring[slot].cells = copy;  // NULL on malloc failure → reads skip it
+    pthread_mutex_unlock(&h->sb_lock);
+    return 1;
+}
+
+// sb_popline: libvterm (screen.c resize-grow path) asks for the NEWEST
+// scrollback line to backfill the top of a grown screen. We copy it
+// into libvterm's `cells` buffer (truncating/padding to `cols` = the
+// previous width) and REMOVE it from the ring. Return 1 on success, 0
+// if empty (libvterm stops popping). This is what makes terminal
+// resize reflow history for free — we just register the callback.
+static int jni_sb_popline(int cols, VTermScreenCell *cells, void *user) {
+    jhandle_t *h = (jhandle_t *) user;
+    pthread_mutex_lock(&h->sb_lock);
+    if (h->sb_count == 0) {
+        pthread_mutex_unlock(&h->sb_lock);
+        return 0;
+    }
+    int slot = (h->sb_head + h->sb_count - 1) % h->sb_cap;  // newest
+    int src_cols = h->sb_ring[slot].cols;
+    VTermScreenCell *src = h->sb_ring[slot].cells;
+    // Zero the destination first so uncovered slots are empty cells.
+    memset(cells, 0, sizeof(VTermScreenCell) * cols);
+    if (src) {
+        int n = (src_cols < cols) ? src_cols : cols;
+        memcpy(cells, src, sizeof(VTermScreenCell) * n);
+    }
+    free(src);
+    h->sb_ring[slot].cells = NULL;
+    h->sb_ring[slot].cols  = 0;
+    h->sb_count--;
+    pthread_mutex_unlock(&h->sb_lock);
+    return 1;
+}
+
+// sb_clear: CSI 3J / clear-scrollback. Free every line. free(NULL) is
+// a no-op so scanning all sb_cap slots (not just sb_count) is safe.
+static int jni_sb_clear(void *user) {
+    jhandle_t *h = (jhandle_t *) user;
+    pthread_mutex_lock(&h->sb_lock);
+    for (int i = 0; i < h->sb_cap; i++) {
+        free(h->sb_ring[i].cells);
+        h->sb_ring[i].cells = NULL;
+        h->sb_ring[i].cols  = 0;
+    }
+    h->sb_count = 0;
+    h->sb_head  = 0;
+    pthread_mutex_unlock(&h->sb_lock);
+    return 1;
+}
+
 static jhandle_t *getHandle(JNIEnv *env, jlong handle) {
     if (handle == 0) {
         LOGE("null handle from Java");
@@ -325,8 +431,25 @@ Java_com_qihua_bVNC_ssh_libvterm_SshTermStateMachine_nativeCreate(
     h->screen_callbacks.settermprop = jni_settermprop;
     h->screen_callbacks.bell       = jni_bell;
     h->screen_callbacks.resize     = jni_resize;
+    // Scrollback callbacks. libvterm calls sb_pushline when a primary-
+    // screen row scrolls off the top (screen.c:premove→sb_pushline_from_row),
+    // sb_popline on resize-grow to backfill, sb_clear on CSI 3J. libvterm
+    // 0.3.3 keeps NO off-screen rows itself — without these the scrolled-
+    // off rows are lost. (The reverted vterm_scroll_rect attempt tried
+    // to reclaim history libvterm had already discarded; this captures
+    // it BEFORE discard instead.)
+    h->screen_callbacks.sb_pushline = jni_sb_pushline;
+    h->screen_callbacks.sb_popline  = jni_sb_popline;
+    h->screen_callbacks.sb_clear    = jni_sb_clear;
+    // sb_pushline4 left NULL: libvterm falls back to sb_pushline
+    // (screen.c:215-218); we don't need wrapped-line continuation flags.
     vterm_screen_set_callbacks(h->vts, &h->screen_callbacks, h);
     vterm_screen_enable_altscreen(h->vts, 1);
+
+    // Scrollback ring storage backing the callbacks above.
+    h->sb_cap  = SB_CAP;
+    h->sb_ring = (sb_line_t *) calloc(h->sb_cap, sizeof(sb_line_t));
+    pthread_mutex_init(&h->sb_lock, NULL);
 
     // VTermStateFallbacks handles OSC commands that on_osc()
     // doesn't recognise by hand (i.e. anything other than
@@ -724,6 +847,48 @@ Java_com_qihua_bVNC_ssh_libvterm_SshTermStateMachine_nativeGetCursor(
     return obj;
 }
 
+// Number of scrollback lines currently stored in the ring. Called by
+// the renderer / SshTermStateMachine to clamp the view offset.
+JNIEXPORT jint JNICALL
+Java_com_qihua_bVNC_ssh_libvterm_SshTermStateMachine_nativeGetScrollbackCount(
+        JNIEnv *env, jclass clazz, jlong handle) {
+    (void) env; (void) clazz;
+    jhandle_t *h = getHandle(env, handle);
+    if (!h) return 0;
+    pthread_mutex_lock(&h->sb_lock);
+    int n = h->sb_count;
+    pthread_mutex_unlock(&h->sb_lock);
+    return n;
+}
+
+// Read one cell from scrollback line `line` (0 = oldest), column `col`.
+// Mirrors nativeGetCell but reads from our ring instead of the live
+// grid. Returns a TermCell (or NULL if out of range). Used by
+// VTermCanvasRenderer to paint history above the live grid. We copy the
+// cell out under sb_lock, then marshall outside the lock so the lock is
+// held only for a memcpy (marshallTermCell's colorToRgb may call back
+// into libvterm — don't hold our lock across that).
+JNIEXPORT jobject JNICALL
+Java_com_qihua_bVNC_ssh_libvterm_SshTermStateMachine_nativeGetScrollbackCell(
+        JNIEnv *env, jclass clazz, jlong handle, jint line, jint col) {
+    (void) clazz;
+    jhandle_t *h = getHandle(env, handle);
+    if (!h) return NULL;
+    VTermScreenCell copy;
+    int got = 0;
+    pthread_mutex_lock(&h->sb_lock);
+    if (line >= 0 && line < h->sb_count) {
+        int slot = (h->sb_head + line) % h->sb_cap;
+        int src_cols = h->sb_ring[slot].cols;
+        if (col >= 0 && col < src_cols && h->sb_ring[slot].cells) {
+            copy = h->sb_ring[slot].cells[col];
+            got = 1;
+        }
+    }
+    pthread_mutex_unlock(&h->sb_lock);
+    return got ? marshallTermCell(env, h->vts, &copy) : NULL;
+}
+
 JNIEXPORT void JNICALL
 Java_com_qihua_bVNC_ssh_libvterm_SshTermStateMachine_nativeDestroy(
         JNIEnv *env, jclass clazz, jlong handle) {
@@ -732,5 +897,10 @@ Java_com_qihua_bVNC_ssh_libvterm_SshTermStateMachine_nativeDestroy(
     if (!h) return;
     if (h->vt) vterm_free(h->vt);
     free(h->output_buf);
+    if (h->sb_ring) {
+        for (int i = 0; i < h->sb_cap; i++) free(h->sb_ring[i].cells);
+        free(h->sb_ring);
+    }
+    pthread_mutex_destroy(&h->sb_lock);
     free(h);
 }

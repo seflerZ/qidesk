@@ -58,6 +58,23 @@ public class SshTerminalRenderer {
     private GridSizeListener gridSizeListener;
     /** Background thread that drains SSH bytes into the state machine. */
     private Thread readerThread;
+    /**
+     * Back-buffer for tear-free rendering. SSH-Paint renders the cell grid
+     * into this bitmap first (10-30 ms), then blits it to the target mbitmap
+     * in one fast {@code drawBitmap} call (~0.1 ms). Without it, SSH-Paint
+     * draws directly onto mbitmap while DrawWorker concurrently reads it —
+     * the per-cell bg fill prevents flicker for keystroke-level edits
+     * (a few cells), but scrolling changes every cell, so DrawWorker can
+     * snap a half-painted frame: upper half showing the new scroll position,
+     * lower half still the old one — visual tearing.
+     */
+    private Bitmap backBitmap;
+    /** Cached Canvas wrapping {@link #backBitmap} — recreated only on resize. */
+    private Canvas backCanvas;
+    /** Cached Canvas wrapping the target mbitmap — recreated only when target changes. */
+    private Canvas targetCanvas;
+    /** The Bitmap that {@link #targetCanvas} currently wraps (for change detection). */
+    private Bitmap targetCanvasBitmap;
 
     public SshTerminalRenderer(float density, SshShellChannel channel, Context ctx) throws IOException {
         this.density = density;
@@ -169,6 +186,8 @@ public class SshTerminalRenderer {
         currentCols = cols;
         currentRows = rows;
         stateMachine = new SshTermStateMachine(cols, rows);
+        // Cell height feeds scrollByPixels' px→row conversion for scrollback.
+        stateMachine.setCellHeight(canvasRenderer.charHeight);
         // Wire libvterm's generated input bytes back to the SSH channel's stdin.
         stateMachine.setOutputStream(channel.getTerminalOut());
         // Reader thread: drains SSH bytes from channel.getTerminalIn()
@@ -213,10 +232,27 @@ public class SshTerminalRenderer {
 
     public void renderInto(Bitmap target) {
         if (closed || target == null || target.isRecycled()) return;
-        Canvas c = new Canvas(target);
+        int w = target.getWidth();
+        int h = target.getHeight();
+        // Ensure the back-buffer + its Canvas match the current target dimensions.
+        if (backBitmap == null
+                || backBitmap.getWidth() != w || backBitmap.getHeight() != h
+                || backBitmap.isRecycled()) {
+            if (backBitmap != null && !backBitmap.isRecycled()) {
+                backBitmap.recycle();
+            }
+            backBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+            backCanvas = new Canvas(backBitmap);
+        }
+        // Erase the back-buffer to the current bg colour. This seeds the
+        // padding ring and any grid-overshoot gaps, so the cell loop + the
+        // gap fills in VTermCanvasRenderer.render together produce a
+        // complete frame with no transparent / stale pixels.
+        backBitmap.eraseColor(currentBgColor());
+
         int pad = paddingPx();
-        int cols = Math.max(20, (target.getWidth() - 2 * pad) / (int) canvasRenderer.charWidth);
-        int rows = Math.max(10, (target.getHeight() - 2 * pad) / canvasRenderer.charHeight);
+        int cols = Math.max(20, (w - 2 * pad) / (int) canvasRenderer.charWidth);
+        int rows = Math.max(10, (h - 2 * pad) / canvasRenderer.charHeight);
         if (cols != currentCols || rows != currentRows) {
             currentCols = cols;
             currentRows = rows;
@@ -244,8 +280,17 @@ public class SshTerminalRenderer {
             }
         }
         if (stateMachine != null) {
-            canvasRenderer.render(stateMachine, c);
+            canvasRenderer.render(stateMachine, backCanvas);
         }
+        // Atomic blit: copy the complete frame to mbitmap in ~0.1 ms.
+        // Reuse a cached Canvas wrapping target — avoids allocating a new
+        // Canvas object every frame (15-30 FPS fast-scroll path).
+        if (targetCanvas == null || targetCanvasBitmap != target
+                || targetCanvasBitmap.isRecycled()) {
+            targetCanvas = new Canvas(target);
+            targetCanvasBitmap = target;
+        }
+        targetCanvas.drawBitmap(backBitmap, 0f, 0f, null);
     }
 
     /**
@@ -277,6 +322,11 @@ public class SshTerminalRenderer {
 
     public int getCurrentRows() {
         return currentRows;
+    }
+
+    /** Cell height in pixels — feeds scrollback px↔row conversion. */
+    public int getCellHeight() {
+        return canvasRenderer != null ? canvasRenderer.charHeight : 1;
     }
 
     /**
@@ -320,6 +370,13 @@ public class SshTerminalRenderer {
         } catch (Throwable t) {
             Log.w(TAG, "stateMachine.destroy failed", t);
         }
+        if (backBitmap != null && !backBitmap.isRecycled()) {
+            backBitmap.recycle();
+            backBitmap = null;
+        }
+        backCanvas = null;
+        targetCanvas = null;
+        targetCanvasBitmap = null;
         channel.close();
     }
 

@@ -42,6 +42,21 @@ public final class SshTermStateMachine {
     private long nativeHandle;
     private OutputStream outputSink;
 
+    // --- Scrollback view state ---
+    // scrollOffsetRows: how many lines back from the live bottom the
+    //   viewport is parked. 0 = live (normal). Written by the input
+    //   thread (scrollByPixels/scrollByLines/scrollToBottom), read by
+    //   the SSH-Paint thread in VTermCanvasRenderer.render.
+    // scrollFracPx: sub-row pixel remainder ∈ [0, charHeight) for smooth
+    //   touchpad scrolling — the renderer shifts content down by this
+    //   many pixels and draws one extra row so the transition is
+    //   pixel-smooth instead of snapping row-by-row.
+    // scrollAccumPx: input-thread-only accumulator feeding the two above.
+    private volatile int scrollOffsetRows = 0;
+    private volatile float scrollFracPx = 0f;
+    private float scrollAccumPx = 0f;
+    private volatile int charHeightForScroll = 1;
+
     public SshTermStateMachine(int cols, int rows) {
         if (cols < 1 || rows < 1) {
             throw new IllegalArgumentException("cols/rows must be >= 1, got " + cols + "x" + rows);
@@ -230,6 +245,129 @@ public final class SshTermStateMachine {
         }
     }
 
+    // --- Scrollback view ---
+    // The scrollback ring lives in native (vterm_jni.c, fed by libvterm's
+    // sb_pushline callback). Java only holds the *view* onto it: how far
+    // back the viewport is parked (scrollOffsetRows) plus a sub-row pixel
+    // remainder for smooth scrolling (scrollFracPx). The renderer reads
+    // these two to decide which virtual rows to paint and how to offset
+    // them; RemoteSshPointer mutates them via scrollByPixels/scrollByLines.
+
+    /**
+     * Cell height in pixels — needed by {@link #scrollByPixels} to turn a
+     * pixel delta into whole-row commits + a sub-row remainder. Set once
+     * from {@link SshTerminalRenderer#open} (the renderer measures
+     * charHeight from the font).
+     */
+    public void setCellHeight(int charHeight) {
+        this.charHeightForScroll = Math.max(1, charHeight);
+    }
+
+    /**
+     * Scroll the viewport by a signed pixel delta. Positive = toward
+     * older history (scrollOffsetRows grows); negative = toward the live
+     * bottom (shrinks). Whole rows are committed immediately to
+     * {@link #scrollOffsetRows}; the sub-row remainder is kept in
+     * {@link #scrollFracPx} so the renderer can paint a pixel-smooth
+     * transition. Clamped to [0, scrollbackCount]; at either extreme the
+     * remainder is zeroed so there's no half-row hang at the edges.
+     *
+     * <p>Called from the input thread (RemoteSshPointer.scrollUp/Down).
+     * The volatile offset/frac fields are read lock-free by the paint
+     * thread; the synchronized block guards the accumulator + the native
+     * getScrollbackCount used for clamping.
+     */
+    public void scrollByPixels(float delta) {
+        synchronized (this) {
+            int ch = charHeightForScroll;
+            // Cap per-event delta to ±2 rows. The touchpad/inertia `speed`
+            // (RDP 255-complement, clamped [-255,255]) yields huge magnitudes
+            // for fast flicks — |newY| up to 255, ×TOUCH_SCROLL_SCALE → a
+            // single inertia tick can carry 700+ px and jump the viewport a
+            // dozen rows (one tap of scrollDown snaps straight back to live).
+            // Capping to ≤2 rows/event keeps scrolling controllable; gentle
+            // swipes (delta < cap) are unaffected and keep their sub-row frac
+            // for smoothness.
+            float cap = 2f * ch;
+            if (delta > cap) delta = cap;
+            else if (delta < -cap) delta = -cap;
+            int oldOffset = scrollOffsetRows;
+            scrollAccumPx += delta;
+            while (scrollAccumPx >= ch) {
+                scrollAccumPx -= ch;
+                scrollOffsetRows++;
+            }
+            while (scrollAccumPx < 0) {
+                scrollAccumPx += ch;
+                scrollOffsetRows--;
+            }
+            int max = nativeGetScrollbackCount(nativeHandle);
+            if (scrollOffsetRows > max) {
+                scrollOffsetRows = max;
+                scrollAccumPx = 0f;
+            } else if (scrollOffsetRows < 0) {
+                scrollOffsetRows = 0;
+                scrollAccumPx = 0f;
+            }
+            // When offset reaches an edge FROM THE OPPOSITE DIRECTION, snap
+            // the sub-row remainder to zero. If the user scrolled DOWN and
+            // landed at offset==0, a residual frac>0 shifts the live grid
+            // down by frac px, which leaves stale content exposed at the
+            // bottom on the next frame (when frac drops to 0).
+            // Conversely, scrolling UP to the very top should show the
+            // oldest line with no partial-row offset.
+            if (scrollOffsetRows == 0 && oldOffset > 0 && scrollAccumPx > 0) {
+                scrollAccumPx = 0f;
+            }
+            if (scrollOffsetRows == max && max > 0 && oldOffset < max) {
+                scrollAccumPx = 0f;
+            }
+            scrollFracPx = scrollAccumPx;  // ∈ [0, ch) after the loops + clamp
+        }
+    }
+
+    /** Scroll by whole lines (positive = older, negative = newer). */
+    public void scrollByLines(int lines) {
+        if (lines == 0) return;
+        scrollByPixels(lines * (float) charHeightForScroll);
+    }
+
+    /** Snap the viewport back to the live bottom (offset = 0). */
+    public void scrollToBottom() {
+        synchronized (this) {
+            scrollOffsetRows = 0;
+            scrollAccumPx = 0f;
+            scrollFracPx = 0f;
+        }
+    }
+
+    /** Lines scrolled back from the live bottom (0 = live). */
+    public int getScrollOffset() {
+        return scrollOffsetRows;
+    }
+
+    /** Sub-row pixel remainder ∈ [0, charHeight) for smooth scrolling. */
+    public float getScrollFracPx() {
+        return scrollFracPx;
+    }
+
+    /** Number of history lines currently captured in the scrollback ring. */
+    public int getScrollbackCount() {
+        synchronized (this) {
+            return nativeGetScrollbackCount(nativeHandle);
+        }
+    }
+
+    /**
+     * Read one cell from scrollback line {@code line} (0 = oldest),
+     * column {@code col}. Returns null if out of range (renderer skips).
+     */
+    public TermCell getScrollbackCell(int line, int col) {
+        synchronized (this) {
+            return nativeGetScrollbackCell(nativeHandle, line, col);
+        }
+    }
+
     /** Read cursor position + visibility. */
     public CursorInfo getCursor() {
         synchronized (this) {
@@ -286,6 +424,31 @@ public final class SshTermStateMachine {
         public boolean visible;
     }
 
+    /**
+     * Atomic snapshot of the scroll view state: offset (lines from live
+     * bottom), sub-row pixel remainder, and total scrollback line count.
+     * The renderer reads all three under one {@code synchronized} block
+     * so it never sees a mismatched offset+frac+sbCount triple.
+     */
+    public static final class ScrollViewState {
+        public final int offset;
+        public final float frac;
+        public final int sbCount;
+        public ScrollViewState(int offset, float frac, int sbCount) {
+            this.offset = offset;
+            this.frac = frac;
+            this.sbCount = sbCount;
+        }
+    }
+
+    /** Read offset, frac, and sbCount atomically for the renderer. */
+    public ScrollViewState getScrollViewState() {
+        synchronized (this) {
+            return new ScrollViewState(scrollOffsetRows, scrollFracPx,
+                    nativeGetScrollbackCount(nativeHandle));
+        }
+    }
+
     private static native long  nativeCreate(int cols, int rows);
     private static native void  nativeSetSize(long h, int cols, int rows);
     private static native int   nativeGetCols(long h);
@@ -297,6 +460,8 @@ public final class SshTermStateMachine {
     private static native boolean nativePollDirty(long h);
     private static native int   nativeTakeDirtyRows(long h, int[] outRows);
     private static native TermCell  nativeGetCell(long h, int row, int col);
+    private static native int       nativeGetScrollbackCount(long h);
+    private static native TermCell  nativeGetScrollbackCell(long h, int line, int col);
     private static native CursorInfo nativeGetCursor(long h);
     private static native void  nativeDestroy(long h);
     private static native void  nativeSetDefaultColors(long h, int fgArgb, int bgArgb);
