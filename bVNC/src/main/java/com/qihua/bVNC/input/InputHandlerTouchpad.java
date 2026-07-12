@@ -464,10 +464,14 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         }
 
         // Decrease sampling time intervals when screen fresh rate is high.
-        long scrollSamplingTimeMs = Math.min(1000 / canvas.fpsCounter.getAvgFps(), SCROLL_SAMPLING_MS);
-        if (System.currentTimeMillis() - lastScrollTimeMs < scrollSamplingTimeMs) {
-            return true;
-        }
+        // long scrollSamplingTimeMs = SCROLL_SAMPLING_MS;
+        // if (canvas.fpsCounter.getAvgFps() > 0) {
+        //     scrollSamplingTimeMs = Math.min(1000 / canvas.fpsCounter.getAvgFps(), SCROLL_SAMPLING_MS);
+        // }
+
+        // if (System.currentTimeMillis() - lastScrollTimeMs < scrollSamplingTimeMs) {
+        //    return true;
+        //}
     
         if (!inScrolling && twoFingers && (Math.abs(distanceX) > 4 || Math.abs(distanceY) > 4)) {
             inScrolling = true;

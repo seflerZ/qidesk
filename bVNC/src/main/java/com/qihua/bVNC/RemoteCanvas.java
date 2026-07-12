@@ -1287,6 +1287,12 @@ public class RemoteCanvas extends SurfaceView implements Viewable
 //        float shiftedX = x - shiftX;
 //        float shiftedY = y - shiftY;
 
+        // drawWorker is null only after onDestroy (line ~1000) nulled it.
+        // A paintRunnable can still be in flight on the SSH-Paint thread at
+        // that point (teardown race) — without this guard reDraw NPEs, and
+        // since paintRunnable runs on a HandlerThread the exception KILLS the
+        // paint thread, after which nothing renders at all.
+        if (drawWorker == null) return;
         drawWorker.addTask(drawTask);
     }
 
