@@ -20,8 +20,6 @@
 
 package com.qihua.bVNC.input;
 
-import static com.qihua.bVNC.input.InputHandlerTouchpad.SCROLL_SAMPLING_MS;
-
 import android.gesture.GestureOverlayView;
 import android.os.SystemClock;
 import android.view.InputDevice;
@@ -51,6 +49,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         implements InputHandler, ScaleGestureDetector.OnScaleGestureListener {
     private static final String TAG = "InputHandlerGeneric";
     public static final int POINTER_SAMPLING_MS = 13;
+    public static final int SCROLL_SAMPLING_MS = 30;
+
     protected final boolean debugLogging;
 
     // The minimum distance a scale event has to traverse the FIRST time before scaling starts.
@@ -496,10 +496,11 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             return true;
         }
 
-        GeneralUtils.debugLog(debugLogging, TAG, "onDoubleTap, e: " + e);
-
         totalMoveX = 0;
         totalMoveY = 0;
+
+        dragX = 0;
+        dragY = 0;
 
         dragMode = true;
 

@@ -38,7 +38,6 @@ import com.qihua.bVNC.R;
 public class InputHandlerTouchpad extends InputHandlerGeneric {
     public static final String ID = "TOUCHPAD_MODE";
     static final String TAG = "InputHandlerTouchpad";
-    public static final int SCROLL_SAMPLING_MS = 30;
 
     public InputHandlerTouchpad(RemoteCanvasActivity activity, RemoteCanvas canvas, RemoteCanvas touchpad,
                                 RemotePointer pointer, boolean debugLogging) {
@@ -118,6 +117,11 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             return true;
         }
 
+        // handle scroll(one\two fingers), long press and double tap
+        if (gestureDetector.onTouchEvent(e)) {
+            return true;
+        }
+
         GeneralUtils.debugLog(debugLogging, TAG, "onTouchEvent: pointerID: " + pointerID);
         switch (pointerID) {
             case 0:
@@ -139,9 +143,6 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                         canvas.cursorBeingMoved = true;
                         // If we are manipulating the desktop, turn off bitmap filtering for faster response.
                         canvas.bitmapData.paint.setFilterBitmap(false);
-                        // Indicate where we start dragging from.
-                        dragX = e.getX();
-                        dragY = e.getY();
 
                         gestureX = e.getX();
                         gestureY = e.getY();
@@ -164,7 +165,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                             activity.sendShortVibration();
                         }
 
-                        detectImmersiveSwipe(dragX, dragY);
+                        detectImmersiveSwipe(e.getX(), e.getY());
                         break;
                     case MotionEvent.ACTION_MOVE:
                         long timeElapsed = System.currentTimeMillis() - inertiaStartTime;
@@ -205,6 +206,10 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                             }
 
                             if (totalMoveY == 0 && totalMoveX == 0) {
+                                // remember drag start coordinates
+                                dragX = e.getX();
+                                dragY = e.getY();
+
                                 if (dragMode) {
                                     pointer.leftButtonDown(getX(e), getY(e), meta);
                                 } else if (rightDragMode) {
@@ -212,6 +217,8 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                                 } else if (middleDragMode) {
                                     pointer.middleButtonDown(getX(e), getY(e), meta);
                                 }
+
+                                activity.sendShortVibration();
 
                                 // make it nonzero to prevent being trigger again
                                 totalMoveX = 1f;
@@ -283,14 +290,6 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
 
                         cumulatedX = 0;
                         cumulatedY = 0;
-
-                        if (totalMoveY <= 10 && totalMoveX <= 10 && (detectImmersiveLeft(e.getX(), e.getY())
-                                || detectImmersiveRight(e.getX(), e.getY()))) {
-
-                            activity.showGestureLayer(2000);
-
-                            return true;
-                        }
 
                         break;
                 }
@@ -408,13 +407,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             totalMoveX = 0;
         }
 
-        if (dragMode || rightDragMode || middleDragMode) {
-            // prevent scrolling when dragging
-            return true;
-        }
-
-        // handle scrolling, pinching, double click and long press
-        return gestureDetector.onTouchEvent(e);
+        return false;
     }
 
     /*
@@ -423,8 +416,6 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
      */
     @Override
     public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-        GeneralUtils.debugLog(debugLogging, TAG, "onScroll, e1: " + e1 + ", e2:" + e2);
-    
         if (activity.isToolbarShowing()) {
             return true;
         }
@@ -464,14 +455,14 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         }
 
         // Decrease sampling time intervals when screen fresh rate is high.
-        // long scrollSamplingTimeMs = SCROLL_SAMPLING_MS;
-        // if (canvas.fpsCounter.getAvgFps() > 0) {
-        //     scrollSamplingTimeMs = Math.min(1000 / canvas.fpsCounter.getAvgFps(), SCROLL_SAMPLING_MS);
-        // }
+        long scrollSamplingTimeMs = SCROLL_SAMPLING_MS;
+        if (canvas.fpsCounter.getAvgFps() > 0) {
+            scrollSamplingTimeMs = Math.min(1000 / canvas.fpsCounter.getAvgFps(), SCROLL_SAMPLING_MS);
+        }
 
-        // if (System.currentTimeMillis() - lastScrollTimeMs < scrollSamplingTimeMs) {
-        //    return true;
-        //}
+        if (System.currentTimeMillis() - lastScrollTimeMs < scrollSamplingTimeMs) {
+           return true;
+        }
     
         if (!inScrolling && twoFingers && (Math.abs(distanceX) > 4 || Math.abs(distanceY) > 4)) {
             inScrolling = true;
@@ -479,29 +470,27 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         }
     
         // Calculate swipe speed and apply acceleration using the helper
-        long currentTime = System.currentTimeMillis();
-        // 使用指针加速助手计算加速倍数，双指滑动的基础倍数为1.6f
         float speedMultiplier = pointerAccelerationHelper.calculateAccelerationMultiplier(
-            currentTime, cumulatedX, cumulatedY, 1.2f);
+                System.currentTimeMillis(), cumulatedX, cumulatedY, 1.2f);
     
         // Make distanceX/Y display density independent with speed-based acceleration.
         distanceX = (cumulatedX / displayDensity) * canvas.getZoomFactor() * speedMultiplier;
         distanceY = (cumulatedY / displayDensity) * canvas.getZoomFactor() * speedMultiplier;
-    
+
         // If in swiping mode, indicate a swipe at regular intervals.
         if (inSwiping || immersiveSwipeX || immersiveSwipeY) {
             scrollDown = false;
             scrollUp = false;
             scrollRight = false;
             scrollLeft = false;
+
+            cumulatedX = 0;
+            cumulatedY = 0;
+
+            lastScrollTimeMs = System.currentTimeMillis();
     
-            doScroll(getX(e2), getY(e2), distanceX, distanceY, meta);
+            return doScroll(getX(e2), getY(e2), distanceX, distanceY, meta);
         }
-    
-        cumulatedX = 0;
-        cumulatedY = 0;
-    
-        lastScrollTimeMs = System.currentTimeMillis();
     
         return false;
     }

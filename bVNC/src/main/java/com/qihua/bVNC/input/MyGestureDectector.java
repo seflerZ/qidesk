@@ -236,8 +236,6 @@ public class MyGestureDectector
                     cancel();
                 }
 
-                handled = true;
-
                 break;
             case MotionEvent.ACTION_POINTER_UP:
                 if (!mIgnoreMultitouch)
