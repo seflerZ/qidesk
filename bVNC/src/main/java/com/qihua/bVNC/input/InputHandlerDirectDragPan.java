@@ -80,7 +80,7 @@ public class InputHandlerDirectDragPan extends InputHandlerGeneric {
         GeneralUtils.debugLog(debugLogging, TAG, "startDragAndDropMode, e: " + e);
         dragMode = true;
         RemotePointer p = canvas.getPointer();
-        p.leftButtonDown(getX(e), getY(e), e.getMetaState());
+        p.leftButtonDown(getDragPointerX(e), getDragPointerY(e), e.getMetaState());
     }
 
     /*
@@ -118,7 +118,7 @@ public class InputHandlerDirectDragPan extends InputHandlerGeneric {
                 startDragAndDropMode(e1);
             } else {
                 RemotePointer p = canvas.getPointer();
-                p.moveMouseButtonDown(getX(e2), getY(e2), e2.getMetaState());
+                p.moveMouseButtonDown(getDragPointerX(e2), getDragPointerY(e2), e2.getMetaState());
             }
         }
         canvas.movePanToMakePointerVisible();

@@ -184,13 +184,13 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
     }
 
     @Override
-    protected int getX(MotionEvent e) {
+    protected int getDragPointerX(MotionEvent e) {
         // For gamepad, we do not use mouse coordinates
         return pointer.getX();
     }
 
     @Override
-    protected int getY(MotionEvent e) {
+    protected int getDragPointerY(MotionEvent e) {
         // For gamepad, we don't use mouse coordinates
         return pointer.getY();
     }

@@ -566,12 +566,27 @@ build_moonlight() {
         git fetch
         git checkout ${moonlight_ver}
         git reset --hard
-        # link to native lib to start compile
+        popd
+        # Build: invoke ndk-build from moonlight's own jni/ directory so
+        # the project's Android.mk (all-subdir-makefiles) pulls in both
+        # moonlight-core/ and evdev_reader/. This avoids the project-root
+        # dispatcher jni/Android.mk, which deliberately skips moonlight
+        # (see comment there: "moonlight-core belongs to its own AGP
+        # module and must not be built by this dispatcher"). The
+        # jni/moonlight-core + jni/evdev_reader symlinks are kept in
+        # place for any tooling that still expects them.
         rm -f "${basedir}/../../../jni/moonlight-core"
         rm -f "${basedir}/../../../jni/evdev_reader"
         ln -s "${basedir}/${moonlight_build}/app/src/main/jni/moonlight-core" "${basedir}/../../../jni/moonlight-core"
         ln -s "${basedir}/${moonlight_build}/app/src/main/jni/evdev_reader" "${basedir}/../../../jni/evdev_reader"
+        # Output directly to src/main/jniLibs/<ABI>/ — the path AGP
+        # packages into the AAR. build_vterm must `unset NDK_LIBS_OUT`
+        # before its ndk-build because ndk-build's setup-app.mk:104-106
+        # runs `rm -f ${NDK_LIBS_OUT}/<ABI>/*` before each build, which
+        # would clobber libmoonlight-core.so placed here. vterm instead
+        # ndk-builds to the default libs/<ABI>/ and cp's the result over.
         export NDK_LIBS_OUT="${basedir}/../../../src/main/jniLibs"
+        pushd "${moonlight_build}/app/src/main/jni"
         ${ANDROID_NDK}/ndk-build -j 2
         popd
     fi
@@ -659,7 +674,21 @@ build_vterm() {
     # rules — same path AGP packages into the AAR.
     pushd "${basedir}/../.."
     echo "Running ndk-build from $(pwd)..."
+    # Deliberately unset NDK_LIBS_OUT here. build_moonlight sets it to
+    # src/main/jniLibs (so libmoonlight-core.so lands where AGP
+    # packages it), and export makes the variable visible to vterm's
+    # ndk-build too. That would trigger setup-app.mk:104-106's
+    # `rm -f ${NDK_LIBS_OUT}/arm64-v8a/*` and clobber moonlight's .so.
+    # Use ndk-build's default libs/<ABI>/ output and copy the result
+    # into src/main/jniLibs/arm64-v8a/ afterwards.
+    unset NDK_LIBS_OUT
     ${ANDROID_NDK}/ndk-build -j 2
+    jnilibs="${basedir}/../../../src/main/jniLibs/arm64-v8a"
+    mkdir -p "${jnilibs}"
+    cp -f "${basedir}/../../../libs/arm64-v8a/"libvterm.so \
+          "${basedir}/../../../libs/arm64-v8a/"libvterm_jni.so \
+          "${basedir}/../../../libs/arm64-v8a/"libc++_shared.so \
+          "${jnilibs}/"
     popd
     popd
     touch VTERM_BUILT

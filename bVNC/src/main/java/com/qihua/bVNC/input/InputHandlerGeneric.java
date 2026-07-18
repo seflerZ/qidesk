@@ -27,7 +27,6 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
-import android.widget.FrameLayout;
 
 import androidx.core.util.Pair;
 import androidx.core.view.InputDeviceCompat;
@@ -247,7 +246,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
      * Function to get appropriate X coordinate from motion event for this input handler.
      * @return the appropriate X coordinate.
      */
-    protected int getX(MotionEvent e) {
+    protected int getDragPointerX(MotionEvent e) {
         float scale = canvas.getZoomFactor();
         return (int) (canvas.getAbsX() + e.getX() / scale);
     }
@@ -260,7 +259,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
      * Function to get appropriate Y coordinate from motion event for this input handler.
      * @return the appropriate Y coordinate.
      */
-    protected int getY(MotionEvent e) {
+    protected int getDragPointerY(MotionEvent e) {
         float scale = canvas.getZoomFactor();
         return (int) (canvas.getAbsY() + (e.getY() - 1.f * canvas.getTop()) / scale);
     }
@@ -476,8 +475,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         }
 
         int metaState = e.getMetaState() | canvas.getKeyboard().getMetaState();
-        int x = getX(e);
-        int y = getY(e);
+        int x = getDragPointerX(e);
+        int y = getDragPointerY(e);
 
         activity.readSpecialKeysState();
 
@@ -487,24 +486,35 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         return true;
     }
 
-    /*
-     * @see android.view.GestureDetector.SimpleOnGestureListener#onDoubleTap(android.view.MotionEvent)
-     */
     @Override
     public boolean onDoubleTap(MotionEvent e) {
-        if (dragMode || rightDragMode || middleDragMode || detectImmersiveRange(e.getX(), e.getY())) {
-            return true;
+        if (dragMode || detectImmersiveRange(e.getX(), e.getY())) {
+            return false;
         }
 
         totalMoveX = 0;
         totalMoveY = 0;
 
-        dragX = 0;
-        dragY = 0;
+        if (touchpadFeedback) {
+            activity.sendShortVibration();
+        }
+
+        // this down will be release when the drag is completed in ACTION_UP event
+        pointer.leftButtonDown(getDragPointerX(e), getDragPointerY(e), 0);
 
         dragMode = true;
 
-        activity.sendShortVibration();
+        // consider a double click if drag not present
+        canvas.getHandler().postDelayed(() -> {
+            if (totalMoveY > 0f || totalMoveX > 0f) {
+                // drag there, not a double click gesture
+                return;
+            }
+
+            // no drag after double click, consider it a double click
+            pointer.leftButtonDown(getDragPointerX(e), getDragPointerY(e), 0);
+            pointer.releaseButton(getDragPointerX(e), getDragPointerY(e), 0);
+        }, 80);
 
         return true;
     }
@@ -581,17 +591,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             middleDragMode = false;
         }
         return nonDragGesture;
-    }
-
-    /**
-     * Modify the event so that the mouse goes where we specify.
-     * @param e event to be modified.
-     * @param x new x coordinate.
-     * @param y new y coordinate.
-     */
-    protected void setEventCoordinates(MotionEvent e, float x, float y) {
-        GeneralUtils.debugLog(debugLogging, TAG, "setEventCoordinates");
-        e.setLocation(x, y);
     }
 
     protected boolean detectImmersiveRange(float x, float y) {
@@ -779,17 +778,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         }
 
         activeEdgeSlider.setTouchPosition(pos);
-    }
-
-    /**
-     * Snap the active edge slider to nearest end (0 or 1).
-     * Call this when touch ends.
-     */
-    protected void snapActiveEdgeSlider() {
-        if (activeEdgeSlider != null) {
-            activeEdgeSlider.snapToEnd();
-            activeEdgeSlider = null;
-        }
     }
 
     protected void hideEdgeViews() {
@@ -1031,7 +1019,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         } else if (e1.getY() > e2.getY()) {
             scrollDown = true;
         }
-        sendScrollEvents(getX(e1), getY(e1), -1, meta);
+        sendScrollEvents(getDragPointerX(e1), getDragPointerY(e1), -1, meta);
         return true;
     }
 }

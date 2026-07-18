@@ -38,6 +38,7 @@ import com.qihua.bVNC.R;
 public class InputHandlerTouchpad extends InputHandlerGeneric {
     public static final String ID = "TOUCHPAD_MODE";
     static final String TAG = "InputHandlerTouchpad";
+    private static final int DOUBLE_CLICK_MSG = 0;
 
     public InputHandlerTouchpad(RemoteCanvasActivity activity, RemoteCanvas canvas, RemoteCanvas touchpad,
                                 RemotePointer pointer, boolean debugLogging) {
@@ -147,6 +148,9 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                         gestureX = e.getX();
                         gestureY = e.getY();
 
+                        dragX = e.getX();
+                        dragY = e.getY();
+
                         lastSpeedX = lastSpeedY = 0;
 
                         inertiaSwiping = false;
@@ -205,30 +209,11 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                                 }
                             }
 
-                            if (totalMoveY == 0 && totalMoveX == 0) {
-                                // remember drag start coordinates
-                                dragX = e.getX();
-                                dragY = e.getY();
-
-                                if (dragMode) {
-                                    pointer.leftButtonDown(getX(e), getY(e), meta);
-                                } else if (rightDragMode) {
-                                    pointer.rightButtonDown(getX(e), getY(e), meta);
-                                } else if (middleDragMode) {
-                                    pointer.middleButtonDown(getX(e), getY(e), meta);
-                                }
-
-                                // make it nonzero to prevent being trigger again
-                                totalMoveX = 1f;
-                                totalMoveY = 1f;
-                            }
-
                             // when reached to the edge, keep the cursor continue moving
-                            int x = getX(e);
-                            int y = getY(e);
+                            int x = getDragPointerX(e);
+                            int y = getDragPointerY(e);
 
-                            if (dragMode
-                                    && System.currentTimeMillis() - lastDragHelpTimeMs > 200) {
+                            if (System.currentTimeMillis() - lastDragHelpTimeMs > 200) {
                                 if (e.getX() >= touchpad.getWidth() - getImmersiveXDistance()) {
                                     x += 50;
                                 } else if (e.getX() <= getImmersiveXDistance()) {
@@ -259,35 +244,35 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                         lastX = e.getX();
                         lastY = e.getY();
 
-//                        if (thirdPointerWasDown
-//                                && (Math.abs(e.getX() - dragX) > 80 || Math.abs(e.getY() - dragY) > 80)) {
-//                            thirdPointerGesture = true;
-//                            // Here we mock a ACTION_DOWN event for gestureOverlayView to transmit the touch events to it flawlessly
-//                            // further touch events will be transmitted in method onTouchEvent.
-//                            gestureOverlay = activity.findViewById(R.id.gestureOverlay);
-//                            gestureOverlay.setVisibility(View.VISIBLE);
-//
-//                            // 生成并分发模拟事件
-//                            MotionEvent downEvent = MotionEvent.obtain(
-//                                    SystemClock.uptimeMillis(),
-//                                    SystemClock.uptimeMillis(),
-//                                    MotionEvent.ACTION_DOWN,
-//                                    e.getX(),
-//                                    e.getY(),
-//                                    0
-//                            );
-//                            gestureOverlay.dispatchTouchEvent(downEvent);
-//                            downEvent.recycle();
-//                        }
-
                         break;
                     case MotionEvent.ACTION_UP:
                         hideEdgeViews();
 
                         canSwipeToMove = false;
 
+                        if (dragMode || rightDragMode || middleDragMode) {
+                            // the mouse down event is at onDoubleTap()
+                            pointer.releaseButton(getDragPointerX(e), getDragPointerY(e), meta);
+
+                            if (dragHelped) {
+                                // 临时放大已结束，恢复原始缩放比例
+                                canvas.scaler.changeZoom(activity, lastZoomFactor / canvas.getZoomFactor(), pointer.getX(), pointer.getY());
+                                dragHelped = false;
+                                // 重置触摸分析器，避免下次拖拽立即触发放大
+                                touchMovementAnalyzer.reset();
+                            }
+
+                            endDragModesAndScrolling();
+                        }
+
                         cumulatedX = 0;
                         cumulatedY = 0;
+
+                        dragX = 0;
+                        dragY = 0;
+
+                        totalMoveX = 0;
+                        totalMoveY = 0;
 
                         break;
                 }
@@ -324,9 +309,9 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
 
         if (action == MotionEvent.ACTION_UP) {
             if (!inSwiping && !inScaling && secondPointerWasDown) {
-                pointer.rightButtonDown(getX(e), getY(e), meta);
+                pointer.rightButtonDown(getDragPointerX(e), getDragPointerY(e), meta);
                 SystemClock.sleep(50);
-                pointer.releaseButton(getX(e), getY(e), meta);
+                pointer.releaseButton(getDragPointerX(e), getDragPointerY(e), meta);
 
                 secondPointerWasDown = false;
             }
@@ -348,9 +333,9 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                         activity.sendShortVibration();
                     }
                 } else {
-                    pointer.middleButtonDown(getX(e), getY(e), meta);
+                    pointer.middleButtonDown(getDragPointerX(e), getDragPointerY(e), meta);
                     SystemClock.sleep(50);
-                    pointer.releaseButton(getX(e), getY(e), meta);
+                    pointer.releaseButton(getDragPointerX(e), getDragPointerY(e), meta);
                 }
 
                 thirdPointerWasDown = false;
@@ -373,39 +358,9 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                 inertiaSwiping = true;
                 inertiaSemaphore.release();
             }
-
-            if (dragMode || rightDragMode || middleDragMode) {
-                // Some Android release doesn't trigger move event when double-clicking, so compensate a click here
-                if (totalMoveX < 1 && totalMoveY < 1 && dragMode) {
-                    // double-clicked, simulate double left click
-                    pointer.leftButtonDown(getX(e), getY(e), meta);
-                }
-
-                pointer.releaseButton(getX(e), getY(e), meta);
-                SystemClock.sleep(50);
-
-                if (totalMoveX < 4 && totalMoveY < 4 && dragMode) {
-                    // double-clicked, simulate double left click
-                    pointer.leftButtonDown(getX(e), getY(e), meta);
-                    pointer.releaseButton(getX(e), getY(e), meta);
-                }
-
-                if (dragHelped) {
-                    // 临时放大已结束，恢复原始缩放比例
-                    canvas.scaler.changeZoom(activity, lastZoomFactor / canvas.getZoomFactor(), pointer.getX(), pointer.getY());
-                    dragHelped = false;
-                    // 重置触摸分析器，避免下次拖拽立即触发放大
-                    touchMovementAnalyzer.reset();
-                }
-
-                endDragModesAndScrolling();
-            }
-
-            totalMoveY = 0;
-            totalMoveX = 0;
         }
 
-        return false;
+        return true;
     }
 
     /*
@@ -487,7 +442,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
 
             lastScrollTimeMs = System.currentTimeMillis();
     
-            return doScroll(getX(e2), getY(e2), distanceX, distanceY, meta);
+            return doScroll(getDragPointerX(e2), getDragPointerY(e2), distanceX, distanceY, meta);
         }
     
         return false;
@@ -604,10 +559,14 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
      * (non-Javadoc)
      * @see com.qihua.bVNC.input.InputHandlerGeneric#getX(android.view.MotionEvent)
      */
-    protected int getX(MotionEvent e) {
+    protected int getDragPointerX(MotionEvent e) {
         RemotePointer p = canvas.getPointer();
         if (dragMode || rightDragMode || middleDragMode) {
-            float distanceX = e.getX() - dragX;
+            float distanceX = 0;
+            if (dragX > 0) {
+                distanceX = e.getX() - dragX;
+            }
+
             dragX = e.getX();
 
             // Compute the absolute new X coordinate.
@@ -621,10 +580,14 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
      * (non-Javadoc)
      * @see com.qihua.bVNC.input.InputHandlerGeneric#getY(android.view.MotionEvent)
      */
-    protected int getY(MotionEvent e) {
+    protected int getDragPointerY(MotionEvent e) {
         RemotePointer p = canvas.getPointer();
         if (dragMode || rightDragMode || middleDragMode) {
-            float distanceY = e.getY() - dragY;
+            float distanceY = 0;
+            if (dragY > 0) {
+                distanceY = e.getY() - dragY;
+            }
+
             dragY = e.getY();
 
             // Compute the absolute new Y coordinate.

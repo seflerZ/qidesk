@@ -38,6 +38,10 @@
 - 单跑 vterm:`cd remoteClientLib/jni/libs && ./build-deps.sh build_vterm`(若脚本没这 case,用 `bash -c 'set -eE; sed -n 1,690p build-deps.sh | source /dev/stdin && build_vterm'` 临时方案)
 - 强制重编:删 `remoteClientLib/jni/libs/VTERM_BUILT` 再跑
 
+**build_moonlight 必须从 moonlight 自带的 jni/Android.mk 跑**:`build_moonlight` 现在 cd 到 `deps/moonlight-android/app/src/main/jni` 后跑 ndk-build,这样它用 moonlight 自己的 Android.mk + Application.mk(`all-subdir-makefiles` 拉 moonlight-core + evdev_reader)。**绝对不能**从项目根跑 ndk-build,会被 dispatcher `jni/Android.mk` 抢走——那个 dispatcher 是 vterm-only 的(注释里明说 "moonlight-core belongs to its own AGP module and must not be built by this dispatcher")。
+
+**build_vterm 必须 `unset NDK_LIBS_OUT`,然后 cp 到 jniLibs**:ndk-build 的 `setup-app.mk:104-106` 在每次 build 前 `rm -f ${NDK_LIBS_OUT}/<ABI>/*`,会清空整个输出目录。`build_moonlight` 用 `NDK_LIBS_OUT=src/main/jniLibs`(`export` 是进程级)→ 如果 vterm 不显式 `unset NDK_LIBS_OUT`,会 inherit 这个变量,然后 `rm -f src/main/jniLibs/arm64-v8a/*` 把 moonlight-core.so 一起冲掉。修复:vterm `unset NDK_LIBS_OUT`,让 ndk-build 装到默认 `libs/<ABI>/`,build 完后 `cp` 到 `src/main/jniLibs/arm64-v8a/`(AGP 唯一打包路径,见 `remoteClientLib/.gitignore` line 11)。
+
 **改源码**:`cd remoteClientLib/jni/libs/deps/libvterm && <改> && git commit && git push`,remote = `git@github.com:seflerZ/libvterm.git`(forked from leonerd.org.uk 0.3.3)。**不要**用 master 10.x——它硬依赖 ncurses,Bionic 没装。
 
 **Sentinel 模式**:`MOONLIGHT_BUILT` / `FREERDP_BUILT` / `VTERM_BUILT` 三个空文件,前两个在 `.gitignore`,`VTERM_BUILT` 在 `remoteClientLib/.gitignore`——不要 commit 它们。
