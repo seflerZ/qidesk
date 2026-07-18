@@ -38,7 +38,6 @@ import com.qihua.bVNC.R;
 public class InputHandlerTouchpad extends InputHandlerGeneric {
     public static final String ID = "TOUCHPAD_MODE";
     static final String TAG = "InputHandlerTouchpad";
-    private static final int DOUBLE_CLICK_MSG = 0;
 
     public InputHandlerTouchpad(RemoteCanvasActivity activity, RemoteCanvas canvas, RemoteCanvas touchpad,
                                 RemotePointer pointer, boolean debugLogging) {
@@ -128,19 +127,15 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             case 0:
                 switch (action) {
                     case MotionEvent.ACTION_DOWN:
-                        disregardNextOnFling = false;
-                        singleHandedJustEnded = false;
                         // We have put down first pointer on the screen, so we can reset the state of all click-state variables.
                         // Permit sending mouse-down event on long-tap again.
                         secondPointerWasDown = false;
                         // Permit right-clicking again.
                         thirdPointerWasDown = false;
-                        thirdPointerGesture = false;
                         // Cancel any effect of scaling having "just finished" (e.g. ignoring scrolling).
                         scalingJustFinished = false;
                         // Cancel drag modes and scrolling.
-                        if (!singleHandedGesture)
-                            endDragModesAndScrolling();
+                        endDragModesAndScrolling();
                         canvas.cursorBeingMoved = true;
                         // If we are manipulating the desktop, turn off bitmap filtering for faster response.
                         canvas.bitmapData.paint.setFilterBitmap(false);
@@ -148,8 +143,8 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                         gestureX = e.getX();
                         gestureY = e.getY();
 
-                        dragX = e.getX();
-                        dragY = e.getY();
+                        lastDragX = e.getX();
+                        lastDragY = e.getY();
 
                         lastSpeedX = lastSpeedY = 0;
 
@@ -248,8 +243,6 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                     case MotionEvent.ACTION_UP:
                         hideEdgeViews();
 
-                        canSwipeToMove = false;
-
                         if (dragMode || rightDragMode || middleDragMode) {
                             // the mouse down event is at onDoubleTap()
                             pointer.releaseButton(getDragPointerX(e), getDragPointerY(e), meta);
@@ -268,8 +261,8 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                         cumulatedX = 0;
                         cumulatedY = 0;
 
-                        dragX = 0;
-                        dragY = 0;
+                        lastDragX = 0;
+                        lastDragY = 0;
 
                         totalMoveX = 0;
                         totalMoveY = 0;
@@ -359,6 +352,36 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                 inertiaSemaphore.release();
             }
         }
+
+        return true;
+    }
+
+    @Override
+    public boolean onDoubleTap(MotionEvent e) {
+        if (dragMode || detectImmersiveRange(e.getX(), e.getY())) {
+            return false;
+        }
+
+        if (touchpadFeedback) {
+            activity.sendShortVibration();
+        }
+
+        // this down will be release when the drag is completed in ACTION_UP event
+        pointer.leftButtonDown(getDragPointerX(e), getDragPointerY(e), 0);
+
+        dragMode = true;
+
+        // consider a double click if drag not present
+        canvas.getHandler().postDelayed(() -> {
+            if (totalMoveY > 0f || totalMoveX > 0f) {
+                // drag there, not a double click gesture
+                return;
+            }
+
+            // no drag after double click, consider it a double click
+            pointer.leftButtonDown(getDragPointerX(e), getDragPointerY(e), 0);
+            pointer.releaseButton(getDragPointerX(e), getDragPointerY(e), 0);
+        }, 150);
 
         return true;
     }
@@ -563,11 +586,11 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         RemotePointer p = canvas.getPointer();
         if (dragMode || rightDragMode || middleDragMode) {
             float distanceX = 0;
-            if (dragX > 0) {
-                distanceX = e.getX() - dragX;
+            if (lastDragX > 0) {
+                distanceX = e.getX() - lastDragX;
             }
 
-            dragX = e.getX();
+            lastDragX = e.getX();
 
             // Compute the absolute new X coordinate.
             return Math.round(p.getX() + distanceX);
@@ -584,11 +607,11 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         RemotePointer p = canvas.getPointer();
         if (dragMode || rightDragMode || middleDragMode) {
             float distanceY = 0;
-            if (dragY > 0) {
-                distanceY = e.getY() - dragY;
+            if (lastDragY > 0) {
+                distanceY = e.getY() - lastDragY;
             }
 
-            dragY = e.getY();
+            lastDragY = e.getY();
 
             // Compute the absolute new Y coordinate.
             return Math.round(p.getY() + distanceY);

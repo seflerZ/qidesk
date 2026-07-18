@@ -69,11 +69,9 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     protected float cumulatedY = 0;
     protected float cumulatedX = 0;
 
-    protected float dragX, dragY;
+    protected float lastDragX, lastDragY;
     protected float gestureX, gestureY;
     protected float totalMoveX, totalMoveY;
-    protected boolean singleHandedGesture = false;
-    protected boolean singleHandedJustEnded = false;
     // These variables keep track of which pointers have seen ACTION_DOWN events.
     protected boolean secondPointerWasDown = false;
     protected long inertiaStartTime = 0;
@@ -87,7 +85,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     protected float lastX = 0;
     protected float lastY = 0;
     protected boolean thirdPointerWasDown = false;
-    protected boolean thirdPointerGesture = false;
 
     protected RemotePointer pointer;
     // This is the initial "focal point" of the gesture (between the two fingers).
@@ -106,17 +103,9 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     boolean scrollDown = false;
     boolean scrollLeft = false;
     boolean scrollRight = false;
-    // These variables indicate whether the dpad should be used as arrow keys
-    // and whether it should be rotated.
-    boolean useDpadAsArrows = false;
-    boolean rotateDpad = false;
     // The variables which indicates how many scroll events to send per swipe
     // event and the maximum number to send at one time.
     long swipeSpeed = 1;
-    // This is how far the swipe has to travel before a swipe event is generated.
-    float startSwipeDist = 5f;
-    boolean canSwipeToMove = false;
-    float baseSwipeDist = 4f;
     // This is how far from the top and bottom edge to detect immersive swipe.
     float immersiveSwipeRatio = 0.1f;
     boolean immersiveSwipeY = false;
@@ -128,8 +117,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
     // What the display density is.
     float displayDensity = 0;
-    // Indicates that the next onFling will be disregarded.
-    boolean disregardNextOnFling = false;
     // Queue which holds the last two MotionEvents which triggered onScroll
     float lastZoomFactor = 1;
     Queue<Float> distXQueue;
@@ -162,8 +149,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         edgeRight = activity.findViewById(R.id.edgeRight);
         edgeTop = activity.findViewById(R.id.edgeTop);
         edgeBottom = activity.findViewById(R.id.edgeBottom);
-//        useDpadAsArrows = true; //activity.getUseDpadAsArrows();
-//        rotateDpad = false; //activity.getRotateDpad();
 
         gestureDetector = new MyGestureDectector(activity, this, null, false);
         scalingGestureDetector = new MyScaleGestureDetector(activity, this);
@@ -185,12 +170,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
         dragHelpEnabled = Utils.querySharedPreferenceBoolean(activity.getApplicationContext()
                 , Constants.dragHelpEnabled, false);
-
-//        baseSwipeDist = baseSwipeDist / displayDensity;
-//        startSwipeDist = startSwipeDist / displayDensity;
-//        immersiveSwipeDistance = immersiveSwipeDistance / displayDensity;
-//        GeneralUtils.debugLog(debugLogging, TAG, "displayDensity, baseSwipeDist, immersiveSwipeRatio: "
-//                + displayDensity + " " + baseSwipeDist + " " + immersiveSwipeRatio);
 
         // 初始化指针加速助手
         pointerAccelerationHelper = new PointerAccelerationHelper(SPEED_ACCELERATION_FACTOR, MAX_ACCELERATION);
@@ -482,39 +461,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
         pointer.leftButtonDown(x, y, metaState);
         pointer.releaseButton(x, y, metaState);
-
-        return true;
-    }
-
-    @Override
-    public boolean onDoubleTap(MotionEvent e) {
-        if (dragMode || detectImmersiveRange(e.getX(), e.getY())) {
-            return false;
-        }
-
-        totalMoveX = 0;
-        totalMoveY = 0;
-
-        if (touchpadFeedback) {
-            activity.sendShortVibration();
-        }
-
-        // this down will be release when the drag is completed in ACTION_UP event
-        pointer.leftButtonDown(getDragPointerX(e), getDragPointerY(e), 0);
-
-        dragMode = true;
-
-        // consider a double click if drag not present
-        canvas.getHandler().postDelayed(() -> {
-            if (totalMoveY > 0f || totalMoveX > 0f) {
-                // drag there, not a double click gesture
-                return;
-            }
-
-            // no drag after double click, consider it a double click
-            pointer.leftButtonDown(getDragPointerX(e), getDragPointerY(e), 0);
-            pointer.releaseButton(getDragPointerX(e), getDragPointerY(e), 0);
-        }, 80);
 
         return true;
     }
