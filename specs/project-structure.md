@@ -250,7 +250,6 @@ RemoteCanvasActivity.onKeyDown / onGenericMotionEvent
 - `InputHandlerDirectTouch` — 默认(触屏 → 鼠标)
 - `InputHandlerTouchpad` — 触屏当触摸板
 - `InputHandlerGamepad` — 手柄模拟鼠标
-- `InputHandlerDirectDragPan` / `SwipePan` — 拖拽 / 滑动 + 平移
 - `DPadMouseKeyHandler` — 方向键模拟鼠标
 
 **键盘 modifier 状态**:`RemoteKeyboardState`(`remoteClientLib/input/`)维护 CapsLock / NumLock / ScrollLock + Ctrl/Shift/Alt/Meta 组合状态。

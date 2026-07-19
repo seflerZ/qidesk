@@ -299,8 +299,6 @@ Note: The application does not verify certificate authorities or check for certi
     <string name="info_ssh_key_fingerprint">"主机密钥指纹是："</string>
     <string name="info_ssh_key_fingerprint_identical">\n\n您可以确认它与服务器证书的已知指纹相同，以防止中间人攻击。</string>
     <string name="info_update_color_model_to">"将颜色模型更新为"</string>
-    <string name="input_method_direct_drag_pan_description">直接、按住并平移：滑动并拖曳下拉。 一根手指单击相当于鼠标左击，用两根手指单击相当于鼠标右击，再用三根手指单击相当于鼠标中击。 用两根手指滑动即可滚动。 长按即可开始平移。</string>
-    <string name="input_method_direct_swipe_pan_description">直接、滑动平移：滑动即可随意平移。 一根手指单击相当于鼠标左击，用两根手指单击相当于鼠标右击，再用三根手指单击相当于鼠标中击。 用两根手指滑动即可滚动。 长按即可拖曳下拉。</string>
     <string name="input_method_single_handed_description">单手操作：滑动即可随意平移。 一根手指单击相当于鼠标左击。长按可选择左击/右击/中击/拖动/滚动/缩放模式。 通常的多点触摸操作也可以使用。</string>
     <string name="input_method_touchpad_description">模拟触控板：滑动即可移动指针，单击相当于鼠标左击，双指单击相当于鼠标右击，双指滑动即可滚动。</string>
     <string name="input_mode">输入模式</string>
@@ -311,8 +309,6 @@ Note: The application does not verify certificate authorities or check for certi
     <string name="input_method_gamepad">手柄模拟</string>
     <string name="input_method_gamepad_description">手柄模拟：直接触屏幕左右摇杆控制。触发按钮发送对应按键。长按 “☰” 进入编辑状态移动按钮。</string>
 
-    <string name="input_method_direct_swipe_pan">直接、滑动平移</string>
-    <string name="input_method_direct_drag_pan">直接、按住并平移</string>
     <string name="input_method_single_handed">单手</string>
     <string name="input_method_touchpad">模拟触摸板</string>
     <string name="input_method_direct_touch">直接触摸</string>

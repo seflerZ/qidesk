@@ -23,12 +23,6 @@
         android:title="@string/input_methods">
         <menu>
             <group android:checkableBehavior="single">
-<!--                <item-->
-<!--                    android:id="@+id/inputMethodDirectSwipePan"-->
-<!--                    android:title="@string/input_method_direct_swipe_pan" />-->
-<!--                <item-->
-<!--                    android:id="@+id/inputMethodDirectDragPan"-->
-<!--                    android:title="@string/input_method_direct_drag_pan" />-->
                 <item
                     android:id="@+id/inputMethodTouchpad"
                     android:title="@string/input_method_touchpad" />
