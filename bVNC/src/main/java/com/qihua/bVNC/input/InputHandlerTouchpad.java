@@ -198,6 +198,9 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         }
 
         GeneralUtils.debugLog(debugLogging, TAG, "onTouchEvent: pointerID: " + pointerID);
+        // 快照拖动状态:下面 ACTION_UP 分支里的 endDragModesAndScrolling() 会把 dragMode 清成
+        // false,若等到后面惯性判断时再读 dragMode 就已失效,导致拖动松手也误触发惯性滚动。
+        boolean wasDragging = dragMode || rightDragMode || middleDragMode;
         switch (pointerID) {
             case 0:
                 switch (action) {
@@ -410,7 +413,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             canEnlarge = true;
 
             // for single finger movement
-            if (inertiaScrollingEnabled && !dragMode && !inSwiping) {
+            if (inertiaScrollingEnabled && !wasDragging && !inSwiping) {
                 if (activity.isToolbarShowing() && canvas.connection.getEnableGesture()) {
 
                 } else {
