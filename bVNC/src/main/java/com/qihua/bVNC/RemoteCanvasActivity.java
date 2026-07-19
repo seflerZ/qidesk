@@ -787,6 +787,10 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         canvas.initializeCanvas(connection, setModes, hideKeyboardAndExtraKeys);
 
         touchpad.setInputHandler(getInputHandlerById(R.id.itemInputTouchpad));
+        // 显示前确保 canvas 持有即将显示的(touchpad 的)进度对话框。外屏模式下 canvas 与
+        // touchpad 是不同对象,各自有独立对话框,不共享的话 NvCommunicator 经 viewable(canvas)
+        // 更新的就是没显示的那个;单屏下两者同一对象,此处为 no-op。
+        canvas.setProgressDialog(touchpad.getProgressDialog());
         touchpad.showProgessDialog();
 
         // NVStream connect on service bind event, not here
@@ -1481,7 +1485,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         recreateExtraKeys(touchpad.getWidth() > touchpad.getHeight());
 
         handler.postDelayed(() -> {
-            canvas.reDraw(0, 0, canvas.getWidth(), canvas.getHeight());
+            canvas.repaint(0, 0, canvas.getWidth(), canvas.getHeight());
         }, 200);
     }
 

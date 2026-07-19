@@ -28,4 +28,10 @@ public interface Viewable {
     boolean isAbleToPan();
 
     void onConnectionSuccess();
+
+    // 更新连接进度对话框上的中间状态文案(如 moonlight 的各个 stage)
+    void setConnectionStatus(String status);
+
+    // 关闭连接进度对话框(连接成功或失败/终止时)
+    void dismissConnectionProgress();
 }

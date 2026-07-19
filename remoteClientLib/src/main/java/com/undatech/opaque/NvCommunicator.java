@@ -203,7 +203,13 @@ public class NvCommunicator extends RemoteConnectable implements NvConnectionLis
 
     @Override
     public void stageStarting(String stage) {
-//        android.util.Log.d(TAG, "OnSettingsChanged called, wxh: " + width + "x" + height);
+        // moonlight 报告的连接中间状态(如 "Starting", "Establishing connection",
+        // "Launching app" 等),显示到连接进度对话框上
+        if (stage != null) {
+            String status = activity.getApplicationContext()
+                    .getString(R.string.conn_starting_stage, stage);
+            viewable.setConnectionStatus(status);
+        }
     }
 
     @Override
@@ -213,6 +219,7 @@ public class NvCommunicator extends RemoteConnectable implements NvConnectionLis
 
     @Override
     public void stageFailed(String stage, int portFlags, int errorCode) {
+        viewable.dismissConnectionProgress();
         activity.runOnUiThread(() -> {
             String text = "Connection failed\nStage: " + stage + ", Error code: " + errorCode;
             Toast.makeText(activity, text, Toast.LENGTH_LONG).show();
@@ -221,12 +228,13 @@ public class NvCommunicator extends RemoteConnectable implements NvConnectionLis
 
     @Override
     public void connectionStarted() {
-
+        // 注意:不在此处关闭进度对话框。connectionStarted 早于首帧解码,此时关框会露出
+        // 一段黑屏。进度框由首帧到达时的 reDraw() 关闭(见 RemoteCanvas.reDraw)。
     }
 
     @Override
     public void connectionTerminated(int errorCode) {
-
+        viewable.dismissConnectionProgress();
     }
 
     @Override

@@ -1038,7 +1038,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         //android.util.Log.d(TAG, "resetScroll: " + (absoluteXPosition - shiftX) * scale + ", "
         //                                        + (absoluteYPosition - shiftY) * scale);
 
-        reDraw(0, 0, getWidth(), getHeight());
+        repaint(0, 0, getWidth(), getHeight());
 //        scrollTo((int) ((absoluteXPosition) * scale),
 //                (int) ((absoluteYPosition) * scale));
     }
@@ -1276,6 +1276,18 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         reDraw(new DrawTask(x, y, w, h));
     }
 
+    // 缩放/旋转后的重绘:只重画当前位图,不关闭进度对话框。reDraw 的 dismiss 是为首帧准备的
+    // (连接成功、画面就绪),但 ZoomScaling 等在连接初始化阶段(setModes)就会调 reDraw,导致
+    // NVStream 的进度框在 stage 开始前就被关掉,中间状态来不及显示。缩放重绘走本方法。
+    public void repaint(int x, int y, int w, int h) {
+        if (drawWorker == null) return;
+        drawWorker.addTask(new DrawTask(x, y, w, h));
+    }
+
+    public void repaint(float x, float y, float w, float h) {
+        repaint((int) x, (int) y, (int) w, (int) h);
+    }
+
     public void reDraw(DrawTask drawTask) {
         if (progressDialog != null && progressDialog.isShowing()) {
             progressDialog.dismiss();
@@ -1341,7 +1353,7 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             // add little offset for the cursor image
             bitmapData.moveCursorRect(pointer.getX() - pointer.getHotspotX(), pointer.getY() - pointer.getHotspotY());
             RectF r = bitmapData.getCursorRect();
-            reDraw(r.left, r.top, r.width(), r.height());
+            repaint(r.left, r.top, r.width(), r.height());
         }
     }
 
@@ -1374,6 +1386,26 @@ public class RemoteCanvas extends SurfaceView implements Viewable
             // that no further image will be transfered
             pointer.moveMouse(getImageHeight() / 2, getImageWidth() / 2, 0);
         });
+    }
+
+    @Override
+    public void setConnectionStatus(String status) {
+        handler.post(() -> {
+            // 不用 isShowing() 守卫:show() 可能尚未生效,但 TextView 已存在,先写入文字,
+            // 等对话框真正显示时就是最新阶段文案。setText 对未显示的对话框无害。
+            if (progressDialog == null || status == null) {
+                return;
+            }
+            TextView messageView = progressDialog.findViewById(R.id.message);
+            if (messageView != null) {
+                messageView.setText(status);
+            }
+        });
+    }
+
+    @Override
+    public void dismissConnectionProgress() {
+        handler.post(this::dismissProgressDialog);
     }
 
     /**

@@ -3,4 +3,5 @@
     <string name="conn_client_latency"> 平均每帧解码延迟：</string>
     <string name="conn_client_latency_hw"> 硬件解码器延迟：</string>
     <string name="conn_hardware_latency"> 硬件解码器平均延迟：</string>
+    <string name="conn_starting_stage">正在连接：%s</string>
 </resources>
