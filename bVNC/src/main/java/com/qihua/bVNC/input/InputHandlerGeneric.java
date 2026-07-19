@@ -32,6 +32,7 @@ import androidx.core.util.Pair;
 
 import com.qihua.bVNC.Constants;
 import com.qihua.bVNC.FpsCounter;
+import com.qihua.bVNC.connection.ProtocolType;
 import com.qihua.bVNC.RemoteCanvas;
 import com.qihua.bVNC.RemoteCanvasActivity;
 import com.qihua.bVNC.Utils;
@@ -414,6 +415,18 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
         String longPressType = Utils.querySharedPreferenceString(activity.getApplicationContext(), Constants.touchpadLongPressAction, "left");
 
+        // SSH short-circuit: instead of entering dragMode (which would
+        // commit to a mouse-drag gesture on long-press → release), SSH
+        // mode routes the long-press into text-selection. Subclasses
+        // override onSshLongPress to record the anchor and arm the
+        // selection state machine. Falling back to dragMode=false keeps
+        // ACTION_MOVE/UP flowing through the normal handler — no
+        // special SSH branch is needed in onTouchEvent.
+        if (canvas.getProtocolType() == ProtocolType.SSH) {
+            onSshLongPress(e);
+            return;
+        }
+
         if (longPressType.equals("left")) {
             dragMode = true;
         } else if (longPressType.equals("middle")) {
@@ -445,6 +458,19 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         }  // else do nothing
 
         activity.sendShortVibration();
+    }
+
+    /**
+     * Subclass hook fired from {@link #onLongPress} when the active
+     * protocol is SSH. The default no-op preserves the existing mouse-
+     * drag long-press behavior on non-SSH protocols; subclasses
+     * override to route the long-press into text selection.
+     */
+    protected void onSshLongPress(MotionEvent e) {
+        // Default: do nothing — super.onLongPress already returned
+        // without setting dragMode, so the upcoming ACTION_UP will
+        // behave like a normal click (which is exactly what the user
+        // would expect for a long-press that "didn't go anywhere").
     }
 
     /**
