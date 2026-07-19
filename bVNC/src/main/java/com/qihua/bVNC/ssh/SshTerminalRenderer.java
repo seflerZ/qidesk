@@ -311,6 +311,23 @@ public class SshTerminalRenderer {
     }
 
     /**
+     * Convenience for paste — write a String to the state machine,
+     * one codepoint at a time. Used by SSH selection-menu "Paste" to
+     * forward the Android clipboard into the remote shell.
+     */
+    public void writeString(String text) {
+        if (stateMachine == null || text == null) return;
+        int len = text.length();
+        for (int i = 0; i < len; i++) {
+            int cp = text.codePointAt(i);
+            stateMachine.writeInput(cp);
+            // Skip the surrogate half so the next codePointAt picks up
+            // the right value.
+            if (Character.isSupplementaryCodePoint(cp)) i++;
+        }
+    }
+
+    /**
      * Current grid size as last computed by renderInto. The
      * SshConnectionInitializer passes this to SshTerminalConnection
      * so the PTY starts with the right cols/rows from the first
@@ -337,6 +354,24 @@ public class SshTerminalRenderer {
     /** Padding around the grid in pixels (left/top inset before col 0 / row 0). */
     public int getPaddingPx() {
         return canvasRenderer != null ? canvasRenderer.paddingPx : 0;
+    }
+
+    /**
+     * Forward selection state to the underlying VTermCanvasRenderer so
+     * the next render pass draws the highlight. Safe to call when
+     * canvasRenderer hasn't been constructed yet (no-op).
+     */
+    public void setSelection(int anchorRow, int anchorCol, int endRow, int endCol) {
+        if (canvasRenderer != null) {
+            canvasRenderer.setSelection(anchorRow, anchorCol, endRow, endCol);
+        }
+    }
+
+    /** Drop the active selection highlight. */
+    public void clearSelection() {
+        if (canvasRenderer != null) {
+            canvasRenderer.clearSelection();
+        }
     }
 
     /**

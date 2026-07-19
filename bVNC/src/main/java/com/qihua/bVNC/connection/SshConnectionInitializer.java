@@ -209,6 +209,16 @@ public class SshConnectionInitializer extends ConnectionInitializer {
         return ProtocolType.SSH;
     }
 
+    /**
+     * Expose the SshTerminalRenderer so callers (RemoteCanvasActivity
+     * for the SSH selection-menu Paste action) can write strings into
+     * the state machine without going through RemoteSshKeyboard.
+     * Returns null if the renderer hasn't been constructed yet.
+     */
+    public SshTerminalRenderer getSshRenderer() {
+        return renderer;
+    }
+
     @Override
     public boolean supports(Connection c, Context c2) {
         return c != null && c.getConnectionType() == Constants.CONN_TYPE_SSH;

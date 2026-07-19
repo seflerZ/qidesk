@@ -117,6 +117,7 @@ public class RemoteSshPointer extends RemotePointer {
         selAnchorCol = selEndCol = cell[1];
         pendingSelectedText = "";
         cachedRows = cachedCols = cachedSbCount = -1;
+        if (sshRenderer != null) sshRenderer.setSelection(cell[0], cell[1], cell[0], cell[1]);
         if (requestRepaint != null) requestRepaint.run();
     }
 
@@ -137,6 +138,7 @@ public class RemoteSshPointer extends RemotePointer {
             selEndCol = cell[1];
         }
         rebuildSelectedText();
+        if (sshRenderer != null) sshRenderer.setSelection(selAnchorRow, selAnchorCol, selEndRow, selEndCol);
         if (requestRepaint != null) requestRepaint.run();
     }
 
@@ -146,7 +148,12 @@ public class RemoteSshPointer extends RemotePointer {
      * wired yet, or if the point is outside the grid padding.
      */
     public int[] pxToCell(float pxX, float pxY) {
-        if (sshRenderer == null || termMachine == null) return null;
+        if (sshRenderer == null || termMachine == null) {
+            android.util.Log.e("RemoteSshPointer",
+                    "DBG pxToCell: NOT WIRED, sshRenderer=" + sshRenderer
+                    + " termMachine=" + termMachine);
+            return null;
+        }
         float charW = sshRenderer.getCellWidth();
         int charH = sshRenderer.getCellHeight();
         int pad = sshRenderer.getPaddingPx();
@@ -161,6 +168,11 @@ public class RemoteSshPointer extends RemotePointer {
         }
         int col = Math.min(cols - 1, (int) (relX / charW));
         int row = Math.min(rows - 1, Math.max(0, (int) (relY / charH)));
+        android.util.Log.e("RemoteSshPointer",
+                "DBG pxToCell: px=(" + pxX + "," + pxY + ") pad=" + pad
+                + " charW=" + charW + " charH=" + charH
+                + " cols=" + cols + " rows=" + rows
+                + " -> (row=" + row + ", col=" + col + ")");
         return new int[] { row, col };
     }
 
@@ -169,6 +181,7 @@ public class RemoteSshPointer extends RemotePointer {
         selAnchorRow = selAnchorCol = selEndRow = selEndCol = -1;
         pendingSelectedText = "";
         cachedRows = cachedCols = cachedSbCount = -1;
+        if (sshRenderer != null) sshRenderer.clearSelection();
         if (requestRepaint != null) requestRepaint.run();
     }
 
@@ -186,6 +199,7 @@ public class RemoteSshPointer extends RemotePointer {
         selAnchorCol = 0;
         selEndRow = cachedRows - 1;
         selEndCol = cachedCols - 1;
+        if (sshRenderer != null) sshRenderer.setSelection(0, 0, cachedRows - 1, cachedCols - 1);
         rebuildSelectedText();
         if (requestRepaint != null) requestRepaint.run();
     }

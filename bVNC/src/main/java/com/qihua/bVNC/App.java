@@ -46,6 +46,7 @@ public class App extends MultiDexApplication {
         database = new Database(this);
         context = new WeakReference<Context>(this);
         debugLog = Utils.querySharedPreferenceBoolean(getApplicationContext(), "moreDebugLoggingTag");
+        android.util.Log.e("App", "DBG: App.onCreate ran, debugLog=" + debugLog);
     }
 
     /**

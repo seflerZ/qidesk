@@ -349,8 +349,11 @@ Note: The application does not verify certificate authorities or check for certi
     <!-- SSH terminal text-selection popup menu -->
     <string name="ssh_selection_copy">Copy</string>
     <string name="ssh_selection_select_all">Select All</string>
+    <string name="ssh_selection_paste">Paste</string>
     <string name="ssh_selection_cancel">Cancel</string>
     <string name="ssh_selection_copied">Copied to clipboard</string>
+    <string name="ssh_selection_pasted">Pasted from clipboard</string>
+    <string name="ssh_selection_clipboard_empty">Clipboard is empty</string>
     <string name="input_mode_help_text">"
 In any Input Mode, tap the keyboard icon to get the on-screen keyboard. Also, your device may have its own gesture which bring up the keyboard.
 

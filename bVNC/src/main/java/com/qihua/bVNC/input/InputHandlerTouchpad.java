@@ -147,11 +147,12 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
     // 单指移动动量采样:上次在 onScroll 单指分支更新光标的时刻,用于算松手速度 + 停顿判定
     private long lastMoveSampleMs = 0;
 
-    // SSH text selection. When sshSelectionMode is true, ACTION_MOVE
-    // updates the selection extent instead of moving the mouse, and
-    // ACTION_UP triggers the popup menu instead of releasing a button.
-    // Anchor coords are kept so ACTION_UP can position the popup at the
-    // finger-down point.
+    // SSH text selection. Set by onSshLongPress (driven by the standard
+    // InputHandlerGeneric.onLongPress path when the active protocol
+    // is SSH). When armed, ACTION_MOVE extends the highlight and
+    // ACTION_UP pops the AlertDialog instead of releasing a mouse
+    // button. Anchor coords are kept so the popup can be positioned
+    // at the long-press point.
     private boolean sshSelectionMode = false;
     private float sshAnchorViewX = 0f, sshAnchorViewY = 0f;
 
@@ -168,17 +169,36 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
 
     @Override
     public boolean onTouchEvent(MotionEvent e) {
+        // SSH selection short-circuit runs BEFORE super.onTouchEvent so
+        // its DOWN-time vibration and the GestureDetector's onLongPress
+        // path don't fire alongside our sshLongPress timer (which is
+        // what actually drives selection). Without this guard the user
+        // gets two to three buzzes per selection.
+        if (sshSelectionMode && pointer instanceof RemoteSshPointer) {
+            return onTouchEventSsh(e);
+        }
+
         boolean pResult = super.onTouchEvent(e);
         if (pResult) {
             return true;
         }
 
-        GeneralUtils.debugLog(debugLogging, TAG, "onTouchEvent, e: " + e);
+        android.util.Log.e(TAG, "onTouchEvent, e: " + e);
 
         final int action = e.getActionMasked();
         final int index = e.getActionIndex();
         final int pointerID = e.getPointerId(index);
         final int meta = e.getMetaState();
+
+        // SSH selection is armed by onSshLongPress (called from
+        // InputHandlerGeneric.onLongPress). Once armed, MOVE/UP go
+        // through onTouchEventSsh so the highlight updates and the
+        // menu pops. Down-side vibration / long-press timer are kept
+        // on the standard path so we don't double-fire with the
+        // base class.
+        if (sshSelectionMode && pointer instanceof RemoteSshPointer) {
+            return onTouchEventSsh(e);
+        }
 
         FpsCounter fpsCounter = canvas.getFpsCounter();
         if (fpsCounter != null) {
@@ -221,7 +241,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             return true;
         }
 
-        GeneralUtils.debugLog(debugLogging, TAG, "onTouchEvent: pointerID: " + pointerID);
+        android.util.Log.e(TAG, "onTouchEvent: pointerID: " + pointerID);
         // 快照拖动状态:下面 ACTION_UP 分支里的 endDragModesAndScrolling() 会把 dragMode 清成
         // false,若等到后面惯性判断时再读 dragMode 就已失效,导致拖动松手也误触发惯性滚动。
         boolean wasDragging = dragMode || rightDragMode || middleDragMode;
@@ -271,18 +291,6 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                         detectImmersiveSwipe(e.getX(), e.getY());
                         break;
                     case MotionEvent.ACTION_MOVE:
-                        // SSH selection in progress: extend selection
-                        // end instead of moving the mouse. Skip the
-                        // rest of the move handler entirely so we don't
-                        // drag the cursor, sample inertia speed, or
-                        // scroll the touchpad edge.
-                        if (sshSelectionMode && pointer instanceof RemoteSshPointer) {
-                            ((RemoteSshPointer) pointer).extendSelectionPx(
-                                    getDragPointerX(e), getDragPointerY(e));
-                            canvas.invalidate();
-                            break;
-                        }
-
                         long timeElapsed = System.currentTimeMillis() - inertiaStartTime;
                         long interval = inertiaBaseInterval * 2;
 
@@ -300,7 +308,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                             inertiaStartTime = System.currentTimeMillis();
                         }
 
-                        GeneralUtils.debugLog(debugLogging, TAG, "onTouchEvent: ACTION_MOVE");
+                        android.util.Log.e(TAG, "onTouchEvent: ACTION_MOVE");
                         // Send scroll up/down events if swiping is happening.
                         if (dragMode || rightDragMode || middleDragMode) {
                             // 添加当前触摸点到分析器，仅在单指下有效
@@ -358,25 +366,6 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
 
                         break;
                     case MotionEvent.ACTION_UP:
-                        // SSH selection done: lock in the cached text
-                        // and surface the popup menu. Skip the rest of
-                        // the up handler — no releaseButton, no
-                        // edgeView cleanup, no dragMode reset.
-                        if (sshSelectionMode && pointer instanceof RemoteSshPointer) {
-                            RemoteSshPointer sshPointer = (RemoteSshPointer) pointer;
-                            String text = sshPointer.consumeSelectedText();
-                            sshSelectionMode = false;
-                            // Convert the anchor view coords to screen
-                            // coords for PopupMenu positioning.
-                            int[] screenLoc = new int[2];
-                            canvas.getLocationOnScreen(screenLoc);
-                            float screenX = screenLoc[0] + sshAnchorViewX;
-                            float screenY = screenLoc[1] + sshAnchorViewY;
-                            activity.showSelectionMenu(text, screenX, screenY);
-                            canvas.invalidate();
-                            break;
-                        }
-
                         hideEdgeViews();
 
                         if (dragMode || rightDragMode || middleDragMode) {
@@ -516,27 +505,67 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         return true;
     }
 
-    @Override
-    public boolean onDoubleTap(MotionEvent e) {
-        // SSH mode: double-tap enters text-selection mode instead of
-        // starting a drag. The user then drags to extend, and ACTION_UP
-        // shows a popup menu (Copy / Select All / Cancel). Short-circuit
-        // before the existing dragMode path so non-SSH protocols are
-        // completely untouched.
-        if (canvas.getProtocolType() == ProtocolType.SSH
-                && pointer instanceof RemoteSshPointer) {
-            RemoteSshPointer sshPointer = (RemoteSshPointer) pointer;
-            sshSelectionMode = true;
-            sshAnchorViewX = e.getX();
-            sshAnchorViewY = e.getY();
-            sshPointer.enterSelectionPx(getDragPointerX(e), getDragPointerY(e));
-            if (touchpadFeedback) {
-                activity.sendShortVibration();
-            }
+    /**
+     * SSH-mode touch handler. Long-press entry into selection is
+     * driven by the standard {@link InputHandlerGeneric#onLongPress}
+     * path — it calls our {@link #onSshLongPress} subclass hook when
+     * the active protocol is SSH, which sets {@link #sshSelectionMode}
+     * and pins the anchor at the long-press point. So all this method
+     * has to do for ACTION_MOVE / ACTION_UP is extend / pop the menu.
+     * ACTION_DOWN falls through to super.onTouchEvent so the standard
+     * DOWN-time state-machine reset and the GestureDetector's
+     * long-press timer run unchanged.
+     */
+    private boolean onTouchEventSsh(MotionEvent e) {
+        final int action = e.getActionMasked();
+        if (action == MotionEvent.ACTION_MOVE && sshSelectionMode) {
+            int bx = (int) e.getX();
+            int by = (int) e.getY();
+            ((RemoteSshPointer) pointer).extendSelectionPx(bx, by);
             canvas.invalidate();
             return true;
         }
+        if (action == MotionEvent.ACTION_UP && sshSelectionMode) {
+            RemoteSshPointer sshPointer = (RemoteSshPointer) pointer;
+            String text = sshPointer.consumeSelectedText();
+            sshSelectionMode = false;
+            android.util.Log.e(TAG,
+                    "ACTION_UP sshSelection: textLen=" + (text == null ? -1 : text.length()));
+            int[] screenLoc = new int[2];
+            canvas.getLocationOnScreen(screenLoc);
+            float screenX = screenLoc[0] + sshAnchorViewX;
+            float screenY = screenLoc[1] + sshAnchorViewY;
+            activity.showSelectionMenu(text, screenX, screenY);
+            canvas.invalidate();
+            return true;
+        }
+        return false;
+    }
 
+    @Override
+    protected void onSshLongPress(MotionEvent e) {
+        // Standard long-press fires after ~500 ms (ViewConfiguration
+        // default) on a finger that hasn't drifted past the touch
+        // slop. Pin the anchor at the long-press coordinates and arm
+        // selection mode. The base class has already vibrated once
+        // — we deliberately do NOT vibrate again.
+        sshSelectionMode = true;
+        sshAnchorViewX = e.getX();
+        sshAnchorViewY = e.getY();
+        if (pointer instanceof RemoteSshPointer) {
+            ((RemoteSshPointer) pointer).enterSelectionPx((int) e.getX(), (int) e.getY());
+        }
+        canvas.invalidate();
+        android.util.Log.e(TAG,
+                "onSshLongPress FIRED anchor=(" + (int) e.getX() + "," + (int) e.getY() + ")");
+    }
+
+    @Override
+    public boolean onDoubleTap(MotionEvent e) {
+        // SSH mode no longer uses double-tap as the entry into selection
+        // mode — long-press does that now (see the SSH branch in
+        // InputHandlerGeneric.onLongPress). Double-tap still triggers the
+        // original mouse-double-click semantics for non-SSH protocols.
         if (dragMode || detectImmersiveRange(e.getX(), e.getY())) {
             return false;
         }

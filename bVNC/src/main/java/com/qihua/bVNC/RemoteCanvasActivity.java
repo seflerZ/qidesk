@@ -28,6 +28,8 @@ import static com.qihua.bVNC.App.getContext;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.app.Dialog;
 import android.app.Service;
 import android.content.ComponentName;
@@ -84,7 +86,9 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.PopupMenu;
+// PopupMenu import removed — selection menu now uses AlertDialog.
+// PopupMenu's window came up with contentSize=0x0 in our context.
+// (See showSelectionMenu.)
 
 import com.google.android.material.button.MaterialButton;
 import com.limelight.binding.input.ControllerHandler;
@@ -2182,63 +2186,101 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
      * the pre-extracted selection contents from {@link RemoteSshPointer}.
      */
     public void showSelectionMenu(String text, float screenX, float screenY) {
-        // Anchor the popup at the canvas, then offset to the finger-up
-        // position. canvas.getLocationOnScreen inside the lambda would
-        // be safe but easier to pass a real anchor view.
-        PopupMenu popup = new PopupMenu(this, canvas);
-        popup.getMenu().add(0, R.id.sshSelectionCopy, 0, R.string.ssh_selection_copy);
-        popup.getMenu().add(0, R.id.sshSelectionSelectAll, 1, R.string.ssh_selection_select_all);
-        popup.getMenu().add(0, R.id.sshSelectionCancel, 2, R.string.ssh_selection_cancel);
-
+        android.util.Log.e(TAG, "DBG showSelectionMenu: textLen=" + (text == null ? -1 : text.length())
+                + " screen=(" + screenX + "," + screenY + ")");
+        // PopupMenu was attempted first but its window came up with
+        // contentSize=0x0 (Android doesn't measure a PopupMenu whose
+        // items were added via getMenu().add() instead of
+        // MenuInflater.inflate). Fall back to a plain AlertDialog with
+        // setItems — guaranteed to render and visible on every Android
+        // version. The dialog dismisses on any item click or back press;
+        // on dismiss we always clear the selection so a stale
+        // highlight can't survive a forgotten menu.
         final RemoteSshPointer sshPointer = (canvas != null
                 && canvas.getPointer() instanceof RemoteSshPointer)
                 ? (RemoteSshPointer) canvas.getPointer() : null;
-
-        popup.setOnMenuItemClickListener(item -> {
-            int id = item.getItemId();
-            if (id == R.id.sshSelectionCopy) {
-                if (text != null && !text.isEmpty()) {
-                    Utils.setClipboard(this, text);
-                    Toast.makeText(this, R.string.ssh_selection_copied, Toast.LENGTH_SHORT).show();
-                }
-                if (sshPointer != null) sshPointer.cancelSelection();
-                canvas.invalidate();
-                return true;
-            } else if (id == R.id.sshSelectionSelectAll) {
-                if (sshPointer != null) {
-                    sshPointer.selectAllVisible();
-                    // Selection stays active — user can drag again to shrink,
-                    // or tap outside / dismiss to clear.
-                    canvas.invalidate();
-                }
-                return true;
-            } else if (id == R.id.sshSelectionCancel) {
-                if (sshPointer != null) sshPointer.cancelSelection();
-                canvas.invalidate();
-                return true;
-            }
-            return false;
-        });
-
-        popup.setOnDismissListener(new PopupMenu.OnDismissListener() {
-            @Override
-            public void onDismiss(PopupMenu menu) {
-                // Safety net: if the user dismisses by tapping outside the
-                // menu without picking an item, drop the highlight so the
-                // SSH canvas doesn't show stale selection rectangles.
-                if (sshPointer != null && sshPointer.hasSelection()) {
-                    sshPointer.cancelSelection();
-                    canvas.invalidate();
-                }
-            }
-        });
-
-        try {
-            popup.show();
-        } catch (Exception e) {
-            android.util.Log.w(TAG, "showSelectionMenu: popup.show failed", e);
-            if (sshPointer != null) sshPointer.cancelSelection();
-        }
+        final String[] items = new String[] {
+                getString(R.string.ssh_selection_copy),
+                getString(R.string.ssh_selection_select_all),
+                getString(R.string.ssh_selection_paste),
+                getString(R.string.ssh_selection_cancel),
+        };
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setItems(items, (d, which) -> {
+                    if (which == 0) {
+                        // Copy
+                        if (text != null && !text.isEmpty()) {
+                            Utils.setClipboard(this, text);
+                            Toast.makeText(this, R.string.ssh_selection_copied, Toast.LENGTH_SHORT).show();
+                        }
+                        if (sshPointer != null) sshPointer.cancelSelection();
+                        canvas.invalidate();
+                    } else if (which == 1) {
+                        // Select All — keep selection active
+                        if (sshPointer != null) {
+                            sshPointer.selectAllVisible();
+                            canvas.invalidate();
+                        }
+                    } else if (which == 2) {
+                        // Paste — read Android clipboard, forward into SSH.
+                        // Android 10+ allows user-initiated reads via
+                        // ClipboardManager.getPrimaryClip() without a
+                        // runtime permission. We're handling a tap, so
+                        // this counts as user-initiated.
+                        try {
+                            ClipboardManager cm = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                            CharSequence clip = null;
+                            if (cm != null && cm.hasPrimaryClip()
+                                    && cm.getPrimaryClip() != null
+                                    && cm.getPrimaryClip().getItemCount() > 0) {
+                                ClipData.Item item = cm.getPrimaryClip().getItemAt(0);
+                                clip = item.coerceToText(this);
+                            }
+                            if (clip == null || clip.length() == 0) {
+                                Toast.makeText(this, R.string.ssh_selection_clipboard_empty,
+                                        Toast.LENGTH_SHORT).show();
+                                // Don't dismiss — let user retry / cancel.
+                                return;
+                            }
+                            com.qihua.bVNC.connection.SshConnectionInitializer sci =
+                                    (com.qihua.bVNC.connection.SshConnectionInitializer) canvas.connInitializer;
+                            if (sci != null && sci.getSshRenderer() != null) {
+                                sci.getSshRenderer().writeString(clip.toString());
+                                Toast.makeText(this, R.string.ssh_selection_pasted,
+                                        Toast.LENGTH_SHORT).show();
+                            } else {
+                                Toast.makeText(this, R.string.ssh_selection_clipboard_empty,
+                                        Toast.LENGTH_SHORT).show();
+                                return;
+                            }
+                        } catch (Exception e) {
+                            android.util.Log.e(TAG, "DBG paste failed", e);
+                            Toast.makeText(this, R.string.ssh_selection_clipboard_empty,
+                                    Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        // Paste doesn't change the selection — keep it
+                        // visible so the user can paste again or copy.
+                    } else {
+                        // Cancel
+                        if (sshPointer != null) sshPointer.cancelSelection();
+                        canvas.invalidate();
+                    }
+                    d.dismiss();
+                })
+                .setOnDismissListener(d -> {
+                    // Safety net: covers back press / outside touch as
+                    // well as the explicit Cancel path. If anything
+                    // non-Copy / non-Cancel happens, drop the highlight
+                    // — Copy already cleared it above.
+                    if (sshPointer != null && sshPointer.hasSelection()) {
+                        sshPointer.cancelSelection();
+                        canvas.invalidate();
+                    }
+                })
+                .create();
+        dialog.show();
+        android.util.Log.e(TAG, "DBG showSelectionMenu: AlertDialog shown");
     }
 
     /**
