@@ -101,7 +101,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         inertiaThread.start();
     }
 
-    /*
+    /**
      * (non-Javadoc)
      * @see com.qihua.bVNC.input.InputHandler#getDescription()
      */
@@ -110,7 +110,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         return canvas.getResources().getString(R.string.input_method_touchpad_description);
     }
 
-    /*
+    /**
      * (non-Javadoc)
      * @see com.qihua.bVNC.input.InputHandler#getId()
      */
@@ -393,9 +393,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                 } else if ("gesture".equals(threePointerAction)) {
                     // 唤出手势功能
                     activity.toggleGestureLayer();
-                    canvas.getHandler().postDelayed(() -> {
-                        activity.hideGestureLayer();
-                    }, 1000);
+                    canvas.getHandler().postDelayed(() -> activity.hideGestureLayer(), 1000);
 
                     if (touchpadFeedback) {
                         activity.sendShortVibration();
@@ -461,7 +459,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         return true;
     }
 
-    /*
+    /**
      * (non-Javadoc)
      * @see android.view.GestureDetector.SimpleOnGestureListener#onScroll(android.view.MotionEvent, android.view.MotionEvent, float, float)
      */
@@ -653,7 +651,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         return false;
     }
 
-    /*
+    /**
      * (non-Javadoc)
      * @see com.qihua.bVNC.input.InputHandlerGeneric#getX(android.view.MotionEvent)
      */
@@ -674,7 +672,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         return p.getX();
     }
 
-    /*
+    /**
      * (non-Javadoc)
      * @see com.qihua.bVNC.input.InputHandlerGeneric#getY(android.view.MotionEvent)
      */

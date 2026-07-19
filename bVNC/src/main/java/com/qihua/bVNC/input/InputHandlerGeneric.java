@@ -29,7 +29,6 @@ import android.view.ScaleGestureDetector;
 import android.view.View;
 
 import androidx.core.util.Pair;
-import androidx.core.view.InputDeviceCompat;
 
 import com.qihua.bVNC.Constants;
 import com.qihua.bVNC.FpsCounter;
@@ -39,9 +38,6 @@ import com.qihua.bVNC.Utils;
 import com.undatech.opaque.util.GeneralUtils;
 import com.qihua.bVNC.R;
 import com.qihua.bVNC.BuildConfig;
-
-import java.util.LinkedList;
-import java.util.Queue;
 
 abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureListener
         implements InputHandler, ScaleGestureDetector.OnScaleGestureListener {
@@ -107,8 +103,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     float displayDensity = 0;
     // Queue which holds the last two MotionEvents which triggered onScroll
     float lastZoomFactor = 1;
-    Queue<Float> distXQueue;
-    Queue<Float> distYQueue;
     protected boolean dragHelped = false;
     protected boolean canEnlarge = true;
     private boolean immersiveSwipeEnabled = true;
@@ -147,9 +141,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
         // 初始化滑动窗口分析器
         touchMovementAnalyzer = new TouchMovementAnalyzer(displayDensity, debugLogging);
-
-        distXQueue = new LinkedList<>();
-        distYQueue = new LinkedList<>();
 
         touchpadFeedback = Utils.querySharedPreferenceBoolean(canvas.getContext(), Constants.touchpadFeedback);
 
@@ -209,7 +200,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     /**
      * Handles actions performed by a mouse-like device.
      * @param e touch or generic motion event
-     * @return
+     * @return true if the event was consumed (button pressed/released/moved or wheel scrolled), false otherwise
      */
     @Override
     public boolean onPointerEvent(MotionEvent e) {
@@ -347,9 +338,9 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
     /**
      * Sends scroll events with previously set direction and speed.
-     * @param x
-     * @param y
-     * @param meta
+     * @param x scroll event x coordinate on the remote screen
+     * @param y scroll event y coordinate on the remote screen
+     * @param meta meta key state at the time of the scroll
      */
     protected void sendScrollEvents(int x, int y, int delta, int meta) {
         GeneralUtils.debugLog(debugLogging, TAG, "sendScrollEvents");
@@ -365,7 +356,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         }
     }
 
-    /*
+    /**
      * @see android.view.GestureDetector.SimpleOnGestureListener#onSingleTapConfirmed(android.view.MotionEvent)
      */
     @Override
@@ -387,9 +378,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                 activity.toggleKeyboard();
             } else {
                 activity.toggleGestureLayer();
-                canvas.getHandler().postDelayed(() -> {
-                    activity.hideGestureLayer();
-                }, 2000);
+                canvas.getHandler().postDelayed(() -> activity.hideGestureLayer(), 2000);
             }
 
             return true;
@@ -407,7 +396,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         return true;
     }
 
-    /*
+    /**
      * @see android.view.GestureDetector.SimpleOnGestureListener#onLongPress(android.view.MotionEvent)
      */
     @Override
@@ -545,7 +534,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             return false;
         }
 
-        float bottomXDistance = getImmersiveXDistance();
         float bottomYDistance = getImmersiveYDistance();
 
         return y <= bottomYDistance;
@@ -560,7 +548,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     }
 
     protected boolean detectImmersiveDownRaw(float x, float y) {
-        float bottomXDistance = getImmersiveXDistance();
         float bottomYDistance = getImmersiveYDistance();
 
         return y >= touchpad.getHeight() - bottomYDistance;
@@ -704,7 +691,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     }
 
 
-    /*
+    /**
      * @see com.qihua.bVNC.input.InputHandler#0yonTouchEvent(android.view.MotionEvent)
      */
     @Override
@@ -727,7 +714,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         return false;
     }
 
-    /*
+    /**
      * @see android.view.ScaleGestureDetector.OnScaleGestureListener#onScale(android.view.ScaleGestureDetector)
      */
     @Override
@@ -760,7 +747,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         return true;
     }
 
-    /*
+    /**
      * @see android.view.ScaleGestureDetector.OnScaleGestureListener#onScaleBegin(android.view.ScaleGestureDetector)
      */
     @Override
@@ -777,7 +764,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         return true;
     }
 
-    /*
+    /**
      * @see android.view.ScaleGestureDetector.OnScaleGestureListener#onScaleEnd(android.view.ScaleGestureDetector)
      */
     @Override
@@ -788,7 +775,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         scalingJustFinished = true;
     }
 
-    /*
+    /**
      * @see com.qihua.bVNC.input.InputHandler#onKeyDown(int, android.view.KeyEvent)
      */
     @Override
@@ -844,70 +831,12 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         return canvas.getKeyboard().keyEvent(keyCode, e);
     }
 
-    /*
+    /**
      * @see com.qihua.bVNC.input.InputHandler#onKeyUp(int, android.view.KeyEvent)
      */
     @Override
     public boolean onKeyUp(int keyCode, KeyEvent e) {
         GeneralUtils.debugLog(debugLogging, TAG, "onKeyDown, e: " + e);
         return canvas.getKeyboard().keyEvent(keyCode, e);
-    }
-
-    /**
-     * Returns the sign of the given number.
-     * @param number
-     * @return
-     */
-    protected float getSign(float number) {
-        float sign;
-        if (number >= 0) {
-            sign = 1.f;
-        } else {
-            sign = -1.f;
-        }
-        return sign;
-    }
-
-    boolean consumeAsMouseWheel(MotionEvent e1, MotionEvent e2) {
-        boolean useEvent = false;
-        if (!canvas.isAbleToPan()) {
-            GeneralUtils.debugLog(debugLogging, TAG, "consumeAsMouseWheel, fit-to-screen");
-            useEvent = true;
-        }
-
-        if (e1.getSource() == InputDeviceCompat.SOURCE_MOUSE ||
-                e1.getSource() == InputDeviceCompat.SOURCE_CLASS_POINTER ||
-                e1.getSource() == InputDeviceCompat.SOURCE_CLASS_TRACKBALL ||
-                e1.getSource() == InputDeviceCompat.SOURCE_TOUCHPAD ||
-                e1.getSource() == InputDeviceCompat.SOURCE_DPAD
-        ) {
-            GeneralUtils.debugLog(debugLogging, TAG, "consumeAsMouseWheel, mouse-like source");
-            useEvent = true;
-        }
-
-        if (!useEvent) {
-            return false;
-        }
-
-        int meta = e1.getMetaState();
-        scrollUp = false;
-        scrollDown = false;
-        scrollLeft = false;
-        scrollRight = false;
-        swipeSpeed = 1;
-
-        if (e1.getX() < e2.getX()) {
-            scrollLeft = true;
-        } else if (e1.getX() > e2.getX()) {
-            scrollRight = true;
-        }
-
-        if (e1.getY() < e2.getY()) {
-            scrollUp = true;
-        } else if (e1.getY() > e2.getY()) {
-            scrollDown = true;
-        }
-        sendScrollEvents(getDragPointerX(e1), getDragPointerY(e1), -1, meta);
-        return true;
     }
 }
