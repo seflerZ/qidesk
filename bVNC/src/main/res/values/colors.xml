@@ -32,6 +32,9 @@
          for the dark variant. -->
     <color name="ssh_terminal_bg">#FFF2F2F2</color>
     <color name="ssh_terminal_fg">#FF383A42</color>
+    <!-- Selection highlight: 40% Material blue in light mode.
+         Override in values-night/colors.xml for the dark variant. -->
+    <color name="ssh_selection_overlay">#664A90E2</color>
     <color name="ssh_terminal_black">#FFFFFFFF</color>
     <color name="ssh_terminal_red">#FFC9817D</color>
     <color name="ssh_terminal_green">#FF71946B</color>

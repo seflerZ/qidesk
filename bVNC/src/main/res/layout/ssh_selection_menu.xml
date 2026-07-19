@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SSH text-selection popup menu. Inflated into a PopupWindow so the
+  user gets a small non-modal menu near the finger-up position.
+  Each row is a clickable TextView styled to look like a list item;
+  the window itself wraps the content tightly with rounded corners
+  via the elevation + a background drawable below.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/ssh_selection_menu_bg"
+    android:elevation="6dp"
+    android:padding="4dp">
+
+    <TextView
+        android:id="@+id/sshMenuCopy"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="12dp"
+        android:textSize="15sp"
+        android:textColor="?android:attr/textColorPrimary"
+        android:background="?android:attr/selectableItemBackground"
+        android:text="@string/ssh_selection_copy" />
+
+    <TextView
+        android:id="@+id/sshMenuSelectAll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="12dp"
+        android:textSize="15sp"
+        android:textColor="?android:attr/textColorPrimary"
+        android:background="?android:attr/selectableItemBackground"
+        android:text="@string/ssh_selection_select_all" />
+
+    <TextView
+        android:id="@+id/sshMenuPaste"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="12dp"
+        android:textSize="15sp"
+        android:textColor="?android:attr/textColorPrimary"
+        android:background="?android:attr/selectableItemBackground"
+        android:text="@string/ssh_selection_paste" />
+
+    <TextView
+        android:id="@+id/sshMenuCancel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="12dp"
+        android:textSize="15sp"
+        android:textColor="?android:attr/textColorPrimary"
+        android:background="?android:attr/selectableItemBackground"
+        android:text="@string/ssh_selection_cancel" />
+</LinearLayout>

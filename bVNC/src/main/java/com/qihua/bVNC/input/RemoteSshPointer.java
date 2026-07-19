@@ -149,9 +149,6 @@ public class RemoteSshPointer extends RemotePointer {
      */
     public int[] pxToCell(float pxX, float pxY) {
         if (sshRenderer == null || termMachine == null) {
-            android.util.Log.e("RemoteSshPointer",
-                    "DBG pxToCell: NOT WIRED, sshRenderer=" + sshRenderer
-                    + " termMachine=" + termMachine);
             return null;
         }
         float charW = sshRenderer.getCellWidth();
@@ -168,11 +165,6 @@ public class RemoteSshPointer extends RemotePointer {
         }
         int col = Math.min(cols - 1, (int) (relX / charW));
         int row = Math.min(rows - 1, Math.max(0, (int) (relY / charH)));
-        android.util.Log.e("RemoteSshPointer",
-                "DBG pxToCell: px=(" + pxX + "," + pxY + ") pad=" + pad
-                + " charW=" + charW + " charH=" + charH
-                + " cols=" + cols + " rows=" + rows
-                + " -> (row=" + row + ", col=" + col + ")");
         return new int[] { row, col };
     }
 

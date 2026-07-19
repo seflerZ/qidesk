@@ -103,11 +103,13 @@ public final class VTermCanvasRenderer {
         cursorPaint.setStyle(Paint.Style.FILL);
 
         // Selection highlight — drawn on top of cell bg but UNDER the
-        // glyphs (so the selected text is still legible). 40% opacity
-        // Material blue, mirrors Android's standard text-selection tint.
+        // glyphs (so the selected text is still legible). The colour
+        // itself is resolved from R.color.ssh_selection_overlay in
+        // setPalette() so it follows the day/night theme — light mode
+        // is a 40 % Material blue, dark mode drops opacity so the
+        // overlay stays legible on a near-black terminal background.
         this.selectionPaint = new Paint();
         selectionPaint.setStyle(Paint.Style.FILL);
-        selectionPaint.setColor(0x664A90E2);
 
         // Read the theme-driven defaults from resources. The SSH
         // initializer calls setPalette() again on theme flips so the
@@ -139,14 +141,17 @@ public final class VTermCanvasRenderer {
         if (ctx == null) return;
         int newBg = ctx.getResources().getColor(R.color.ssh_terminal_bg, ctx.getTheme());
         int newFg = ctx.getResources().getColor(R.color.ssh_terminal_fg, ctx.getTheme());
+        int newSelection = ctx.getResources().getColor(R.color.ssh_selection_overlay, ctx.getTheme());
         android.util.Log.i("VTermCanvasRenderer",
                 "setPalette: bg=0x" + Integer.toHexString(newBg)
                 + " fg=0x" + Integer.toHexString(newFg)
+                + " sel=0x" + Integer.toHexString(newSelection)
                 + " (old bg=0x" + Integer.toHexString(bgColor)
                 + " fg=0x" + Integer.toHexString(defaultFg) + ")");
         this.bgColor = newBg;
         this.defaultFg = newFg;
         this.defaultBg = this.bgColor;
+        this.selectionPaint.setColor(newSelection);
     }
 
     /**

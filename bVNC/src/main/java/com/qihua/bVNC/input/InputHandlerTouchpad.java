@@ -183,8 +183,6 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             return true;
         }
 
-        android.util.Log.e(TAG, "onTouchEvent, e: " + e);
-
         final int action = e.getActionMasked();
         final int index = e.getActionIndex();
         final int pointerID = e.getPointerId(index);
@@ -241,7 +239,6 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             return true;
         }
 
-        android.util.Log.e(TAG, "onTouchEvent: pointerID: " + pointerID);
         // 快照拖动状态:下面 ACTION_UP 分支里的 endDragModesAndScrolling() 会把 dragMode 清成
         // false,若等到后面惯性判断时再读 dragMode 就已失效,导致拖动松手也误触发惯性滚动。
         boolean wasDragging = dragMode || rightDragMode || middleDragMode;
@@ -308,7 +305,6 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                             inertiaStartTime = System.currentTimeMillis();
                         }
 
-                        android.util.Log.e(TAG, "onTouchEvent: ACTION_MOVE");
                         // Send scroll up/down events if swiping is happening.
                         if (dragMode || rightDragMode || middleDragMode) {
                             // 添加当前触摸点到分析器，仅在单指下有效
@@ -529,12 +525,15 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             RemoteSshPointer sshPointer = (RemoteSshPointer) pointer;
             String text = sshPointer.consumeSelectedText();
             sshSelectionMode = false;
-            android.util.Log.e(TAG,
-                    "ACTION_UP sshSelection: textLen=" + (text == null ? -1 : text.length()));
+            // Anchor the popup at the FINGER-UP point, not the long-press
+            // anchor — the user dragged to extend, so the up position is
+            // where their thumb ended up. Falling back to the long-press
+            // anchor (sshAnchorViewX/Y) makes the menu pop at the start
+            // of the selection, which feels wrong.
             int[] screenLoc = new int[2];
             canvas.getLocationOnScreen(screenLoc);
-            float screenX = screenLoc[0] + sshAnchorViewX;
-            float screenY = screenLoc[1] + sshAnchorViewY;
+            float screenX = screenLoc[0] + e.getX();
+            float screenY = screenLoc[1] + e.getY();
             activity.showSelectionMenu(text, screenX, screenY);
             canvas.invalidate();
             return true;
@@ -556,8 +555,6 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             ((RemoteSshPointer) pointer).enterSelectionPx((int) e.getX(), (int) e.getY());
         }
         canvas.invalidate();
-        android.util.Log.e(TAG,
-                "onSshLongPress FIRED anchor=(" + (int) e.getX() + "," + (int) e.getY() + ")");
     }
 
     @Override

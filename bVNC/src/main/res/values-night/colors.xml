@@ -25,6 +25,9 @@
          values/colors.xml for the full rationale on these names. -->
     <color name="ssh_terminal_bg">#FF282C34</color>
     <color name="ssh_terminal_fg">#FFDCDFE4</color>
+    <!-- Dark-mode selection overlay: same Material blue at lower
+         opacity so it stays legible on a dark terminal. -->
+    <color name="ssh_selection_overlay">#553D7BD0</color>
     <color name="ssh_terminal_black">#FF3D444F</color>
     <color name="ssh_terminal_red">#FFE06C75</color>
     <color name="ssh_terminal_green">#FF98C379</color>
