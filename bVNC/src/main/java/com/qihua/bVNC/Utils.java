@@ -469,10 +469,25 @@ public class Utils {
         return "\n" + localizedMessage + "\n" + sw.toString();
     }
 
+    // 缓存 generalSettings 的 SharedPreferences 实例:getSharedPreferences() 每次都走
+    // ContextImpl 的 synchronized map 查找,而下面这些 query/set 在触摸热路径里被高频调用。
+    // 缓存实例本身而非缓存值——SP 内部的内存 map 由框架维护,任何写入(含设置页 PreferenceFragment
+    // 直接写,不经过本类的 setXxx)都会同步更新它,所以读永不脏,无需失效逻辑。
+    private static SharedPreferences sGeneralPrefs;
+
+    private static SharedPreferences getPrefs(Context context) {
+        if (sGeneralPrefs == null) {
+            // 用 applicationContext 避免持有 Activity 引用导致泄漏
+            sGeneralPrefs = context.getApplicationContext()
+                    .getSharedPreferences(Constants.generalSettingsTag, Context.MODE_PRIVATE);
+        }
+        return sGeneralPrefs;
+    }
+
     public static boolean querySharedPreferenceBoolean(Context context, String key) {
         boolean result = false;
         if (context != null) {
-            SharedPreferences sp = context.getSharedPreferences(Constants.generalSettingsTag, Context.MODE_PRIVATE);
+            SharedPreferences sp = getPrefs(context);
             result = sp.getBoolean(key, false);
         }
         return result;
@@ -481,7 +496,7 @@ public class Utils {
     public static boolean querySharedPreferenceBoolean(Context context, String key, boolean defaultValue) {
         boolean result = defaultValue;
         if (context != null) {
-            SharedPreferences sp = context.getSharedPreferences(Constants.generalSettingsTag, Context.MODE_PRIVATE);
+            SharedPreferences sp = getPrefs(context);
             result = sp.getBoolean(key, false);
         }
         return result;
@@ -490,7 +505,7 @@ public class Utils {
     public static String querySharedPreferenceString(Context context, String key, String dftValue) {
         String result = dftValue;
         if (context != null) {
-            SharedPreferences sp = context.getSharedPreferences(Constants.generalSettingsTag, Context.MODE_PRIVATE);
+            SharedPreferences sp = getPrefs(context);
             result = sp.getString(key, dftValue);
         }
         return result;
@@ -499,7 +514,7 @@ public class Utils {
     public static int querySharedPreferenceInt(Context context, String key, int dftValue) {
         int result = dftValue;
         if (context != null) {
-            SharedPreferences sp = context.getSharedPreferences(Constants.generalSettingsTag, Context.MODE_PRIVATE);
+            SharedPreferences sp = getPrefs(context);
             result = sp.getInt(key, dftValue);
         }
         return result;
@@ -507,7 +522,7 @@ public class Utils {
 
     public static void setSharedPreferenceString(Context context, String key, String value) {
         if (context != null) {
-            SharedPreferences sp = context.getSharedPreferences(Constants.generalSettingsTag, Context.MODE_PRIVATE);
+            SharedPreferences sp = getPrefs(context);
             Editor editor = sp.edit();
             editor.putString(key, value);
             editor.apply();
@@ -517,7 +532,7 @@ public class Utils {
 
     public static void setSharedPreferenceBoolean(Context context, String key, boolean value) {
         if (context != null) {
-            SharedPreferences sp = context.getSharedPreferences(Constants.generalSettingsTag, Context.MODE_PRIVATE);
+            SharedPreferences sp = getPrefs(context);
             Editor editor = sp.edit();
             editor.putBoolean(key, value);
             editor.apply();
@@ -528,8 +543,7 @@ public class Utils {
 
     public static void toggleSharedPreferenceBoolean(Context context, String key) {
         if (context != null) {
-            SharedPreferences sp = context.getSharedPreferences(Constants.generalSettingsTag,
-                    Context.MODE_PRIVATE);
+            SharedPreferences sp = getPrefs(context);
             boolean state = sp.getBoolean(key, false);
             Editor editor = sp.edit();
             editor.putBoolean(key, !state);
