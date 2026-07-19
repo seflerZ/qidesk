@@ -37,6 +37,13 @@ buildscript {
 apply plugin: "com.google.osdetector"
 
 dependencies {
+    // AppCompat is needed so GeneratePubkeyActivity can extend
+    // AppCompatActivity — without that, Theme.AppCompat.DayNight (the
+    // parent of @style/QiHua) can't propagate night-mode resource
+    // switching to this activity, so it stays light-themed regardless
+    // of the user's day/night preference. Mirrors the version bVNC pulls.
+    implementation 'androidx.appcompat:appcompat:1.4.1'
+
     api 'org.connectbot:sshlib:2.2.20'
     implementation group: 'org.bouncycastle', name: 'bcprov-jdk15on', version: '1.70'
     implementation group: 'org.bouncycastle', name: 'bcpkix-jdk15on', version: '1.70'

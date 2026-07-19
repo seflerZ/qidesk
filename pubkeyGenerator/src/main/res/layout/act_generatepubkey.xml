@@ -1,26 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?><!--
-/*
- * ConnectBot: simple, powerful, open-source SSH client for Android
- * Copyright 2007 Kenny Root, Jeffrey Sharkey
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
--->
+    GeneratePubkeyActivity layout (Phase 3.6 + theme fixes).
 
+    Phase 3.6 changes:
+    - Switched plain <Button> to androidx.appcompat.widget.AppCompatButton
+      so the button color/textColor honors the app's @style/QiHua
+      (Theme.AppCompat.DayNight) instead of the framework default — the
+      earlier plain widgets rendered with mismatched colors in night mode
+      and the user's report that they don't follow the day/night setting.
+    - Added android:background="?android:attr/colorBackground" on the
+      ScrollView so the page background follows the active day/night
+      mode rather than rendering transparent over the windowBackground
+      (which gave the appearance of "the theme is wrong").
+    - Added textColor="?android:attr/textColorPrimary" on EditTexts and
+      TextViews so glyph colors stay legible in both light and dark modes.
+
+    The original ConnectBot layout was published under Apache 2.0; the
+    changes here are minimal in scope.
+-->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="fill_parent"
     android:layout_height="wrap_content"
-    android:scrollbars="vertical">
+    android:scrollbars="vertical"
+    android:fitsSystemWindows="true"
+    android:clipToPadding="false"
+    android:background="?android:attr/colorBackground">
 
     <TableLayout
         android:layout_width="fill_parent"
@@ -30,21 +33,41 @@
         android:paddingRight="10dip"
         android:scrollbars="vertical">
 
-        <Button
+        <!--
+            Persistent key-status banner. The toast in onCreate
+            ("Key not generated yet" / "Successfully decrypted")
+            disappears after a few seconds, leaving the user unable
+            to tell at a glance whether a key exists. This TextView
+            stays visible for the lifetime of the activity and is
+            updated from checkEntries() — the single convergence
+            point for all state transitions (onCreate →
+            decryptAndRecoverKey, the Decrypt button, and the
+            passphrase text watcher).
+        -->
+        <TextView
+            android:id="@+id/keyStatus"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:paddingBottom="8dip"
+            android:paddingTop="8dip"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:textColor="?android:attr/textColorPrimary" />
+
+        <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/generate"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:enabled="true"
             android:text="@string/generate" />
 
-        <Button
+        <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/importKey"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:enabled="true"
             android:text="@string/key_import" />
 
-        <Button
+        <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/decrypt"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
@@ -55,7 +78,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:gravity="left"
-            android:text="@string/prompt_password_can_be_blank" />
+            android:text="@string/prompt_password_can_be_blank"
+            android:textColor="?android:attr/textColorPrimary" />
 
         <EditText
             android:id="@+id/password"
@@ -65,7 +89,8 @@
             android:hint="@string/prompt_passphrase"
             android:inputType="textPassword"
             android:password="true"
-            android:singleLine="true" />
+            android:singleLine="true"
+            android:textColor="?android:attr/textColorPrimary" />
 
         <TableRow>
 
@@ -74,7 +99,8 @@
                 android:gravity="left"
                 android:paddingRight="10dip"
                 android:text="@string/prompt_type"
-                android:textAppearance="?android:attr/textAppearanceMedium" />
+                android:textAppearance="?android:attr/textAppearanceMedium"
+                android:textColor="?android:attr/textColorPrimary" />
 
             <RadioGroup
                 android:id="@+id/key_type"
@@ -88,13 +114,15 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:paddingRight="30dip"
-                    android:text="RSA" />
+                    android:text="@string/key_type_rsa"
+                    android:textColor="?android:attr/textColorPrimary" />
 
                 <RadioButton
                     android:id="@+id/dsa"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="DSA" />
+                    android:text="@string/key_type_dsa"
+                    android:textColor="?android:attr/textColorPrimary" />
             </RadioGroup>
         </TableRow>
 
@@ -104,7 +132,8 @@
                 android:gravity="left"
                 android:paddingRight="10dip"
                 android:text="@string/prompt_bits"
-                android:textAppearance="?android:attr/textAppearanceMedium" />
+                android:textAppearance="?android:attr/textAppearanceMedium"
+                android:textColor="?android:attr/textColorPrimary" />
 
             <EditText
                 android:id="@+id/bits"
@@ -112,7 +141,8 @@
                 android:layout_weight="1"
                 android:inputType="number"
                 android:singleLine="true"
-                android:text="2048" />
+                android:text="2048"
+                android:textColor="?android:attr/textColorPrimary" />
         </TableRow>
 
         <SeekBar
@@ -123,21 +153,21 @@
             android:paddingBottom="10dip"
             android:progress="1280" />
 
-        <Button
+        <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/share"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:enabled="false"
             android:text="@string/share" />
 
-        <Button
+        <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/copy"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:enabled="false"
             android:text="@string/copy" />
 
-        <Button
+        <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/save"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"

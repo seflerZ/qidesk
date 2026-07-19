@@ -449,11 +449,16 @@ public class PubkeyUtils {
     // This function first tries to import keys in PEM format and failing that, tries passphrase-less PKCS8 format.
     public static KeyPair tryImportingPemAndPkcs8(Context c, String pem, String passphrase) throws Exception {
         KeyPair pair = null;
-        // Try to import as PEM
+        // Try traditional PEM next.
         pair = importPem(c, pem, passphrase);
-        // If PEM import failed, try to import as PKCS#8
+        // If PEM import failed, try to import as PKCS#8. Strip whitespace
+        // first — users commonly paste a bare base64 body they've copied
+        // out of an email or chat, and Android's Base64 decoder tolerates
+        // embedded newlines only if the decoder flags request it. Removing
+        // whitespace matches what `pem` formats would otherwise provide.
         if (pair == null) {
-            pair = importPkcs8(pem);
+            String stripped = pem.replaceAll("\\s+", "");
+            pair = importPkcs8(stripped);
         }
         // If both failed, throw an exception to alert the user to the failure.
         if (pair == null) {

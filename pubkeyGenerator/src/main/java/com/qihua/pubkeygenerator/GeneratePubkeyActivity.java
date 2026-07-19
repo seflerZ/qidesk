@@ -18,7 +18,6 @@
 
 package com.qihua.pubkeygenerator;
 
-import android.app.Activity;
 import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.ContentResolver;
@@ -43,6 +42,7 @@ import android.widget.RadioGroup;
 import android.widget.RadioGroup.OnCheckedChangeListener;
 import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.morpheusly.common.Utilities;
@@ -54,7 +54,9 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 
-public class GeneratePubkeyActivity extends Activity implements OnEntropyGatheredListener {
+import androidx.appcompat.app.AppCompatActivity;
+
+public class GeneratePubkeyActivity extends AppCompatActivity implements OnEntropyGatheredListener {
     public final static String TAG = "GeneratePubkeyActivity";
 
     final static int MIN_BITS_RSA = 768;
@@ -76,6 +78,7 @@ public class GeneratePubkeyActivity extends Activity implements OnEntropyGathere
     private Button decrypt;
     private Button copy;
     private Button save;
+    private TextView keyStatus;
     private Dialog entropyDialog;
     private ProgressDialog progress;
     private EditText password1;
@@ -155,6 +158,7 @@ public class GeneratePubkeyActivity extends Activity implements OnEntropyGathere
         copy = (Button) findViewById(R.id.copy);
         save = (Button) findViewById(R.id.save);
         importKey = (Button) findViewById(R.id.importKey);
+        keyStatus = (TextView) findViewById(R.id.keyStatus);
 
         inflater = LayoutInflater.from(this);
 
@@ -167,6 +171,11 @@ public class GeneratePubkeyActivity extends Activity implements OnEntropyGathere
             decryptAndRecoverKey();
         } else {
             Toast.makeText(getBaseContext(), getString(R.string.key_not_generated_yet), Toast.LENGTH_LONG).show();
+            // Set the status banner for the no-key case. decryptAndRecoverKey
+            // calls checkEntries internally, but this branch doesn't — without
+            // this explicit call the banner stays empty until the user types
+            // something in the passphrase field (which fires the text watcher).
+            checkEntries();
         }
 
         keyTypeGroup.setOnCheckedChangeListener(new OnCheckedChangeListener() {
@@ -266,7 +275,7 @@ public class GeneratePubkeyActivity extends Activity implements OnEntropyGathere
                 Intent share = new Intent(Intent.ACTION_SEND);
                 share.setType("text/plain");
                 share.putExtra(Intent.EXTRA_TEXT, publicKeySSHFormat);
-                startActivity(Intent.createChooser(share, "Share Pubkey"));
+                startActivity(Intent.createChooser(share, getString(R.string.share_chooser_title)));
             }
         });
 
@@ -347,20 +356,32 @@ public class GeneratePubkeyActivity extends Activity implements OnEntropyGathere
     }
 
     /**
-     * Turns buttons on and off depending on state of pubkey.
+     * Turns buttons on and off depending on state of pubkey. Also
+     * updates the persistent {@link #keyStatus} banner so the user
+     * can tell at a glance whether a key exists without relying on
+     * the transient onCreate toast.
      */
     private void checkEntries() {
+        boolean hasKey = sshPrivKey != null && sshPrivKey.length() != 0;
         if (recovered) {
             share.setEnabled(true);
             copy.setEnabled(true);
             save.setEnabled(true);
             decrypt.setEnabled(false);
+            if (keyStatus != null)
+                keyStatus.setText(R.string.key_status_ready);
         } else {
             share.setEnabled(false);
             copy.setEnabled(false);
             save.setEnabled(false);
-            if (sshPrivKey.length() != 0)
+            if (hasKey)
                 decrypt.setEnabled(true);
+            if (keyStatus != null) {
+                if (hasKey)
+                    keyStatus.setText(R.string.key_status_locked);
+                else
+                    keyStatus.setText(R.string.key_status_none);
+            }
         }
     }
 
@@ -431,11 +452,19 @@ public class GeneratePubkeyActivity extends Activity implements OnEntropyGathere
         sshPubKey = Base64.encodeToString(PubkeyUtils.getEncodedPublic(pub), Base64.DEFAULT);
 
         // Send the generated data back to the calling activity.
+        // Also surface the passphrase the user chose at generation time so
+        // the calling Config activity can pre-fill its passphrase field —
+        // otherwise the user has to type it again before they can copy the
+        // public key or test the connection. The import branch above calls
+        // convertToBase64AndSendIntent too, so both Generate and Import
+        // take this path; for import the `password1` field is read by the
+        // caller already, so we just send whatever's there.
         Intent databackIntent = new Intent();
         databackIntent.putExtra("PrivateKey", sshPrivKey);
         databackIntent.putExtra("PublicKey", sshPubKey);
+        databackIntent.putExtra("Passphrase", secret);
 
-        setResult(Activity.RESULT_OK, databackIntent);
+        setResult(AppCompatActivity.RESULT_OK, databackIntent);
     }
 
     /**
@@ -448,7 +477,7 @@ public class GeneratePubkeyActivity extends Activity implements OnEntropyGathere
         super.onActivityResult(requestCode, resultCode, data);
         switch (requestCode) {
             case IMPORT_KEY_REQUEST:
-                if (resultCode == Activity.RESULT_OK) {
+                if (resultCode == AppCompatActivity.RESULT_OK) {
                     if (data != null && data.getData() != null) {
                         String keyData = Utilities.Companion.getStringDataFromIntent(data, this);
                         try {
@@ -470,7 +499,7 @@ public class GeneratePubkeyActivity extends Activity implements OnEntropyGathere
                 }
                 break;
             case SAVE_KEY_REQUEST:
-                if (resultCode == Activity.RESULT_OK) {
+                if (resultCode == AppCompatActivity.RESULT_OK) {
                     if (data != null && data.getData() != null) {
                         ContentResolver resolver = getContentResolver();
 
