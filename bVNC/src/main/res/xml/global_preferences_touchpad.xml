@@ -27,7 +27,9 @@
             android:key="threePointerTouchAction"
             android:title="@string/three_pointers_touch_action" />
     </PreferenceCategory>
-    <PreferenceCategory android:title="@string/efficiency_tools">
+    <PreferenceCategory
+        android:key="efficiency_tools"
+        android:title="@string/efficiency_tools">
         <SwitchPreferenceCompat
             android:defaultValue="true"
             android:key="touchpadEdgeWheel"
@@ -40,6 +42,12 @@
             app:defaultValue="false"
             android:title="@string/drag_help_enabled"
             android:summary="@string/drag_help_enabled_hint"/>
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:key="inertiaEnabled"
+            app:defaultValue="true"
+            android:title="@string/inertia_enabled"
+            android:summary="@string/inertia_enabled_hint"/>
         <SwitchPreferenceCompat
             android:defaultValue="false"
             android:key="backTapShowKeyboard"

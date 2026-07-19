@@ -28,6 +28,7 @@ import android.view.View;
 import androidx.core.util.Pair;
 
 import com.qihua.bVNC.Constants;
+import com.qihua.bVNC.BuildConfig;
 import com.qihua.bVNC.FpsCounter;
 import com.qihua.bVNC.RemoteCanvas;
 import com.qihua.bVNC.RemoteCanvasActivity;
@@ -46,6 +47,10 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         super(activity, canvas, touchpad, pointer, debugLogging);
 
         this.displayDensity = activity.getResources().getDisplayMetrics().density;
+
+        // 惯性滚动:高级功能,受用户开关控制,且 free 版(EDGE_ENABLED=false)运行时强制关闭
+        inertiaScrollingEnabled = Utils.querySharedPreferenceBoolean(activity.getApplicationContext(),
+                Constants.inertiaEnabled, true) && BuildConfig.EDGE_ENABLED;
 
         // for inertia scrolling
         inertiaThread = new Thread(() -> {
@@ -131,13 +136,15 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
     private final Semaphore inertiaSemaphore = new Semaphore(0);
     private long inertiaStartTime = 0;
     private long inertiaBaseInterval = 16;
-    private boolean inertiaScrollingEnabled = true;
+    private boolean inertiaScrollingEnabled = false;
     private boolean inertiaSwiping = false;
     private int inertiaMetaState = 0;
     private float lastSpeedX = 0;
     private float lastSpeedY = 0;
     private float lastX = 0;
     private float lastY = 0;
+    // 单指移动动量采样:上次在 onScroll 单指分支更新光标的时刻,用于算松手速度 + 停顿判定
+    private long lastMoveSampleMs = 0;
 
     // 指数衰减近似: 0.92 每 16ms tick ≈ e^(-0.083*16) ≈ 0.92,30 帧 ≈ 8% 残余
     private static final float INERTIA_DECAY = 0.92f;
@@ -145,6 +152,10 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
     private static final float INERTIA_STOP_THRESHOLD = 0.5f;
     // pan 节流:tick 内速度超过此阈值才调 movePanToMakePointerVisible,避免每 16ms 一次布局
     private static final float PAN_TRIGGER_THRESHOLD = 50f;
+    // 单指移动动量:松手时每 tick 光标位移低于此值不触发滑行,精细微调不飘(仅快甩才滑)
+    private static final float INERTIA_FLING_MIN_SPEED = 4f;
+    // 松手距最后一次移动超过此时长视为已停顿,不触发滑行,避免"移动-停顿-松手"误滑
+    private static final long INERTIA_FLING_TIMEOUT_MS = 60;
 
     @Override
     public boolean onTouchEvent(MotionEvent e) {
@@ -229,6 +240,8 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                         lastDragY = e.getY();
 
                         lastSpeedX = lastSpeedY = 0;
+                        // 新手势开始,清采样时间戳,避免用上次手势的旧时刻算出巨大 dt
+                        lastMoveSampleMs = 0;
 
                         inertiaSwiping = false;
 
@@ -422,15 +435,41 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                 if (activity.isToolbarShowing() && canvas.connection.getEnableGesture()) {
 
                 } else {
-                    inertiaMetaState = e.getMetaState();
-                    inertiaSemaphore.release();
+                    // 仅快甩才滑行:松手速度(每 tick 光标位移)超阈值,且松手距最后一次采样未停顿
+                    float flingSpeedX = lastSpeedX * inertiaBaseInterval;
+                    float flingSpeedY = lastSpeedY * inertiaBaseInterval;
+                    boolean fastEnough = Math.abs(flingSpeedX) > INERTIA_FLING_MIN_SPEED
+                            || Math.abs(flingSpeedY) > INERTIA_FLING_MIN_SPEED;
+                    boolean notPaused = lastMoveSampleMs != 0
+                            && System.currentTimeMillis() - lastMoveSampleMs <= INERTIA_FLING_TIMEOUT_MS;
+
+                    if (fastEnough && notPaused) {
+                        inertiaMetaState = e.getMetaState();
+                        inertiaSemaphore.release();
+                    }
                 }
             }
 
             // for two finger inertia scrolling
             if (inertiaScrollingEnabled && inSwiping) {
-                inertiaSwiping = true;
-                inertiaSemaphore.release();
+                // 与单指一致:仅快甩才滑行,松手速度超阈值且未停顿。停顿判定用 lastScrollTimeMs
+                // (滚动路径走 doScroll,不经过单指分支,lastMoveSampleMs 不会被更新)。
+                float flingSpeedX = lastSpeedX * inertiaBaseInterval;
+                float flingSpeedY = lastSpeedY * inertiaBaseInterval;
+                boolean fastEnough = Math.abs(flingSpeedX) > INERTIA_FLING_MIN_SPEED
+                        || Math.abs(flingSpeedY) > INERTIA_FLING_MIN_SPEED;
+                boolean notPaused = System.currentTimeMillis() - lastScrollTimeMs <= INERTIA_FLING_TIMEOUT_MS;
+
+                if (fastEnough && notPaused) {
+                    // 惯性阶段手指已离开,immersive(跟随手指在边缘的位置)语义已不存在。
+                    // 边缘滚动松手不走 endDragModesAndScrolling,immersiveSwipeX/Y 残留为 true,
+                    // 会在 doScroll(638/671 行)门掉某方向分量,导致边缘惯性不如双指顺。
+                    // 这里清掉,让边缘惯性与双指走完全相同的 doScroll 路径。
+                    immersiveSwipeX = false;
+                    immersiveSwipeY = false;
+                    inertiaSwiping = true;
+                    inertiaSemaphore.release();
+                }
             }
         }
 
@@ -490,16 +529,28 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             }
 
             Pair<Integer, Integer> pointerPos = computePointerPos(-cumulatedX, -cumulatedY, 1.5f);
-    
+
+            // 动量采样:用光标坐标位移(而非手指位移)除以采样间隔,量纲对齐惯性线程
+            // else 分支的 pointer.getX()+speed,松手滑行速度不会突变。
+            long now = System.currentTimeMillis();
+            long dt = now - lastMoveSampleMs;
+            if (lastMoveSampleMs != 0 && dt > 0) {
+                lastSpeedX = (pointerPos.first - pointer.getX()) / (float) dt;
+                lastSpeedY = (pointerPos.second - pointer.getY()) / (float) dt;
+            } else {
+                lastSpeedX = lastSpeedY = 0;
+            }
+            lastMoveSampleMs = now;
+
             pointer.moveMouse(pointerPos.first, pointerPos.second, meta);
-    
+
             canvas.movePanToMakePointerVisible();
-    
+
             cumulatedX = 0;
             cumulatedY = 0;
-    
+
             lastScrollTimeMs = System.currentTimeMillis();
-    
+
             return true;
         }
     

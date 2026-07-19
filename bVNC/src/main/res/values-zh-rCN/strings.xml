@@ -848,6 +848,8 @@ aSPICE对应的功能如下：
     <string name="touchpad_cursor_speed">光标移动速度</string>
     <string name="drag_help_enabled">智能放大辅助</string>
     <string name="drag_help_enabled_hint">缓慢拖动时临时放大屏幕，方便选中文本</string>
+    <string name="inertia_enabled">惯性滚动</string>
+    <string name="inertia_enabled_hint">快速滑动松手后，光标与滚动继续惯性滑行</string>
     <string name="back_tap_show_keyboard">背部敲击唤出键盘</string>
     <string name="back_tap_show_keyboard_hint">双击手机背部或者轻晃唤出软键盘</string>
 

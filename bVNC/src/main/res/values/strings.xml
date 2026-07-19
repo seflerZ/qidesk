@@ -947,6 +947,8 @@ Below that is where you configure your connection.
     <string name="touchpad_cursor_speed">Cursor Speed</string>
     <string name="drag_help_enabled">Smart Zoom Assist</string>
     <string name="drag_help_enabled_hint">Temporarily zooms in when dragging slowly to help select text</string>
+    <string name="inertia_enabled">Inertial Scrolling</string>
+    <string name="inertia_enabled_hint">Cursor and scrolling keep gliding after a fast flick</string>
     <string name="back_tap_show_keyboard">Back Tap to Show Keyboard</string>
     <string name="back_tap_show_keyboard_hint">Double tap the phone or shake to invoke the soft keyboard</string>
 
