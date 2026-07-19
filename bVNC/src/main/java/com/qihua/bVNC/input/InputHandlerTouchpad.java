@@ -61,26 +61,33 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                     continue;
                 }
 
-                int speedX = (int) lastSpeedX;
-                int speedY = (int) lastSpeedY;
+                float speedX = lastSpeedX * inertiaBaseInterval;
+                float speedY = lastSpeedY * inertiaBaseInterval;
 
                 if (inertiaSwiping) {
-                    while ((speedX != 0 || speedY != 0) && !inertiaThread.isInterrupted()) {
+                    while ((Math.abs(speedX) > INERTIA_STOP_THRESHOLD || Math.abs(speedY) > INERTIA_STOP_THRESHOLD)
+                            && !inertiaThread.isInterrupted()) {
                         doScroll(pointer.getX(), pointer.getY(), -speedX, -speedY, inertiaMetaState);
-//                        pointer.moveMouse(pointer.getX() + speedX, pointer.getY() + speedY, inertiaMetaState);
 
-                        speedX = (int) (speedX * 0.9);
-                        speedY = (int) (speedY * 0.9);
+                        speedX *= INERTIA_DECAY;
+                        speedY *= INERTIA_DECAY;
 
                         SystemClock.sleep(inertiaBaseInterval);
                     }
                 } else {
-                    while ((speedX != 0 || speedY != 0) && !inertiaThread.isInterrupted()) {
-                        pointer.moveMouse(pointer.getX() + speedX, pointer.getY() + speedY, inertiaMetaState);
-                        canvas.movePanToMakePointerVisible();
+                    while ((Math.abs(speedX) > INERTIA_STOP_THRESHOLD || Math.abs(speedY) > INERTIA_STOP_THRESHOLD)
+                            && !inertiaThread.isInterrupted()) {
+                        int nextX = Math.round(pointer.getX() + speedX);
+                        int nextY = Math.round(pointer.getY() + speedY);
+                        pointer.moveMouse(nextX, nextY, inertiaMetaState);
 
-                        speedX = (int) (speedX * 0.9);
-                        speedY = (int) (speedY * 0.9);
+                        // pan 节流:只在高速时调,避免每 16ms 一次布局
+                        if (Math.abs(speedX) > PAN_TRIGGER_THRESHOLD || Math.abs(speedY) > PAN_TRIGGER_THRESHOLD) {
+                            canvas.movePanToMakePointerVisible();
+                        }
+
+                        speedX *= INERTIA_DECAY;
+                        speedY *= INERTIA_DECAY;
 
                         SystemClock.sleep(inertiaBaseInterval);
                     }
@@ -119,7 +126,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
     private Thread inertiaThread;
     private final Semaphore inertiaSemaphore = new Semaphore(0);
     private long inertiaStartTime = 0;
-    private long inertiaBaseInterval = 10;
+    private long inertiaBaseInterval = 16;
     private boolean inertiaScrollingEnabled = true;
     private boolean inertiaSwiping = false;
     private int inertiaMetaState = 0;
@@ -127,6 +134,13 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
     private float lastSpeedY = 0;
     private float lastX = 0;
     private float lastY = 0;
+
+    // 指数衰减近似: 0.92 每 16ms tick ≈ e^(-0.083*16) ≈ 0.92,30 帧 ≈ 8% 残余
+    private static final float INERTIA_DECAY = 0.92f;
+    // 速度小于此阈值(px/tick)即停止,避免无限逼近 0
+    private static final float INERTIA_STOP_THRESHOLD = 0.5f;
+    // pan 节流:tick 内速度超过此阈值才调 movePanToMakePointerVisible,避免每 16ms 一次布局
+    private static final float PAN_TRIGGER_THRESHOLD = 50f;
 
     @Override
     public boolean onTouchEvent(MotionEvent e) {
@@ -233,12 +247,12 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
 
                         if (timeElapsed > interval) {
                             if (lastX != 0) {
-                                lastSpeedX = ((e.getX() - lastX) / timeElapsed) * inertiaBaseInterval / canvas.getZoomFactor() / 1.6f;
+                                lastSpeedX = ((e.getX() - lastX) / timeElapsed) / canvas.getZoomFactor() / 1.6f;
                                 lastSpeedX = lastSpeedX * Utils.querySharedPreferenceInt(activity, Constants.touchpadCursorSpeed, 1) / 10;
                             }
 
                             if (lastY != 0) {
-                                lastSpeedY = ((e.getY() - lastY) / timeElapsed) * inertiaBaseInterval / canvas.getZoomFactor() / 1.6f;
+                                lastSpeedY = ((e.getY() - lastY) / timeElapsed) / canvas.getZoomFactor() / 1.6f;
                                 lastSpeedY = lastSpeedY * Utils.querySharedPreferenceInt(activity, Constants.touchpadCursorSpeed, 1) / 10;
                             }
 
