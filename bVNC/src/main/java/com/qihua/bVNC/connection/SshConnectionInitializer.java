@@ -624,6 +624,7 @@ public class SshConnectionInitializer extends ConnectionInitializer {
         if (canvas.pointer instanceof RemoteSshPointer) {
             ((RemoteSshPointer) canvas.pointer)
                     .setScrollback(renderer.getTermSession(), this::postPaintToBackground);
+            ((RemoteSshPointer) canvas.pointer).setRenderer(renderer);
         }
         ensurePaintThread();
         postPaintToBackground();

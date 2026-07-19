@@ -329,6 +329,16 @@ public class SshTerminalRenderer {
         return canvasRenderer != null ? canvasRenderer.charHeight : 1;
     }
 
+    /** Cell width in pixels. */
+    public float getCellWidth() {
+        return canvasRenderer != null ? canvasRenderer.charWidth : 1f;
+    }
+
+    /** Padding around the grid in pixels (left/top inset before col 0 / row 0). */
+    public int getPaddingPx() {
+        return canvasRenderer != null ? canvasRenderer.paddingPx : 0;
+    }
+
     /**
      * Y pixel of the libvterm cursor's bottom in mbitmap coordinates.
      * Used by the SSH IME push-up path to substitute for the

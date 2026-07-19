@@ -84,6 +84,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.PopupMenu;
 
 import com.google.android.material.button.MaterialButton;
 import com.limelight.binding.input.ControllerHandler;
@@ -109,6 +110,7 @@ import com.qihua.bVNC.input.KeyBoardListenerHelper;
 import com.qihua.bVNC.input.Panner;
 import com.qihua.bVNC.input.RemoteCanvasHandler;
 import com.qihua.bVNC.input.RemoteKeyboard;
+import com.qihua.bVNC.input.RemoteSshPointer;
 import com.qihua.util.SamsungDexUtils;
 import com.qihua.util.UriIntentParser;
 import com.qihua.bVNC.util.SmartResolutionUtils;
@@ -2172,6 +2174,71 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         }
 
         finish();
+    }
+
+    /**
+     * Show the SSH text-selection popup menu (Copy / Select All /
+     * Cancel) anchored at the given screen coordinates. {@code text} is
+     * the pre-extracted selection contents from {@link RemoteSshPointer}.
+     */
+    public void showSelectionMenu(String text, float screenX, float screenY) {
+        // Anchor the popup at the canvas, then offset to the finger-up
+        // position. canvas.getLocationOnScreen inside the lambda would
+        // be safe but easier to pass a real anchor view.
+        PopupMenu popup = new PopupMenu(this, canvas);
+        popup.getMenu().add(0, R.id.sshSelectionCopy, 0, R.string.ssh_selection_copy);
+        popup.getMenu().add(0, R.id.sshSelectionSelectAll, 1, R.string.ssh_selection_select_all);
+        popup.getMenu().add(0, R.id.sshSelectionCancel, 2, R.string.ssh_selection_cancel);
+
+        final RemoteSshPointer sshPointer = (canvas != null
+                && canvas.getPointer() instanceof RemoteSshPointer)
+                ? (RemoteSshPointer) canvas.getPointer() : null;
+
+        popup.setOnMenuItemClickListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.sshSelectionCopy) {
+                if (text != null && !text.isEmpty()) {
+                    Utils.setClipboard(this, text);
+                    Toast.makeText(this, R.string.ssh_selection_copied, Toast.LENGTH_SHORT).show();
+                }
+                if (sshPointer != null) sshPointer.cancelSelection();
+                canvas.invalidate();
+                return true;
+            } else if (id == R.id.sshSelectionSelectAll) {
+                if (sshPointer != null) {
+                    sshPointer.selectAllVisible();
+                    // Selection stays active — user can drag again to shrink,
+                    // or tap outside / dismiss to clear.
+                    canvas.invalidate();
+                }
+                return true;
+            } else if (id == R.id.sshSelectionCancel) {
+                if (sshPointer != null) sshPointer.cancelSelection();
+                canvas.invalidate();
+                return true;
+            }
+            return false;
+        });
+
+        popup.setOnDismissListener(new PopupMenu.OnDismissListener() {
+            @Override
+            public void onDismiss(PopupMenu menu) {
+                // Safety net: if the user dismisses by tapping outside the
+                // menu without picking an item, drop the highlight so the
+                // SSH canvas doesn't show stale selection rectangles.
+                if (sshPointer != null && sshPointer.hasSelection()) {
+                    sshPointer.cancelSelection();
+                    canvas.invalidate();
+                }
+            }
+        });
+
+        try {
+            popup.show();
+        } catch (Exception e) {
+            android.util.Log.w(TAG, "showSelectionMenu: popup.show failed", e);
+            if (sshPointer != null) sshPointer.cancelSelection();
+        }
     }
 
     /**

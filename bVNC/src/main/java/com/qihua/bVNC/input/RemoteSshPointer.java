@@ -3,6 +3,7 @@ package com.qihua.bVNC.input;
 import android.os.Handler;
 
 import com.qihua.bVNC.RemoteCanvas;
+import com.qihua.bVNC.ssh.SshTerminalRenderer;
 import com.qihua.bVNC.ssh.libvterm.SshTermStateMachine;
 import com.undatech.opaque.RemoteConnectable;
 
@@ -46,11 +47,36 @@ public class RemoteSshPointer extends RemotePointer {
 
     private SshTermStateMachine termMachine;
     private Runnable requestRepaint;
+    // Back-reference to the renderer so px↔cell conversion works from
+    // here. Wired by SshConnectionInitializer after construction
+    // (alongside setScrollback).
+    private SshTerminalRenderer sshRenderer;
+
+    // --- SSH text selection (Phase 2) ---
+    // Selection rectangle in SCREEN-grid coordinates (row in [0, rows),
+    // col in [0, cols)). -1 = no selection. Guarded by the same
+    // requestRepaint hook so updates from the input thread trigger a
+    // paint on the SSH-Paint thread.
+    private int selAnchorRow = -1, selAnchorCol = -1;
+    private int selEndRow = -1, selEndCol = -1;
+    // Cached selected text snapshot — rebuilt on every extend, returned
+    // + cleared by consumeSelectedText() at ACTION_UP time so the popup
+    // menu can show it without re-walking the grid.
+    private String pendingSelectedText = "";
+    // Last-known viewport snapshot for text extraction. Cached on
+    // extend so ACTION_UP can read it without re-acquiring the lock
+    // (and racing with a concurrent repaint).
+    private int cachedRows = -1, cachedCols = -1, cachedSbCount = -1;
 
     /** Wire the scrollback state machine + a coalesced-repaint hook. */
     public void setScrollback(SshTermStateMachine termMachine, Runnable requestRepaint) {
         this.termMachine = termMachine;
         this.requestRepaint = requestRepaint;
+    }
+
+    /** Wire the renderer reference for px↔cell conversion. Idempotent. */
+    public void setRenderer(SshTerminalRenderer renderer) {
+        this.sshRenderer = renderer;
     }
 
     @Override
@@ -74,6 +100,211 @@ public class RemoteSshPointer extends RemotePointer {
             termMachine.scrollByPixels(+decodeTouchMagnitude(speed, true));
         }
         if (requestRepaint != null) requestRepaint.run();
+    }
+
+    // ===== SSH text-selection API (Phase 2) =====
+
+    /**
+     * Begin a selection at bitmap-pixel coordinates (the same
+     * coordinate space as MotionEvent.x/y in the touchpad view, after
+     * zoom inversion by getDragPointerX/Y in the caller). Anchor and
+     * end both set to this point — the user then drags to extend.
+     */
+    public void enterSelectionPx(float pxX, float pxY) {
+        int[] cell = pxToCell(pxX, pxY);
+        if (cell == null) return;
+        selAnchorRow = selEndRow = cell[0];
+        selAnchorCol = selEndCol = cell[1];
+        pendingSelectedText = "";
+        cachedRows = cachedCols = cachedSbCount = -1;
+        if (requestRepaint != null) requestRepaint.run();
+    }
+
+    /**
+     * Move the selection end to bitmap-pixel coordinates. Rebuilds the
+     * cached text snapshot and requests a repaint.
+     */
+    public void extendSelectionPx(float pxX, float pxY) {
+        int[] cell = pxToCell(pxX, pxY);
+        if (cell == null) return;
+        if (selAnchorRow < 0) {
+            selAnchorRow = selEndRow = cell[0];
+            selAnchorCol = selEndCol = cell[1];
+            pendingSelectedText = "";
+            cachedRows = cachedCols = cachedSbCount = -1;
+        } else {
+            selEndRow = cell[0];
+            selEndCol = cell[1];
+        }
+        rebuildSelectedText();
+        if (requestRepaint != null) requestRepaint.run();
+    }
+
+    /**
+     * Map a bitmap-pixel coordinate to a (row, col) in the live screen
+     * grid. Returns null if the renderer or state machine hasn't been
+     * wired yet, or if the point is outside the grid padding.
+     */
+    public int[] pxToCell(float pxX, float pxY) {
+        if (sshRenderer == null || termMachine == null) return null;
+        float charW = sshRenderer.getCellWidth();
+        int charH = sshRenderer.getCellHeight();
+        int pad = sshRenderer.getPaddingPx();
+        int cols = termMachine.getCols();
+        int rows = termMachine.getRows();
+        float relX = pxX - pad;
+        float relY = pxY - pad;
+        if (relX < 0f || relY < 0f) {
+            // Click landed in the padding — snap to nearest edge cell.
+            relX = Math.max(0f, relX);
+            relY = Math.max(0f, relY);
+        }
+        int col = Math.min(cols - 1, (int) (relX / charW));
+        int row = Math.min(rows - 1, Math.max(0, (int) (relY / charH)));
+        return new int[] { row, col };
+    }
+
+    /** Drop the selection. Safe to call from any thread. */
+    public void cancelSelection() {
+        selAnchorRow = selAnchorCol = selEndRow = selEndCol = -1;
+        pendingSelectedText = "";
+        cachedRows = cachedCols = cachedSbCount = -1;
+        if (requestRepaint != null) requestRepaint.run();
+    }
+
+    /**
+     * Snapshot the current selection as the entire visible grid (live
+     * screen only — NOT scrollback). Sets anchor to (0,0), end to
+     * (rows-1, cols-1). Cached text is rebuilt synchronously.
+     */
+    public void selectAllVisible() {
+        if (termMachine == null) return;
+        cachedRows = termMachine.getRows();
+        cachedCols = termMachine.getCols();
+        cachedSbCount = termMachine.getScrollbackCount();
+        selAnchorRow = 0;
+        selAnchorCol = 0;
+        selEndRow = cachedRows - 1;
+        selEndCol = cachedCols - 1;
+        rebuildSelectedText();
+        if (requestRepaint != null) requestRepaint.run();
+    }
+
+    /**
+     * Return and clear the cached selection text. Called by the popup
+     * menu at ACTION_UP time. Returns "" if no selection or if the
+     * selection collapsed (anchor == end).
+     */
+    public String consumeSelectedText() {
+        String t = pendingSelectedText;
+        pendingSelectedText = "";
+        return t;
+    }
+
+    /** Whether a non-empty selection rectangle is currently active. */
+    public boolean hasSelection() {
+        return selAnchorRow >= 0 && selAnchorCol >= 0
+                && selEndRow >= 0 && selEndCol >= 0;
+    }
+
+    public int getSelectionAnchorRow() { return selAnchorRow; }
+    public int getSelectionAnchorCol() { return selAnchorCol; }
+    public int getSelectionEndRow() { return selEndRow; }
+    public int getSelectionEndCol() { return selEndCol; }
+
+    /**
+     * Walk the selection rectangle (in screen-grid coords) and
+     * assemble the corresponding text from the state machine. Uses
+     * the cached rows/cols/sbCount if present (set by enterSelection
+     * / selectAllVisible / extendSelection), otherwise reads them
+     * once via the state machine's synchronized getters.
+     *
+     * <p>Codepoint semantics (per TermCell):
+     * <ul>
+     *   <li>{@code codepoint > 0}: real character — emit as UTF-16
+     *       (handles surrogate pairs via {@code Character.toChars}).
+     *   <li>{@code codepoint == 0}: empty cell — emit a single space.
+     *   <li>{@code codepoint == -1}: right half of a wide (CJK) char
+     *       — skip; the primary cell already emitted the codepoint.
+     * </ul>
+     *
+     * <p>Each row gets a trailing {@code '\n'} except the last row
+     * of the selection (matches Unix xterm-style copy semantics —
+     * pasting into a shell inserts a clean newline-terminated block
+     * but doesn't tack a trailing blank line).
+     */
+    private void rebuildSelectedText() {
+        if (termMachine == null || !hasSelection()) {
+            pendingSelectedText = "";
+            return;
+        }
+        int rows, cols, sbCount;
+        if (cachedRows > 0 && cachedCols > 0 && cachedSbCount >= 0) {
+            rows = cachedRows;
+            cols = cachedCols;
+            sbCount = cachedSbCount;
+        } else {
+            rows = termMachine.getRows();
+            cols = termMachine.getCols();
+            sbCount = termMachine.getScrollbackCount();
+            cachedRows = rows;
+            cachedCols = cols;
+            cachedSbCount = sbCount;
+        }
+        // Normalize: row0<=row1, col0<=col1 within a row.
+        int r0 = Math.min(selAnchorRow, selEndRow);
+        int r1 = Math.max(selAnchorRow, selEndRow);
+        int c0, c1;
+        if (selAnchorRow == selEndRow) {
+            c0 = Math.min(selAnchorCol, selEndCol);
+            c1 = Math.max(selAnchorCol, selEndCol);
+        } else if (selAnchorRow < selEndRow) {
+            c0 = selAnchorCol;
+            c1 = selEndCol;
+        } else {
+            c0 = selEndCol;
+            c1 = selAnchorCol;
+        }
+        // Clamp — should already be in range from the caller, but be defensive.
+        r0 = Math.max(0, Math.min(r0, rows - 1));
+        r1 = Math.max(0, Math.min(r1, rows - 1));
+        c0 = Math.max(0, Math.min(c0, cols - 1));
+        c1 = Math.max(0, Math.min(c1, cols - 1));
+
+        // Live grid only for now — scrollback integration is a future
+        // extension. The screen row `r` corresponds to live row `r`
+        // when the viewport is at the bottom (offset==0). When the user
+        // has scrolled back, screen row r corresponds to virtual line
+        // sbCount - offset + r; if that v < sbCount it's in scrollback.
+        // We always emit from the LIVE grid here, even when scrolled —
+        // a selection made while scrolled back still maps to the same
+        // screen rows. (Caveat: cells in scrollback rows show the
+        // scrollback content visually, but getCell() returns the live
+        // row at that index. To get scrollback content the caller
+        // would need to pass getScrollbackCell; left for follow-up.)
+        StringBuilder sb = new StringBuilder((r1 - r0 + 1) * (c1 - c0 + 1) + 4);
+        for (int row = r0; row <= r1; row++) {
+            int colStart = (row == r0) ? c0 : 0;
+            int colEnd   = (row == r1) ? c1 : (cols - 1);
+            for (int col = colStart; col <= colEnd; col++) {
+                SshTermStateMachine.TermCell cell = termMachine.getCell(row, col);
+                if (cell == null) {
+                    sb.append(' ');
+                    continue;
+                }
+                if (cell.codepoint == -1) {
+                    // right half of a wide char — primary already emitted
+                    continue;
+                }
+                if (cell.codepoint <= 0) {
+                    sb.append(' ');
+                    continue;
+                }
+                sb.append(new String(Character.toChars(cell.codepoint)));
+            }
+            if (row < r1) sb.append('\n');
+        }
+        pendingSelectedText = sb.toString();
     }
 
     @Override

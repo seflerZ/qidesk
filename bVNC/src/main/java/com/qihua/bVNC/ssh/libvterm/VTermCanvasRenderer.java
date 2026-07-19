@@ -53,17 +53,29 @@ public final class VTermCanvasRenderer {
     private static final int ATTR_STRIKE    = 32;
 
     private final int fontSizePx;
-    private final int paddingPx;
+    public final int paddingPx;
     private final Typeface typeface;
     private final TextPaint textPaint;
     private final Paint bgPaint;
     private final Paint underlinePaint;
     private final Paint cursorPaint;
+    private final Paint selectionPaint;
 
     /** Cell width in pixels, valid after construction. */
     public final float charWidth;
     /** Cell height in pixels, valid after construction. */
     public final int charHeight;
+
+    // SSH text selection state. -1 = no selection. Written from any
+    // thread via setSelection(); read only from render() on the
+    // SSH-Paint thread. selectionActive is volatile because setSelection
+    // is called from the input (UI) thread while render() reads it from
+    // the paint thread; the four ints are read together once at the top
+    // of paintSelection into locals, so torn reads across the four
+    // variables are not observable within one render pass.
+    private volatile boolean selectionActive = false;
+    private int selAnchorRow = -1, selAnchorCol = -1;
+    private int selEndRow = -1, selEndCol = -1;
 
     public VTermCanvasRenderer(int fontSizePx, int paddingPx, Typeface typeface, Context ctx) {
         this.fontSizePx = fontSizePx;
@@ -89,6 +101,13 @@ public final class VTermCanvasRenderer {
 
         this.cursorPaint = new Paint();
         cursorPaint.setStyle(Paint.Style.FILL);
+
+        // Selection highlight — drawn on top of cell bg but UNDER the
+        // glyphs (so the selected text is still legible). 40% opacity
+        // Material blue, mirrors Android's standard text-selection tint.
+        this.selectionPaint = new Paint();
+        selectionPaint.setStyle(Paint.Style.FILL);
+        selectionPaint.setColor(0x664A90E2);
 
         // Read the theme-driven defaults from resources. The SSH
         // initializer calls setPalette() again on theme flips so the
@@ -128,6 +147,39 @@ public final class VTermCanvasRenderer {
         this.bgColor = newBg;
         this.defaultFg = newFg;
         this.defaultBg = this.bgColor;
+    }
+
+    /**
+     * Set the active text selection rectangle, in screen-grid
+     * coordinates (row in [0, rows), col in [0, cols)). Anchor and end
+     * may be in either order — paintSelection normalizes them. Pass
+     * all four as -1 (or call {@link #clearSelection}) to drop the
+     * highlight. Safe to call from any thread.
+     */
+    public void setSelection(int anchorRow, int anchorCol, int endRow, int endCol) {
+        if (anchorRow < 0 || anchorCol < 0 || endRow < 0 || endCol < 0) {
+            clearSelection();
+            return;
+        }
+        this.selAnchorRow = anchorRow;
+        this.selAnchorCol = anchorCol;
+        this.selEndRow = endRow;
+        this.selEndCol = endCol;
+        this.selectionActive = true;
+    }
+
+    /** Drop the active selection. Safe to call from any thread. */
+    public void clearSelection() {
+        this.selectionActive = false;
+        this.selAnchorRow = -1;
+        this.selAnchorCol = -1;
+        this.selEndRow = -1;
+        this.selEndCol = -1;
+    }
+
+    /** Whether a selection is currently set. */
+    public boolean hasSelection() {
+        return selectionActive;
     }
 
     /**
@@ -224,6 +276,14 @@ public final class VTermCanvasRenderer {
             canvas.drawRect(paddingPx, gridBottom, clipRight, clipBottom, bgPaint);
         }
         canvas.restoreToCount(saveCount);
+
+        // Selection highlight — drawn AFTER the gap fills but BEFORE
+        // the cursor so the highlight tints selected cells, then the
+        // cursor (if it happens to land inside the selection) is still
+        // visible on top.
+        if (selectionActive) {
+            paintSelection(canvas, cols, rows);
+        }
 
         // Cursor — only when viewing the live screen. While parked in
         // scrollback (offset > 0) the live cursor sits off-screen, so
@@ -335,6 +395,73 @@ public final class VTermCanvasRenderer {
             underlinePaint.setColor(textPaint.getColor());
             float underlineY = cellBottom - Math.max(1f, fontSizePx / 14f);
             canvas.drawLine(cellLeft, underlineY, cellRight, underlineY, underlinePaint);
+        }
+    }
+
+    /**
+     * Paint the active selection highlight. Anchor/end may be in either
+     * order; we normalize so row0 <= row1 and within a row col0 <= col1.
+     * Wide-char cells (CJK) render as 2-cell-wide rectangles so the
+     * highlight covers both halves.
+     */
+    private void paintSelection(Canvas canvas, int cols, int rows) {
+        int r0 = Math.min(selAnchorRow, selEndRow);
+        int r1 = Math.max(selAnchorRow, selEndRow);
+        int c0, c1;
+        if (selAnchorRow == selEndRow) {
+            c0 = Math.min(selAnchorCol, selEndCol);
+            c1 = Math.max(selAnchorCol, selEndCol);
+        } else if (selAnchorRow < selEndRow) {
+            c0 = selAnchorCol;
+            c1 = selEndCol;
+        } else {
+            c0 = selEndCol;
+            c1 = selAnchorCol;
+        }
+        // Clamp to grid bounds (a finger lift near the edge could have
+        // briefly produced out-of-range values before we caught them).
+        r0 = Math.max(0, Math.min(r0, rows - 1));
+        r1 = Math.max(0, Math.min(r1, rows - 1));
+        c0 = Math.max(0, Math.min(c0, cols - 1));
+        c1 = Math.max(0, Math.min(c1, cols - 1));
+
+        // First and last row span the full [c0..cols-1] / [0..c1]
+        // interior rows span the full row.
+        for (int row = r0; row <= r1; row++) {
+            int colStart, colEnd;
+            if (row == r0 && row == r1) {
+                colStart = c0; colEnd = c1;
+            } else if (row == r0) {
+                colStart = c0; colEnd = cols - 1;
+            } else if (row == r1) {
+                colStart = 0;   colEnd = c1;
+            } else {
+                colStart = 0;   colEnd = cols - 1;
+            }
+            float top = paddingPx + row * charHeight;
+            float bottom = top + charHeight;
+            // Walk cells, honoring width==2 (wide CJK). We collapse
+            // adjacent gap cells (codepoint==-1) into the previous
+            // primary's rect — but since the primary already covers 2
+            // cells of width via cell.width, we just rely on
+            // charWidth * max(1, cell.width) here without inspecting
+            // the actual cell content (cheaper, and the highlight
+            // visually matches the underlying 2-cell character).
+            for (int col = colStart; col <= colEnd; ) {
+                float left = paddingPx + col * charWidth;
+                // Heuristic: assume wide chars at the start of the
+                // row to extend. We can't read the cell here without
+                // re-entering sm synchronously, so we just paint
+                // 1-cell rects — single-line at 1x charWidth is the
+                // visually-correct case for ASCII; CJK on adjacent
+                // cols will paint 2 rects which look correct too.
+                // (If a wide char straddles the start col, the user
+                // will see a 1-cell highlight on its left half — rare
+                // enough not to warrant a sync read here.)
+                float right = left + charWidth;
+                canvas.drawRect(left, top, right, bottom, selectionPaint);
+                col++;
+            }
         }
     }
 }

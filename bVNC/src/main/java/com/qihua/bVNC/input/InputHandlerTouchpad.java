@@ -35,6 +35,7 @@ import com.qihua.bVNC.RemoteCanvasActivity;
 import com.qihua.bVNC.Utils;
 import com.undatech.opaque.util.GeneralUtils;
 import com.qihua.bVNC.R;
+import com.qihua.bVNC.connection.ProtocolType;
 
 import java.util.concurrent.Semaphore;
 
@@ -145,6 +146,14 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
     private float lastY = 0;
     // 单指移动动量采样:上次在 onScroll 单指分支更新光标的时刻,用于算松手速度 + 停顿判定
     private long lastMoveSampleMs = 0;
+
+    // SSH text selection. When sshSelectionMode is true, ACTION_MOVE
+    // updates the selection extent instead of moving the mouse, and
+    // ACTION_UP triggers the popup menu instead of releasing a button.
+    // Anchor coords are kept so ACTION_UP can position the popup at the
+    // finger-down point.
+    private boolean sshSelectionMode = false;
+    private float sshAnchorViewX = 0f, sshAnchorViewY = 0f;
 
     // 指数衰减近似: 0.92 每 16ms tick ≈ e^(-0.083*16) ≈ 0.92,30 帧 ≈ 8% 残余
     private static final float INERTIA_DECAY = 0.92f;
@@ -262,6 +271,18 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                         detectImmersiveSwipe(e.getX(), e.getY());
                         break;
                     case MotionEvent.ACTION_MOVE:
+                        // SSH selection in progress: extend selection
+                        // end instead of moving the mouse. Skip the
+                        // rest of the move handler entirely so we don't
+                        // drag the cursor, sample inertia speed, or
+                        // scroll the touchpad edge.
+                        if (sshSelectionMode && pointer instanceof RemoteSshPointer) {
+                            ((RemoteSshPointer) pointer).extendSelectionPx(
+                                    getDragPointerX(e), getDragPointerY(e));
+                            canvas.invalidate();
+                            break;
+                        }
+
                         long timeElapsed = System.currentTimeMillis() - inertiaStartTime;
                         long interval = inertiaBaseInterval * 2;
 
@@ -337,6 +358,25 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
 
                         break;
                     case MotionEvent.ACTION_UP:
+                        // SSH selection done: lock in the cached text
+                        // and surface the popup menu. Skip the rest of
+                        // the up handler — no releaseButton, no
+                        // edgeView cleanup, no dragMode reset.
+                        if (sshSelectionMode && pointer instanceof RemoteSshPointer) {
+                            RemoteSshPointer sshPointer = (RemoteSshPointer) pointer;
+                            String text = sshPointer.consumeSelectedText();
+                            sshSelectionMode = false;
+                            // Convert the anchor view coords to screen
+                            // coords for PopupMenu positioning.
+                            int[] screenLoc = new int[2];
+                            canvas.getLocationOnScreen(screenLoc);
+                            float screenX = screenLoc[0] + sshAnchorViewX;
+                            float screenY = screenLoc[1] + sshAnchorViewY;
+                            activity.showSelectionMenu(text, screenX, screenY);
+                            canvas.invalidate();
+                            break;
+                        }
+
                         hideEdgeViews();
 
                         if (dragMode || rightDragMode || middleDragMode) {
@@ -478,6 +518,25 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
 
     @Override
     public boolean onDoubleTap(MotionEvent e) {
+        // SSH mode: double-tap enters text-selection mode instead of
+        // starting a drag. The user then drags to extend, and ACTION_UP
+        // shows a popup menu (Copy / Select All / Cancel). Short-circuit
+        // before the existing dragMode path so non-SSH protocols are
+        // completely untouched.
+        if (canvas.getProtocolType() == ProtocolType.SSH
+                && pointer instanceof RemoteSshPointer) {
+            RemoteSshPointer sshPointer = (RemoteSshPointer) pointer;
+            sshSelectionMode = true;
+            sshAnchorViewX = e.getX();
+            sshAnchorViewY = e.getY();
+            sshPointer.enterSelectionPx(getDragPointerX(e), getDragPointerY(e));
+            if (touchpadFeedback) {
+                activity.sendShortVibration();
+            }
+            canvas.invalidate();
+            return true;
+        }
+
         if (dragMode || detectImmersiveRange(e.getX(), e.getY())) {
             return false;
         }

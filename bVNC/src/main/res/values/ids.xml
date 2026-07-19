@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <item name="actionInputModeToggle" type="id" />
+    <item name="sshSelectionCopy" type="id" />
+    <item name="sshSelectionSelectAll" type="id" />
+    <item name="sshSelectionCancel" type="id" />
 </resources>
