@@ -497,7 +497,7 @@ public class Utils {
         boolean result = defaultValue;
         if (context != null) {
             SharedPreferences sp = getPrefs(context);
-            result = sp.getBoolean(key, false);
+            result = sp.getBoolean(key, defaultValue);
         }
         return result;
     }
