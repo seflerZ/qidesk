@@ -42,7 +42,6 @@ import com.qihua.bVNC.BuildConfig;
 
 import java.util.LinkedList;
 import java.util.Queue;
-import java.util.concurrent.Semaphore;
 
 abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureListener
         implements InputHandler, ScaleGestureDetector.OnScaleGestureListener {
@@ -74,16 +73,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     protected float totalMoveX, totalMoveY;
     // These variables keep track of which pointers have seen ACTION_DOWN events.
     protected boolean secondPointerWasDown = false;
-    protected long inertiaStartTime = 0;
-    protected Thread inertiaThread;
-    protected long inertiaBaseInterval = 10;
-    protected boolean inertiaScrollingEnabled = true;
-    protected int inertiaMetaState = 0;
-    protected Semaphore inertiaSemaphore = new Semaphore(0);
-    protected float lastSpeedX = 0;
-    protected float lastSpeedY = 0;
-    protected float lastX = 0;
-    protected float lastY = 0;
     protected boolean thirdPointerWasDown = false;
 
     protected RemotePointer pointer;
@@ -98,7 +87,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     float yCurrentFocus;
     // These variables record whether there was a two-finger swipe performed up or down.
     boolean inSwiping = false;
-    boolean inertiaSwiping = false;
     boolean scrollUp = false;
     boolean scrollDown = false;
     boolean scrollLeft = false;
@@ -173,52 +161,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
         // 初始化指针加速助手
         pointerAccelerationHelper = new PointerAccelerationHelper(SPEED_ACCELERATION_FACTOR, MAX_ACCELERATION);
-        
-        // for inertia scrolling
-        inertiaThread = new Thread(() -> {
-            while (true) {
-                try {
-                    inertiaSemaphore.acquire();
-                } catch (Exception ignored) {
-                    // stop immediately
-                    continue;
-                }
-
-                if (lastSpeedX == 0 && lastSpeedY == 0) {
-                    continue;
-                }
-
-                int speedX = (int) lastSpeedX;
-                int speedY = (int) lastSpeedY;
-
-                if (inertiaSwiping) {
-                    while ((speedX != 0 || speedY != 0) && !inertiaThread.isInterrupted()) {
-                        doScroll(pointer.getX(), pointer.getY(), -speedX, -speedY, inertiaMetaState);
-//                        pointer.moveMouse(pointer.getX() + speedX, pointer.getY() + speedY, inertiaMetaState);
-
-                        speedX = (int) (speedX * 0.9);
-                        speedY = (int) (speedY * 0.9);
-
-                        SystemClock.sleep(inertiaBaseInterval);
-                    }
-                } else {
-                    while ((speedX != 0 || speedY != 0) && !inertiaThread.isInterrupted()) {
-                        pointer.moveMouse(pointer.getX() + speedX, pointer.getY() + speedY, inertiaMetaState);
-                        canvas.movePanToMakePointerVisible();
-
-                        speedX = (int) (speedX * 0.9);
-                        speedY = (int) (speedY * 0.9);
-
-                        SystemClock.sleep(inertiaBaseInterval);
-                    }
-                }
-
-                inertiaSwiping = false;
-            }
-        });
-
-        inertiaThread.setDaemon(true);
-        inertiaThread.start();
     }
 
     /**

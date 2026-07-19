@@ -35,6 +35,8 @@ import com.qihua.bVNC.Utils;
 import com.undatech.opaque.util.GeneralUtils;
 import com.qihua.bVNC.R;
 
+import java.util.concurrent.Semaphore;
+
 public class InputHandlerTouchpad extends InputHandlerGeneric {
     public static final String ID = "TOUCHPAD_MODE";
     static final String TAG = "InputHandlerTouchpad";
@@ -44,6 +46,52 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         super(activity, canvas, touchpad, pointer, debugLogging);
 
         this.displayDensity = activity.getResources().getDisplayMetrics().density;
+
+        // for inertia scrolling
+        inertiaThread = new Thread(() -> {
+            while (true) {
+                try {
+                    inertiaSemaphore.acquire();
+                } catch (Exception ignored) {
+                    // stop immediately
+                    continue;
+                }
+
+                if (lastSpeedX == 0 && lastSpeedY == 0) {
+                    continue;
+                }
+
+                int speedX = (int) lastSpeedX;
+                int speedY = (int) lastSpeedY;
+
+                if (inertiaSwiping) {
+                    while ((speedX != 0 || speedY != 0) && !inertiaThread.isInterrupted()) {
+                        doScroll(pointer.getX(), pointer.getY(), -speedX, -speedY, inertiaMetaState);
+//                        pointer.moveMouse(pointer.getX() + speedX, pointer.getY() + speedY, inertiaMetaState);
+
+                        speedX = (int) (speedX * 0.9);
+                        speedY = (int) (speedY * 0.9);
+
+                        SystemClock.sleep(inertiaBaseInterval);
+                    }
+                } else {
+                    while ((speedX != 0 || speedY != 0) && !inertiaThread.isInterrupted()) {
+                        pointer.moveMouse(pointer.getX() + speedX, pointer.getY() + speedY, inertiaMetaState);
+                        canvas.movePanToMakePointerVisible();
+
+                        speedX = (int) (speedX * 0.9);
+                        speedY = (int) (speedY * 0.9);
+
+                        SystemClock.sleep(inertiaBaseInterval);
+                    }
+                }
+
+                inertiaSwiping = false;
+            }
+        });
+
+        inertiaThread.setDaemon(true);
+        inertiaThread.start();
     }
 
     /*
@@ -66,6 +114,19 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
 
     // Add the following variables in the class member variable area
     private long lastScrollTimeMs = System.currentTimeMillis();
+
+    // inertia scrolling state (moved down from InputHandlerGeneric; touchpad-only)
+    private Thread inertiaThread;
+    private final Semaphore inertiaSemaphore = new Semaphore(0);
+    private long inertiaStartTime = 0;
+    private long inertiaBaseInterval = 10;
+    private boolean inertiaScrollingEnabled = true;
+    private boolean inertiaSwiping = false;
+    private int inertiaMetaState = 0;
+    private float lastSpeedX = 0;
+    private float lastSpeedY = 0;
+    private float lastX = 0;
+    private float lastY = 0;
 
     @Override
     public boolean onTouchEvent(MotionEvent e) {
