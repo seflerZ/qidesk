@@ -43,7 +43,6 @@ import android.graphics.Typeface;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Handler;
-import android.os.SystemClock;
 import android.text.ClipboardManager;
 import android.text.InputType;
 import android.util.AttributeSet;
@@ -1691,82 +1690,45 @@ public class RemoteCanvas extends SurfaceView implements Viewable
      * Provide an InputConnection so the soft keyboard can bind to this SurfaceView.
      *
      * <p>Without this, {@link InputMethodManager#showSoftInput} may refuse to show
-     * the keyboard on a plain SurfaceView. For SSH we also convert IME commitText()
-     * (the final candidate string delivered by Chinese IMEs) into KeyEvents with
-     * keyCode=0 + getCharacters(), which {@link RemoteSshKeyboard} already handles.
+     * the keyboard on a plain SurfaceView. We deliberately don't override
+     * commitText / sendKeyEvent / deleteSurroundingText — returning the default
+     * {@link BaseInputConnection} makes the IME fall back to
+     * {@link InputMethodManager#dispatchKeyEventFromInputMethod}, which routes
+     * each character through {@link View#dispatchKeyEvent} →
+     * {@link RemoteCanvasActivity#onKey} → keyboard.keyEvent. That single path
+     * handles voice input (Gboard/Tencent/Sogou), hardware keyboard, and SSH CJK
+     * candidate delivery via {@code keyCode=0 + getCharacters()} (handled in
+     * {@link com.qihua.bVNC.input.RemoteSshKeyboard#processLocalKeyEvent}).
      */
     @Override
     public InputConnection onCreateInputConnection(EditorInfo outAttrs) {
-        // Always return a real InputConnection. The IME needs this to bind to
-        // the SurfaceView and show the soft keyboard. If we only return it once
-        // getProtocolType() == SSH, the IME may have already bound before the
-        // connection initializer finished, leaving us with no way to receive
-        // text. For non-SSH protocols we just fall back to BaseInputConnection's
-        // default behaviour in each override.
-        outAttrs.inputType = InputType.TYPE_CLASS_TEXT
-                | InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+        // URI variation + NO_SUGGESTIONS tells IMEs (Gboard / Sogou / Baidu /
+        // Tencent / SwiftKey) to deliver voice input via raw key events through
+        // InputMethodManager.dispatchKeyEventFromInputMethod — same path as a
+        // hardware keyboard. Each KeyEvent walks the View tree and reaches the
+        // OnKeyListener installed on this Canvas (RemoteCanvasActivity.onKey),
+        // which forwards to inputHandler.onKeyDown/Up → keyboard.keyEvent →
+        // protocol keyboard.processLocalKeyEvent.
+        //
+        // Returning a vanilla BaseInputConnection(this, /*fullEditor=*/ false)
+        // — without overriding commitText / sendKeyEvent / deleteSurroundingText —
+        // is what the pre-libvterm codebase shipped and what the user has
+        // verified works for voice input on RDP/VNC/NVStream/SPICE. The SSH
+        // terminal also works through the same View→OnKeyListener path because
+        // RemoteSshKeyboard.processLocalKeyEvent already handles
+        // keyCode=0 + getCharacters() (the IME's final candidate delivery,
+        // which View dispatch forwards as ACTION_DOWN with empty keyCode).
+        //
+        // A previous refactor (commit 80eae8de, "ssh connection works now, with
+        // libvterm") introduced fullEditor=true + overridden commitText/sendKey
+        // returning true. That bypassed the OnKeyListener path entirely,
+        // breaking voice input and any IME that doesn't pre-decide between
+        // commitText and sendKeyEvent the way we hardcoded.
+        outAttrs.inputType = InputType.TYPE_TEXT_VARIATION_URI
                 | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS;
-        outAttrs.imeOptions = EditorInfo.IME_FLAG_NO_EXTRACT_UI
-                | EditorInfo.IME_ACTION_NONE;
+        outAttrs.imeOptions = EditorInfo.IME_FLAG_NO_EXTRACT_UI;
 
-        return new BaseInputConnection(this, true) {
-            @Override
-            public boolean commitText(CharSequence text, int newCursorPosition) {
-                Log.i(TAG, "IME commitText: '" + text + "' protocol=" + getProtocolType());
-                if (keyboard == null || text == null || text.length() == 0) {
-                    return super.commitText(text, newCursorPosition);
-                }
-                // For every protocol (RDP/VNC/SPICE/NVStream/SSH) the keyboard
-                // implementations already understand KEYCODE_UNKNOWN + getCharacters()
-                // for printable text. Special-case Enter so it sends a real KEYCODE_ENTER
-                // rather than a literal '\n' character.
-                for (int i = 0; i < text.length(); ) {
-                    int cp = Character.codePointAt(text, i);
-                    if (cp == '\n') {
-                        keyboard.keyEvent(KeyEvent.KEYCODE_ENTER,
-                                new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER));
-                        keyboard.keyEvent(KeyEvent.KEYCODE_ENTER,
-                                new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
-                    } else {
-                        String chars = new String(Character.toChars(cp));
-                        long time = SystemClock.uptimeMillis();
-                        KeyEvent event = new KeyEvent(time, chars, 0,
-                                KeyEvent.FLAG_SOFT_KEYBOARD | KeyEvent.FLAG_KEEP_TOUCH_MODE);
-                        keyboard.keyEvent(0, event);
-                    }
-                    i += Character.charCount(cp);
-                }
-                return true;
-            }
-
-            @Override
-            public boolean sendKeyEvent(KeyEvent event) {
-                Log.i(TAG, "IME sendKeyEvent: keyCode=" + event.getKeyCode()
-                        + " action=" + event.getAction() + " chars=" + event.getCharacters()
-                        + " protocol=" + getProtocolType());
-                if (keyboard != null) {
-                    keyboard.keyEvent(event.getKeyCode(), event);
-                    return true;
-                }
-                return super.sendKeyEvent(event);
-            }
-
-            @Override
-            public boolean deleteSurroundingText(int beforeLength, int afterLength) {
-                Log.i(TAG, "IME deleteSurroundingText: before=" + beforeLength
-                        + " protocol=" + getProtocolType());
-                if (keyboard == null || beforeLength <= 0) {
-                    return super.deleteSurroundingText(beforeLength, afterLength);
-                }
-                for (int i = 0; i < beforeLength; i++) {
-                    keyboard.keyEvent(KeyEvent.KEYCODE_DEL,
-                            new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL));
-                    keyboard.keyEvent(KeyEvent.KEYCODE_DEL,
-                            new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL));
-                }
-                return true;
-            }
-        };
+        return new BaseInputConnection(this, false);
     }
 
     public void drawTouchpadHint() {
