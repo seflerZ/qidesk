@@ -3,14 +3,16 @@ package com.qihua.bVNC.ssh;
 import android.util.Base64;
 import android.util.Log;
 
+import com.qihua.pubkeygenerator.PubkeyUtils;
 import com.trilead.ssh2.Connection;
 import com.trilead.ssh2.ConnectionInfo;
 import com.trilead.ssh2.ServerHostKeyVerifier;
 
 import java.io.IOException;
+import java.security.KeyPair;
 
 /**
- * SSH terminal connection (Phase 3.1).
+ * SSH terminal connection (Phase 3.1, pubkey auth added Phase 3.6).
  *
  * <p>Wraps a trilead {@link com.trilead.ssh2.Connection} + {@link com.trilead.ssh2.Session}
  * pair to provide a focused "connect, password-auth, start shell" surface
@@ -23,10 +25,18 @@ import java.io.IOException;
  * fingerprint dialog and KnownHosts persistence). Pubkey and
  * keyboard-interactive authentication are also deferred to Phase 3.6.
  *
- * <p>Thread model: {@link #connect} and {@link #openShell} are expected
- * to be called on a background thread (the "SSH-Connect" HandlerThread
- * owned by {@code SshConnectionInitializer}). {@link #close} and
- * {@link #resizePty} may be called from any thread.
+ * <p>Phase 3.6 added pubkey auth: callers that have a generated
+ * key-pair (via the {@code pubkeyGenerator} module's
+ * {@code GeneratePubkeyActivity}) call {@link #connectWithPubkey(String, String, String)}
+ * instead of {@link #connect(String, String)}. The pubkey auth path is
+ * preferred when a private key has been generated — the credential is
+ * sent on the wire before any password, matching the SSH protocol's
+ * own preferred-order semantics.
+ *
+ * <p>Thread model: {@link #connect}, {@link #connectWithPubkey} and
+ * {@link #openShell} are expected to be called on a background thread
+ * (the "SSH-Connect" HandlerThread owned by {@code SshConnectionInitializer}).
+ * {@link #close} and {@link #resizePty} may be called from any thread.
  */
 public final class SshTerminalConnection {
     private static final String TAG = "SshTerminalConnection";
@@ -65,12 +75,64 @@ public final class SshTerminalConnection {
      * {@code ConnectionBean.getSshHostKey()} field.
      */
     public boolean connect(String user, String password) throws IOException {
+        ensureConnected();
+        return conn.authenticateWithPassword(user, password);
+    }
+
+    /**
+     * Connect to the server and authenticate using a public/private
+     * key-pair. The stored {@code privKey} is the app's compact format:
+     * base64 of PKCS#8 DER (unencrypted) or base64 of salt+AES-encrypted
+     * PKCS#8 DER (passphrase-protected). We recover the {@link KeyPair}
+     * via {@link PubkeyUtils#decryptAndRecoverKeyPair(String, String)}
+     * and hand it directly to trilead's
+     * {@code authenticateWithPublicKey(user, KeyPair)} overload.
+     *
+     * <p>This bypasses trilead's PEM file parser entirely. An earlier
+     * revision tried the {@code (user, File, String)} overload by
+     * writing the key to a temp PEM file, but trilead's PEMDecoder
+     * rejected the wrapped base64 body with "Invalid PEM structure,
+     * '-----BEGIN...' missing" — the {@code (user, KeyPair)} overload
+     * avoids that whole class of problems because no PEM parsing is
+     * involved.
+     *
+     * <p>{@code pubKey} is unused on the wire — trilead only needs the
+     * private key half of the KeyPair. It's kept in the signature so
+     * callers can pass both bean fields through a single call.
+     */
+    public boolean connectWithPubkey(String user, String privKey, String pubKey, String passphrase) throws IOException {
+        if (pubKey == null) pubKey = "";
         if (conn != null) {
-            throw new IllegalStateException("SshTerminalConnection.connect called twice");
+            throw new IllegalStateException("SshTerminalConnection.connectWithPubkey called twice");
+        }
+        ensureConnected();
+
+        String pp = (passphrase != null) ? passphrase : "";
+        KeyPair kp = PubkeyUtils.decryptAndRecoverKeyPair(privKey, pp);
+        if (kp == null) {
+            throw new IOException("Could not decrypt private key — wrong passphrase or corrupt key");
+        }
+        return conn.authenticateWithPublicKey(user, kp);
+    }
+
+    /**
+     * Run the underlying TCP handshake + host-key capture. Shared by
+     * both auth paths — extracted from the original {@link #connect} so
+     * pubkey auth doesn't have to duplicate the trust-everything
+     * {@link ServerHostKeyVerifier} boilerplate.
+     *
+     * <p>Idempotent: a caller may invoke {@link #connect} after a
+     * failed {@link #connectWithPubkey} attempt (fallback to password
+     * auth) without paying the cost of a second TCP handshake. The
+     * trilead Connection object stays open across both auth attempts;
+     * we just need to make sure the second auth call doesn't trip the
+     * "called twice" guard. Phase 3.6 plan: tighten this verifier.
+     */
+    private void ensureConnected() throws IOException {
+        if (conn != null) {
+            return;
         }
         conn = new Connection(host, port);
-
-        // Phase 3.1: trust any host key. Phase 3.6 will tighten this.
         final ServerHostKeyVerifier trustingVerifier = new ServerHostKeyVerifier() {
             @Override
             public boolean verifyServerHostKey(String hostname, int port, String serverHostKeyAlgorithm,
@@ -86,8 +148,6 @@ public final class SshTerminalConnection {
                 + " kex=" + info.keyExchangeAlgorithm
                 + " cipherC2S=" + info.clientToServerCryptoAlgorithm
                 + " cipherS2C=" + info.serverToClientCryptoAlgorithm);
-
-        return conn.authenticateWithPassword(user, password);
     }
 
     /**

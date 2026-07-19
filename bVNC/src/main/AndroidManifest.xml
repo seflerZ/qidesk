@@ -27,13 +27,24 @@
         android:xlargeScreens="true" />
 
     <application>
-<!--        <activity-->
-<!--            android:name="com.qihua.pubkeygenerator.GeneratePubkeyActivity"-->
-<!--            android:configChanges="keyboardHidden|orientation"-->
-<!--            android:resizeableActivity="true"-->
-<!--            android:theme="@android:style/Theme.DeviceDefault"-->
-<!--            android:windowSoftInputMode="stateHidden|adjustResize"-->
-<!--            tools:replace="android:screenOrientation" />-->
+        <!--
+            GeneratePubkeyActivity lives in the :pubkeyGenerator module
+            whose own AndroidManifest.xml declares no components, so the
+            activity would never reach the final APK if left undeclared
+            here. AGP's manifest merger folds this <application> child into
+            the consuming app's merged manifest at build time. Without this
+            entry MainConfiguration.generatePubkey's startActivityForResult
+            throws ActivityNotFoundException the moment the user taps the
+            Manage Key button — the reason the SSH-pubkey flow appeared to
+            crash. (Phase 3.6.)
+        -->
+        <activity
+            android:name="com.qihua.pubkeygenerator.GeneratePubkeyActivity"
+            android:configChanges="keyboardHidden|orientation"
+            android:resizeableActivity="true"
+            android:theme="@style/QiHua"
+            android:windowSoftInputMode="stateHidden|adjustResize" />
+
         <uses-library
             android:name="com.sec.android.app.multiwindow"
             android:required="false" />

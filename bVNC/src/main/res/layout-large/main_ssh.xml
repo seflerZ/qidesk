@@ -119,43 +119,65 @@
                         android:singleLine="true"
                         android:text="@string/keep_password_button"
                         android:textAppearance="?android:attr/textAppearanceLarge" />
+
+                    <EditText
+                        android:id="@+id/sshPassphrase"
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/ssh_passphrase_hint"
+                        android:inputType="textNoSuggestions|textPassword"
+                        android:singleLine="true"
+                        android:textAppearance="?android:attr/textAppearanceLarge" />
                 </LinearLayout>
             </TableRow>
-
-            <!--
-                MainConfiguration.onCreate() unconditionally looks up
-                R.id.buttonGeneratePubkey and calls setOnClickListener
-                on it. Phase 3.1's SSH terminal does not need the Manage
-                Key button (pubkey auth is deferred to Phase 3.6), but
-                the base class doesn't know that. Hidden GONE placeholder
-                so findViewById returns non-null and the base class setup
-                doesn't NPE.
-            -->
-            <TableRow>
-                <Button
-                    android:id="@+id/buttonGeneratePubkey"
-                    android:layout_width="fill_parent"
-                    android:layout_height="wrap_content"
-                    android:enabled="true"
-                    android:text="@string/ssh_pubkey_button"
-                    android:visibility="gone"
-                    android:textAppearance="?android:attr/textAppearanceLarge" />
-            </TableRow>
-
-            <!--
-                Same reason as buttonGeneratePubkey: MainConfiguration
-                always looks up R.id.layoutUseSshPubkey. Phase 3.1's
-                SSH terminal doesn't use pubkey auth, so the container
-                is hidden (visibility=gone) but the View itself exists.
-            -->
-            <TableRow>
-                <LinearLayout
-                    android:id="@+id/layoutUseSshPubkey"
-                    android:layout_width="fill_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:visibility="gone" />
-            </TableRow>
         </TableLayout>
+
+        <!--
+            Phase 3.6 — pubkey auth UI. Pulled out of the TableLayout
+            (see the comment in layout/main_ssh.xml for the reason:
+            TableRow column-width math used to stretch this container
+            sideways after a long saved Passphrase).
+        -->
+        <LinearLayout
+            android:id="@+id/layoutUseSshPubkey"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="5dip"
+            android:paddingEnd="5dip">
+
+            <CheckBox
+                android:id="@+id/checkboxUseSshPubkey"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:checked="false"
+                android:singleLine="true"
+                android:text="@string/ssh_use_pubkey"
+                android:textAppearance="?android:attr/textAppearanceLarge" />
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/buttonGeneratePubkey"
+                style="@style/Widget.AppCompat.Button"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:enabled="true"
+                android:text="@string/ssh_pubkey_button" />
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/buttonImportPrivateKey"
+                style="@style/Widget.AppCompat.Button"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:enabled="true"
+                android:text="@string/ssh_import_privkey_button" />
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/buttonCopyPublicKey"
+                style="@style/Widget.AppCompat.Button"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:enabled="false"
+                android:text="@string/ssh_copy_pubkey_button" />
+        </LinearLayout>
     </LinearLayout>
 </ScrollView>

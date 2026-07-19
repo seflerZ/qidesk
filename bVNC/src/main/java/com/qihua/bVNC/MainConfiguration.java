@@ -454,11 +454,30 @@ public abstract class MainConfiguration extends AppCompatActivity {
             if (resultCode == Activity.RESULT_OK && data != null && data.getExtras() != null) {
                 Bundle b = data.getExtras();
                 String privateKey = (String) b.get("PrivateKey");
-                if (!privateKey.equals(selected.getSshPrivKey()) && !privateKey.isEmpty())
-                    Toast.makeText(getBaseContext(), getString(R.string.ssh_key_generated), Toast.LENGTH_LONG).show();
-                selected.setSshPrivKey(privateKey);
-                selected.setSshPubKey((String) b.get("PublicKey"));
-                selected.saveAndWriteRecent(true, this);
+                Log.i(TAG, "ACTIVITY_GEN_KEY result: privKeyLen=" + (privateKey == null ? -1 : privateKey.length())
+                        + " pubKeyLen=" + ((String) b.get("PublicKey") == null ? -1 : ((String) b.get("PublicKey")).length())
+                        + " passLen=" + (b.getString("Passphrase") == null ? -1 : b.getString("Passphrase").length())
+                        + " existingPrivKeyLen=" + (selected.getSshPrivKey() == null ? -1 : selected.getSshPrivKey().length()));
+                if (privateKey != null && !privateKey.isEmpty()) {
+                    if (!privateKey.equals(selected.getSshPrivKey())) {
+                        Toast.makeText(getBaseContext(), getString(R.string.ssh_key_generated), Toast.LENGTH_LONG).show();
+                    }
+                    selected.setSshPrivKey(privateKey);
+                    selected.setSshPubKey((String) b.get("PublicKey"));
+                    // The GeneratePubkeyActivity also sends back the passphrase the
+                    // user typed at generation time so callers (e.g. ConfigSSH) can
+                    // pre-fill it back into the form. Save it to the same
+                    // ConnectionBean field used by the sshPassphrase EditText so
+                    // a subsequent updateViewFromConnection + onPause save also
+                    // persists it across config edits.
+                    String pass = b.getString("Passphrase");
+                    if (pass != null) {
+                        selected.setSshPassPhrase(pass);
+                    }
+                    selected.saveAndWriteRecent(true, this);
+                } else {
+                    Log.w(TAG, "ACTIVITY_GEN_KEY returned empty privateKey — did the user cancel?");
+                }
             } else
                 Log.i(TAG, "The user cancelled SSH key generation.");
         }

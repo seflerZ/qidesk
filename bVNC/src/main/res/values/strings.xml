@@ -813,6 +813,17 @@ When you add or edit a connection, you will see a connection configuration page.
     <string name="ssh_passphrase_hint">SSH Passphrase</string>
     <string name="ssh_pubkey_button">Manage Key</string>
     <string name="ssh_use_pubkey">Use Key</string>
+    <string name="ssh_import_privkey_button">Import Private Key</string>
+    <string name="ssh_import_privkey_title">Import Private Key</string>
+    <string name="ssh_import_privkey_hint">Paste your OpenSSH/PEM private key here.\n\nSupports unencrypted RSA/DSA/ECDSA, and passphrase-encrypted PEM keys (enter passphrase below).</string>
+    <string name="ssh_import_privkey_ok">Private key imported.</string>
+    <string name="ssh_import_privkey_failed">Could not parse the key. Check format and passphrase.</string>
+    <string name="ssh_import_privkey_import">Import</string>
+    <string name="ssh_import_privkey_cancel">Cancel</string>
+    <string name="ssh_copy_pubkey_button">Copy Public Key</string>
+    <string name="ssh_pubkey_copy_ok">Public key copied. Paste it into the server\'s ~/.ssh/authorized_keys.</string>
+    <string name="ssh_pubkey_copy_no_key">No key yet. Tap \"Manage Key\" first.</string>
+    <string name="ssh_pubkey_copy_wrong_passphrase">Could not decrypt the key. Check passphrase and try again.</string>
     <string name="ssh_use_x11vnc">Auto Desktop</string>
     <string name="ssh_x11vnc_customize">Configure AutoX</string>
 

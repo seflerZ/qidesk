@@ -156,6 +156,21 @@ public class SshConnectionInitializer extends ConnectionInitializer {
     private int sshPort;
     private String sshUser;
     private String sshPassword;
+    /**
+     * Phase 3.6: pubkey auth fields. {@code sshPrivKey} is the
+     * OpenSSH/PEM-format private key string (possibly passphrase-encrypted,
+     * base64-encoded by the {@code pubkeyGenerator} module's
+     * {@code GeneratePubkeyActivity}). {@code sshPrivKey} being non-empty
+     * in conjunction with {@code useSshPubKey=true} on the
+     * {@code ConnectionBean} triggers pubkey auth in
+     * {@link #doConnect()}; {@code sshPassPhrase} is the passphrase used
+     * to decrypt the key (empty string when the key was generated
+     * unencrypted).
+     */
+    private String sshPrivKey;
+    private String sshPubKey;
+    private String sshPassPhrase;
+    private boolean useSshPubKey;
     private String savedHostKey;
     /**
      * Phase 2: bridge between the trilead Session and TermSession. Built
@@ -246,6 +261,15 @@ public class SshConnectionInitializer extends ConnectionInitializer {
         sshPort = conn.getPort() == 0 ? 22 : conn.getPort();
         sshUser = conn.getUserName();
         sshPassword = conn.getPassword();
+        // Phase 3.6 — pubkey auth fields. All three are read here (not
+        // inside the connect thread) so the connect thread only has to
+        // pick an auth path; this also keeps the connection bean's
+        // getters consistent with how MainConfiguration/ConfigSSH saved
+        // them earlier on the UI thread.
+        sshPrivKey = conn.getSshPrivKey() == null ? "" : conn.getSshPrivKey();
+        sshPubKey = conn.getSshPubKey() == null ? "" : conn.getSshPubKey();
+        sshPassPhrase = conn.getSshPassPhrase() == null ? "" : conn.getSshPassPhrase();
+        useSshPubKey = conn.getUseSshPubKey();
         savedHostKey = conn.getSshHostKey() == null ? "" : conn.getSshHostKey();
         sshTerminal = new SshTerminalConnection(sshHost, sshPort, savedHostKey);
 
@@ -370,10 +394,43 @@ public class SshConnectionInitializer extends ConnectionInitializer {
      */
     private void doConnect() {
         try {
-            Log.i(TAG, "doConnect: connecting " + sshUser + "@" + sshHost + ":" + sshPort);
-            boolean authOk = sshTerminal.connect(sshUser, sshPassword);
+            Log.i(TAG, "doConnect: connecting " + sshUser + "@" + sshHost + ":" + sshPort
+                    + " useSshPubKey=" + useSshPubKey + " hasPrivKey=" + !sshPrivKey.isEmpty());
+            boolean authOk;
+            // Phase 3.6 — pubkey auth is preferred when a generated private
+            // key is present, even if the user also typed a password. The
+            // SSH protocol naturally tries every method the server offers;
+            // sending pubkey first means a passphrase-less key skips the
+            // password round-trip entirely, while a passphrase-protected
+            // key still wins when the server supports publickey. We fall
+            // back to password only when the key is missing or empty AND
+            // the user actually checked Use Key (a UI choice we respect,
+            // not override).
+            boolean canPubkey = useSshPubKey && !sshPrivKey.isEmpty();
+            if (canPubkey) {
+                try {
+                    authOk = sshTerminal.connectWithPubkey(sshUser, sshPrivKey, sshPubKey, sshPassPhrase);
+                } catch (Exception pubkeyErr) {
+                    // The key is encrypted with a passphrase that's wrong
+                    // / missing, or the server doesn't accept publickey.
+                    // Defer to password as the documented fallback for the
+                    // VNC-over-SSH-tunnel flow (see SSHConnection.
+                    // connectAndAuthenticate L386-431). For the terminal
+                    // path we surface the original pubkey error rather
+                    // than silently retry — surfacing the cause lets the
+                    // user fix a bad passphrase by re-entering it through
+                    // ConfigSSH instead of guessing why password auth
+                    // "didn't work."
+                    Log.w(TAG, "doConnect: pubkey auth failed (" + pubkeyErr.getMessage()
+                            + "), falling back to password");
+                    authOk = sshTerminal.connect(sshUser, sshPassword);
+                }
+            } else {
+                authOk = sshTerminal.connect(sshUser, sshPassword);
+            }
             if (!authOk) {
-                throw new Exception("SSH password authentication failed for " + sshUser + "@" + sshHost);
+                throw new Exception("SSH authentication failed for " + sshUser + "@" + sshHost
+                        + (canPubkey ? " (pubkey + password both rejected)" : " (password rejected)"));
             }
             Log.i(TAG, "doConnect: auth OK, opening shell with xterm-256color PTY");
             // Open the PTY at the renderer's *real* cols/rows, not the
