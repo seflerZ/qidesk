@@ -121,6 +121,10 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
 
     // Add the following variables in the class member variable area
     private long lastScrollTimeMs = System.currentTimeMillis();
+    // 边缘滑条重绘的独立节流门:不能复用 lastScrollTimeMs——onScroll 的 immersive 分支
+    // 每次事件都会写 lastScrollTimeMs,同一事件流里紧接着调 updateActiveEdgeSlider 时
+    // 时间差恒为 ~0,复用会让滑条永远被跳过。用独立时间戳与 SCROLL_SAMPLING_MS 对齐。
+    private long lastEdgeUpdateMs = 0;
 
     // inertia scrolling state (moved down from InputHandlerGeneric; touchpad-only)
     private Thread inertiaThread;
@@ -307,8 +311,9 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                         }
 
                         // Update edge slider position during swipe
-                        if (inSwiping) {
+                        if (inSwiping && System.currentTimeMillis() - lastEdgeUpdateMs >= SCROLL_SAMPLING_MS) {
                             updateActiveEdgeSlider(e.getX(), e.getY());
+                            lastEdgeUpdateMs = System.currentTimeMillis();
                         }
 
                         totalMoveX += Math.abs(e.getX() - lastX);
