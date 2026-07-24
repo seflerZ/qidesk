@@ -87,10 +87,11 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                         int nextY = Math.round(pointer.getY() + speedY);
                         pointer.moveMouse(nextX, nextY, inertiaMetaState);
 
-                        // pan 节流:只在高速时调,避免每 16ms 一次布局
-                        if (Math.abs(speedX) > PAN_TRIGGER_THRESHOLD || Math.abs(speedY) > PAN_TRIGGER_THRESHOLD) {
-                            canvas.movePanToMakePointerVisible();
-                        }
+                        // 每一 tick 都调一次:惯性尾巴速度已衰得很小,但光标可能正好停在视图
+                        // 可见边界外侧仍向同方向推,这时不调就会一直留在屏外。
+                        // movePanToMakePointerVisible 内部自己判是否需要 pan(没越界时直接
+                        // return false),没有越界时不会触发 resetScroll/layout,代价可控。
+                        canvas.movePanToMakePointerVisible();
 
                         speedX *= INERTIA_DECAY;
                         speedY *= INERTIA_DECAY;
@@ -131,7 +132,10 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
     // 每次事件都会写 lastScrollTimeMs,同一事件流里紧接着调 updateActiveEdgeSlider 时
     // 时间差恒为 ~0,复用会让滑条永远被跳过。用独立时间戳与 SCROLL_SAMPLING_MS 对齐。
     private long lastEdgeUpdateMs = 0;
-
+    // 边缘滚动 X/Y 各自的节流门:doScroll 减半后仍每 tick 都触发,如果 X 和 Y 都过了
+    // immersive 边界(对角边缘),共享 lastScrollTimeMs 会让后到的方向被跳过。
+    private long lastImmersiveScrollMsX = 0;
+    private long lastImmersiveScrollMsY = 0;
     // inertia scrolling state (moved down from InputHandlerGeneric; touchpad-only)
     private Thread inertiaThread;
     private final Semaphore inertiaSemaphore = new Semaphore(0);
@@ -160,8 +164,6 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
     private static final float INERTIA_DECAY = 0.92f;
     // 速度小于此阈值(px/tick)即停止,避免无限逼近 0
     private static final float INERTIA_STOP_THRESHOLD = 0.5f;
-    // pan 节流:tick 内速度超过此阈值才调 movePanToMakePointerVisible,避免每 16ms 一次布局
-    private static final float PAN_TRIGGER_THRESHOLD = 50f;
     // 单指移动动量:松手时每 tick 光标位移低于此值不触发滑行,精细微调不飘(仅快甩才滑)
     private static final float INERTIA_FLING_MIN_SPEED = 4f;
     // 松手距最后一次移动超过此时长视为已停顿,不触发滑行,避免"移动-停顿-松手"误滑
@@ -388,6 +390,8 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                         totalMoveX = 0;
                         totalMoveY = 0;
 
+                        // 临时回退:RdpScrollCoalescer 已不再用于滚动路径,无尾巴可 flush
+
                         break;
                 }
                 break;
@@ -486,6 +490,32 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                 boolean notPaused = System.currentTimeMillis() - lastScrollTimeMs <= INERTIA_FLING_TIMEOUT_MS;
 
                 if (fastEnough && notPaused) {
+                    // ============================================================
+                    // 低帧率协议 (RDP / VNC) 上的 scroll inertia 显式禁用
+                    // ============================================================
+                    // 背景:doScroll 对边缘 / 双指滚动做了两层降频处理——
+                    //   1. delta 系数减半 (distanceY * density / 4,原 /2)
+                    //   2. RDP 路径计划用 RdpScrollCoalescer 32ms 窗合包 (FLUSH_MS=32)
+                    // 这两层处理后每包 delta 翻倍,RDP 服务器侧 wheel 累加更稳定
+                    // (参见相关 RdpScrollCoalescer 调研历史)。但在松手阶段,
+                    // inertia 路径再走 doScroll 时,中间只有几个 tick,
+                    // 这些 tick 各被合 1~2 个 30Hz 窗口,服务器可能收不到或
+                    // 被新一轮手势覆盖,体感是"手指在快、松手后慢"。
+                    //
+                    // 与 NVStream/SPICE/SSH 的差异:NVStream 内部 batch
+                    // 路径天然无此问题,所以不需要在这里 bypass。
+                    //
+                    // 副作用说明:这里的 return-true 只阻止 scroll inertia
+                    // 释放,不影响 doScroll 本体,也不影响单指 pointer inertia
+                    // (pointer inertia 走 inertiaThread 的 else 分支
+                    // → pointer.moveMouse,跟此处分支无关)。
+                    //
+                    // 未来如果加了新的 RFB 派生指针类型 (如 RemoteSpiceRfbPointer),
+                    // 想继承同样的处理就把它的 instanceof 加进下面这个或判断里。
+                    // ============================================================
+                    if (pointer instanceof RemoteRdpPointer || pointer instanceof RemoteVncPointer) {
+                        return true;
+                    }
                     // 惯性阶段手指已离开,immersive(跟随手指在边缘的位置)语义已不存在。
                     // 边缘滚动松手不走 endDragModesAndScrolling,immersiveSwipeX/Y 残留为 true,
                     // 会在 doScroll(638/671 行)门掉某方向分量,导致边缘惯性不如双指顺。
@@ -613,7 +643,8 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                 return true;
             }
 
-            Pair<Integer, Integer> pointerPos = computePointerPos(-cumulatedX, -cumulatedY, 1.5f);
+            // 加速基数 1.5 → 1.35 → 1.2 → 1.0,接近无加速线性
+            Pair<Integer, Integer> pointerPos = computePointerPos(-cumulatedX, -cumulatedY, 1.0f);
 
             // 动量采样:用光标坐标位移(而非手指位移)除以采样间隔,量纲对齐惯性线程
             // else 分支的 pointer.getX()+speed,松手滑行速度不会突变。
@@ -657,14 +688,14 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
            return true;
         }
     
-        if (!inScrolling && twoFingers && (Math.abs(distanceX) > 4 || Math.abs(distanceY) > 4)) {
+        if (!inScrolling && twoFingers && (Math.abs(distanceX) > 2 || Math.abs(distanceY) > 2)) {
             inScrolling = true;
             inSwiping = true;
         }
     
         // Calculate swipe speed and apply acceleration using the helper
         float speedMultiplier = pointerAccelerationHelper.calculateAccelerationMultiplier(
-                System.currentTimeMillis(), cumulatedX, cumulatedY, 1.2f);
+                System.currentTimeMillis(), cumulatedX, cumulatedY, 1.3f);
     
         // Make distanceX/Y display density independent with speed-based acceleration.
         distanceX = (cumulatedX / displayDensity) * canvas.getZoomFactor() * speedMultiplier;
@@ -710,8 +741,11 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         }
 
         // get the relative moving distance compared to one step
-        float ratioY = distanceY * displayDensity / 2;
-        float ratioX = distanceX * displayDensity / 2;
+        // 边缘滚动(delta 太大导致远程帧缓存压力过高,延迟涨):
+        // distanceY 已经乘过 zoomFactor(常 ≥ 2),原 /2 → /4 让单 tick 位移减半,
+        // 对角边缘时与下方 per-axis 节流门一起把发送频率也减半,两步降速。
+        float ratioY = distanceY * displayDensity / 4;
+        float ratioX = distanceX * displayDensity / 4;
 
         // The direction is just up side down.
         int newY = (int) -(ratioY);
@@ -727,78 +761,93 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         }
 
         if ((scrollUp || scrollDown) && !immersiveSwipeX) {
-            if (distanceY < 0 && newY == 0) {
-                delta = 0;
-            } else if (distanceY > 0 && newY == 0) {
-                delta = 0;
-            } else {
-                delta = newY;
+            // 边缘滚动 Y 节流:同一方向上次 send 距今 < SCROLL_SAMPLING_MS(30)就跳过本次 Y,
+            // 但继续到下面的 X 分支(对角边缘 swipe 需要 X/Y 各自独立推进)。
+            // 例外:pointer 是 RDP 时走累积合并(16ms 窗)而不是节流——RDP 高 RTT 高频小 delta
+            // 会被服务器淹没,合成少包大 delta 更稳。
+            boolean rdpY = (pointer instanceof RemoteRdpPointer);
+            if (rdpY || System.currentTimeMillis() - lastImmersiveScrollMsY >= SCROLL_SAMPLING_MS) {
+                if (distanceY < 0 && newY == 0) {
+                    delta = 0;
+                } else if (distanceY > 0 && newY == 0) {
+                    delta = 0;
+                } else {
+                    delta = newY;
+                }
+
+                if (delta != 0) {
+                    if (delta > 255) {
+                        delta = 255;
+                    } else if (delta < -255) {
+                        delta = -255;
+                    }
+
+                    if (delta < 0) {
+                        // use positive number to represent the component directly for
+                        // the least two bytes
+                        delta = 256 + delta;
+                    }
+
+                    lastDelta = delta;
+
+                    if (rdpY) {
+                        // RDP: 用户反馈合包 path 完全滚不动。临时回退到直接发送以恢复基本滚动。
+                        // 合包/RdpScrollCoalescer 暂保留工具类,后续定位问题后再接回。
+                        sendScrollEvents(x, y, delta, meta);
+                        lastImmersiveScrollMsY = System.currentTimeMillis();
+                    } else {
+                        sendScrollEvents(x, y, delta, meta);
+                        lastImmersiveScrollMsY = System.currentTimeMillis();
+                    }
+
+                    swipeSpeed = 1;
+                }
             }
-
-            if (delta == 0) {
-                return true;
-            }
-
-            if (delta > 255) {
-                delta = 255;
-            } else if (delta < -255) {
-                delta = -255;
-            }
-
-            if (delta < 0) {
-                // use positive number to represent the component directly for
-                // the least two bytes
-                delta = 256 + delta;
-            }
-
-            lastDelta = delta;
-
-            // Set the coordinates to where the swipe began (i.e. where scaling started).
-            sendScrollEvents(x, y, delta, meta);
-
-            swipeSpeed = 1;
         }
 
         if ((scrollRight || scrollLeft) && !immersiveSwipeY) {
-            if (distanceX < 0 && newX == 0) {
-                delta = 0;
-            } else if (distanceX > 0 && newX == 0) {
-                delta = 0;
-            } else {
-                delta = newX;
+            // 边缘滚动 X 节流——见上 Y 分支注释(RDP 例外同理,临时回退)
+            boolean rdpX = (pointer instanceof RemoteRdpPointer);
+            if (rdpX || System.currentTimeMillis() - lastImmersiveScrollMsX >= SCROLL_SAMPLING_MS) {
+                if (distanceX < 0 && newX == 0) {
+                    delta = 0;
+                } else if (distanceX > 0 && newX == 0) {
+                    delta = 0;
+                } else {
+                    delta = newX;
+                }
+
+                if (delta != 0) {
+                    if (delta > 255) {
+                        delta = 255;
+                    } else if (delta < -255) {
+                        delta = -255;
+                    }
+
+                    if (delta < 0) {
+                        // use positive number to represent the component directly for
+                        // the least two bytes
+                        delta = 256 + delta;
+                    }
+
+                    lastDelta = delta;
+
+                    if (rdpX) {
+                        sendScrollEvents(x, y, delta, meta);
+                        lastImmersiveScrollMsX = System.currentTimeMillis();
+                    } else {
+                        sendScrollEvents(x, y, delta, meta);
+                        lastImmersiveScrollMsX = System.currentTimeMillis();
+                    }
+
+                    swipeSpeed = 1;
+                }
             }
-
-            if (delta == 0) {
-                return true;
-            }
-
-            if (delta > 255) {
-                delta = 255;
-            } else if (delta < -255) {
-                delta = -255;
-            }
-
-            if (delta < 0) {
-                // use positive number to represent the component directly for
-                // the least two bytes
-                delta = 256 + delta;
-            }
-
-            lastDelta = delta;
-
-            // Set the coordinates to where the swipe began (i.e. where scaling started).
-            sendScrollEvents(x, y, delta, meta);
-
-            swipeSpeed = 1;
         }
 
         return false;
     }
 
-    /**
-     * (non-Javadoc)
-     * @see com.qihua.bVNC.input.InputHandlerGeneric#getX(android.view.MotionEvent)
-     */
     protected int getDragPointerX(MotionEvent e) {
         RemotePointer p = canvas.getPointer();
         if (dragMode || rightDragMode || middleDragMode) {
@@ -816,10 +865,6 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         return p.getX();
     }
 
-    /**
-     * (non-Javadoc)
-     * @see com.qihua.bVNC.input.InputHandlerGeneric#getY(android.view.MotionEvent)
-     */
     protected int getDragPointerY(MotionEvent e) {
         RemotePointer p = canvas.getPointer();
         if (dragMode || rightDragMode || middleDragMode) {

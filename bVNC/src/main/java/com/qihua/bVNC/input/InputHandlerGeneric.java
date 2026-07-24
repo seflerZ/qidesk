@@ -179,8 +179,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
     private long lastPointerEventTime = 0;
     private long lastScrollEventTime = 0;
-    protected static final float SPEED_ACCELERATION_FACTOR = 0.5f; // 加速度因子
-    protected static final float MAX_ACCELERATION = 5f; // 最大加速度乘数
+    protected static final float SPEED_ACCELERATION_FACTOR = 1.2f; // 加速度因子:0.5 → 1.2,快滚加速感更明显
+    protected static final float MAX_ACCELERATION = 8f; // 最大加速度乘数:5 → 8,允许更快滚速突破上限
     
     // 添加指针加速助手
     protected PointerAccelerationHelper pointerAccelerationHelper;
@@ -258,7 +258,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             fpsCounter.countInput();
         }
 
-        Pair<Integer, Integer> pointerPos = computePointerPos(diffX, diffY, 2.1f);
+        // 加速基数 2.1 → 1.68:与 Touchpad 的 1.35 协调,统一再降 20%
+        Pair<Integer, Integer> pointerPos = computePointerPos(diffX, diffY, 1.68f);
         int x = pointerPos.first;
         int y = pointerPos.second;
 
@@ -716,10 +717,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         }
     }
 
-
-    /**
-     * @see com.qihua.bVNC.input.InputHandler#0yonTouchEvent(android.view.MotionEvent)
-     */
     @Override
     public boolean onTouchEvent(MotionEvent e) {
         InputDevice device = e.getDevice();
