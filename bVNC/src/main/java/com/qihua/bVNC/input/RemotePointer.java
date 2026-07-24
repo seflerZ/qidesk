@@ -222,7 +222,9 @@ public abstract class RemotePointer {
 
         protocomm.writePointerEvent(pointerX, pointerY, metaState, pointerMask, false);
 
-        canvas.invalidateMousePosition();
+        if (isMoving) {
+            canvas.invalidateMousePosition();
+        }
     }
 
 }

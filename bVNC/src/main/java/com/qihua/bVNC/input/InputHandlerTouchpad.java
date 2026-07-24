@@ -132,10 +132,6 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
     // 每次事件都会写 lastScrollTimeMs,同一事件流里紧接着调 updateActiveEdgeSlider 时
     // 时间差恒为 ~0,复用会让滑条永远被跳过。用独立时间戳与 SCROLL_SAMPLING_MS 对齐。
     private long lastEdgeUpdateMs = 0;
-    // 边缘滚动 X/Y 各自的节流门:doScroll 减半后仍每 tick 都触发,如果 X 和 Y 都过了
-    // immersive 边界(对角边缘),共享 lastScrollTimeMs 会让后到的方向被跳过。
-    private long lastImmersiveScrollMsX = 0;
-    private long lastImmersiveScrollMsY = 0;
     // inertia scrolling state (moved down from InputHandlerGeneric; touchpad-only)
     private Thread inertiaThread;
     private final Semaphore inertiaSemaphore = new Semaphore(0);
@@ -389,8 +385,6 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
 
                         totalMoveX = 0;
                         totalMoveY = 0;
-
-                        // 临时回退:RdpScrollCoalescer 已不再用于滚动路径,无尾巴可 flush
 
                         break;
                 }
@@ -678,10 +672,22 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             return true;
         }
 
-        // Decrease sampling time intervals when screen fresh rate is high.
-        long scrollSamplingTimeMs = SCROLL_SAMPLING_MS;
-        if (canvas.fpsCounter.getAvgFps() > 0) {
-            scrollSamplingTimeMs = Math.min(1000 / canvas.fpsCounter.getAvgFps(), SCROLL_SAMPLING_MS);
+        // 协议感知采样门:
+        //   - NVStream/SPICE 走 SCROLL_SAMPLING_MS (30ms)。NV 内部 60fps,30ms 是合适节拍。
+        //   - RDP/VNC 帧率低,30ms 不会到一帧(需要 100ms+),用频繁小 tick 反而不会被
+        //     服务器处理掉。100ms 门让每个 scroll 事件携带更多合并位移,服务端能一次
+        //     完成 notch 累加。合并效果同 pointer 移动的 30ms 同窗逻辑,但 RDP/VNC
+        //     可以容忍更大窗。
+        // 同时保留:高于屏刷的速率下不至于一秒百次发包。
+        boolean lowFpsScroll = pointer instanceof RemoteRdpPointer || pointer instanceof RemoteVncPointer;
+        long scrollSamplingTimeMs;
+        if (lowFpsScroll) {
+            scrollSamplingTimeMs = 100;
+        } else {
+            scrollSamplingTimeMs = SCROLL_SAMPLING_MS;
+            if (canvas.fpsCounter.getAvgFps() > 0) {
+                scrollSamplingTimeMs = Math.min(1000 / canvas.fpsCounter.getAvgFps(), SCROLL_SAMPLING_MS);
+            }
         }
 
         if (System.currentTimeMillis() - lastScrollTimeMs < scrollSamplingTimeMs) {
@@ -732,25 +738,17 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             scrollLeft = true;
         }
 
-        if (cumulatedY * distanceY < 0) {
-            cumulatedY = 0;
-        }
-
-        if (cumulatedX * distanceX < 0) {
-            cumulatedX = 0;
-        }
-
-        // get the relative moving distance compared to one step
-        // 边缘滚动(delta 太大导致远程帧缓存压力过高,延迟涨):
-        // distanceY 已经乘过 zoomFactor(常 ≥ 2),原 /2 → /4 让单 tick 位移减半,
-        // 对角边缘时与下方 per-axis 节流门一起把发送频率也减半,两步降速。
+        // 边缘 / 双指 scroll:onScroll 在过 sampling 门时已经把 cumulatedX/Y 累加并清零,
+        // 这里 distanceX/Y 已含本窗合并值。
+        // ratioY / 4:distanceY 已经被 zoomFactor(常 ≥ 2)放大,除 4 让单 tick 位移
+        // 在服务器端转 notch 时更平滑,且与服务器 WHEEL_DELTA 数值匹配。
+        // 频率上由 onScroll 那一道 30ms sampling 门统一节流,本函数不再叠加门。
         float ratioY = distanceY * displayDensity / 4;
         float ratioX = distanceX * displayDensity / 4;
 
         // The direction is just up side down.
         int newY = (int) -(ratioY);
         int newX = (int) (ratioX);
-        int delta = 0;
 
         if (Math.abs(distanceY) >= Math.abs(distanceX)) {
             scrollRight = false;
@@ -761,87 +759,53 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         }
 
         if ((scrollUp || scrollDown) && !immersiveSwipeX) {
-            // 边缘滚动 Y 节流:同一方向上次 send 距今 < SCROLL_SAMPLING_MS(30)就跳过本次 Y,
-            // 但继续到下面的 X 分支(对角边缘 swipe 需要 X/Y 各自独立推进)。
-            // 例外:pointer 是 RDP 时走累积合并(16ms 窗)而不是节流——RDP 高 RTT 高频小 delta
-            // 会被服务器淹没,合成少包大 delta 更稳。
-            boolean rdpY = (pointer instanceof RemoteRdpPointer);
-            if (rdpY || System.currentTimeMillis() - lastImmersiveScrollMsY >= SCROLL_SAMPLING_MS) {
-                if (distanceY < 0 && newY == 0) {
-                    delta = 0;
-                } else if (distanceY > 0 && newY == 0) {
-                    delta = 0;
-                } else {
-                    delta = newY;
+            // 双指 / 沉浸边缘 scroll 的 30ms 采样门由 onScroll line 691 统一处理,
+            // 这里不重复门。delta 系数 /4 让单 tick 位移减半,与服务器端 wheelDelta 配合。
+            int delta = newY;  // newY == 0 已被下方 if 跳过
+
+            if (delta != 0) {
+                if (delta > 255) {
+                    delta = 255;
+                } else if (delta < -255) {
+                    delta = -255;
                 }
 
-                if (delta != 0) {
-                    if (delta > 255) {
-                        delta = 255;
-                    } else if (delta < -255) {
-                        delta = -255;
-                    }
-
-                    if (delta < 0) {
-                        // use positive number to represent the component directly for
-                        // the least two bytes
-                        delta = 256 + delta;
-                    }
-
-                    lastDelta = delta;
-
-                    if (rdpY) {
-                        // RDP: 用户反馈合包 path 完全滚不动。临时回退到直接发送以恢复基本滚动。
-                        // 合包/RdpScrollCoalescer 暂保留工具类,后续定位问题后再接回。
-                        sendScrollEvents(x, y, delta, meta);
-                        lastImmersiveScrollMsY = System.currentTimeMillis();
-                    } else {
-                        sendScrollEvents(x, y, delta, meta);
-                        lastImmersiveScrollMsY = System.currentTimeMillis();
-                    }
-
-                    swipeSpeed = 1;
+                if (delta < 0) {
+                    // use positive number to represent the component directly for
+                    // the least two bytes
+                    delta = 256 + delta;
                 }
+
+                lastDelta = delta;
+
+                sendScrollEvents(x, y, delta, meta);
+
+                swipeSpeed = 1;
             }
         }
 
         if ((scrollRight || scrollLeft) && !immersiveSwipeY) {
-            // 边缘滚动 X 节流——见上 Y 分支注释(RDP 例外同理,临时回退)
-            boolean rdpX = (pointer instanceof RemoteRdpPointer);
-            if (rdpX || System.currentTimeMillis() - lastImmersiveScrollMsX >= SCROLL_SAMPLING_MS) {
-                if (distanceX < 0 && newX == 0) {
-                    delta = 0;
-                } else if (distanceX > 0 && newX == 0) {
-                    delta = 0;
-                } else {
-                    delta = newX;
+            // 见上 Y 分支注释
+            int delta = newX;  // newX == 0 已被下方 if 跳过
+
+            if (delta != 0) {
+                if (delta > 255) {
+                    delta = 255;
+                } else if (delta < -255) {
+                    delta = -255;
                 }
 
-                if (delta != 0) {
-                    if (delta > 255) {
-                        delta = 255;
-                    } else if (delta < -255) {
-                        delta = -255;
-                    }
-
-                    if (delta < 0) {
-                        // use positive number to represent the component directly for
-                        // the least two bytes
-                        delta = 256 + delta;
-                    }
-
-                    lastDelta = delta;
-
-                    if (rdpX) {
-                        sendScrollEvents(x, y, delta, meta);
-                        lastImmersiveScrollMsX = System.currentTimeMillis();
-                    } else {
-                        sendScrollEvents(x, y, delta, meta);
-                        lastImmersiveScrollMsX = System.currentTimeMillis();
-                    }
-
-                    swipeSpeed = 1;
+                if (delta < 0) {
+                    // use positive number to represent the component directly for
+                    // the least two bytes
+                    delta = 256 + delta;
                 }
+
+                lastDelta = delta;
+
+                sendScrollEvents(x, y, delta, meta);
+
+                swipeSpeed = 1;
             }
         }
 

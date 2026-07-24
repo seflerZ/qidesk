@@ -57,19 +57,19 @@ public class RemoteRdpPointer extends RemotePointer {
     @Override
     public void leftButtonDown(int x, int y, int metaState) {
         pointerMask = MOUSE_BUTTON_LEFT | POINTER_DOWN_MASK;
-        sendPointerEvent(x, y, metaState, true);
+        sendPointerEvent(x, y, metaState, false);
     }
 
     @Override
     public void middleButtonDown(int x, int y, int metaState) {
         pointerMask = MOUSE_BUTTON_MIDDLE | POINTER_DOWN_MASK;
-        sendPointerEvent(x, y, metaState, true);
+        sendPointerEvent(x, y, metaState, false);
     }
 
     @Override
     public void rightButtonDown(int x, int y, int metaState) {
         pointerMask = MOUSE_BUTTON_RIGHT | POINTER_DOWN_MASK;
-        sendPointerEvent(x, y, metaState, true);
+        sendPointerEvent(x, y, metaState, false);
     }
 
     @Override
@@ -80,7 +80,7 @@ public class RemoteRdpPointer extends RemotePointer {
             pointerMask = PTRFLAGS_WHEEL | (speed & 0x00ff);
         }
 
-        sendPointerEvent(x, y, metaState, true);
+        sendPointerEvent(x, y, metaState, false);
     }
 
     @Override
@@ -90,7 +90,7 @@ public class RemoteRdpPointer extends RemotePointer {
         } else {
             pointerMask = PTRFLAGS_WHEEL | PTRFLAGS_WHEEL_NEGATIVE | (speed & 0x00ff);
         }
-        sendPointerEvent(x, y, metaState, true);
+        sendPointerEvent(x, y, metaState, false);
     }
 
     @Override
@@ -100,7 +100,7 @@ public class RemoteRdpPointer extends RemotePointer {
         } else {
             pointerMask = PTRFLAGS_HWHEEL | (speed & 0x00ff);
         }
-        sendPointerEvent(x, y, metaState, true);
+        sendPointerEvent(x, y, metaState, false);
     }
 
     @Override
@@ -110,7 +110,7 @@ public class RemoteRdpPointer extends RemotePointer {
         } else {
             pointerMask = PTRFLAGS_HWHEEL | PTRFLAGS_WHEEL_NEGATIVE | (speed & 0x00ff);
         }
-        sendPointerEvent(x, y, metaState, true);
+        sendPointerEvent(x, y, metaState, false);
     }
 
     @Override
