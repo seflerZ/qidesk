@@ -694,7 +694,10 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
            return true;
         }
     
-        if (!inScrolling && twoFingers && (Math.abs(distanceX) > 2 || Math.abs(distanceY) > 2)) {
+        // 双指 swipe 起判:onScroll 在入口已经过 30ms sampling 门(见上行),
+        // 再叠 distance > 2 是冗余(threshold 的设计场景已经被 sampling gate 覆盖)。
+        // 只保留“首次进入两指 scroll” 的状态切换。
+        if (!inScrolling && twoFingers) {
             inScrolling = true;
             inSwiping = true;
         }

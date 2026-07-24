@@ -589,6 +589,16 @@ build_moonlight() {
         pushd "${moonlight_build}/app/src/main/jni"
         ${ANDROID_NDK}/ndk-build -j 2
         popd
+
+        # ndk-build 在 moonlight 自带 Android.mk 路径下跑时,NDK_LIBS_OUT 偶尔被
+        # moonlight-core/Android.mk 内的 $(TARGET_OUT) 路径覆盖,产物落在
+        # moonlight-android/app/src/main/obj/local/<ABI>/ 而不是 src/main/jniLibs/。
+        # 手动 copy 一份到 AGP 真正会打包的位置,让 bVNC 的 APK 能拿到 libmoonlight-core.so。
+        mkdir -p "${basedir}/../../../src/main/jniLibs/arm64-v8a"
+        if [ -d "${moonlight_build}/app/src/main/obj/local/arm64-v8a" ]; then
+            cp -f "${moonlight_build}/app/src/main/obj/local/arm64-v8a/libmoonlight-core.so" \
+                  "${basedir}/../../../src/main/jniLibs/arm64-v8a/" 2>/dev/null || true
+        fi
     fi
     popd
     touch MOONLIGHT_BUILT
