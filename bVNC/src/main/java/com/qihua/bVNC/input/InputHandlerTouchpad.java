@@ -637,7 +637,6 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                 return true;
             }
 
-            // 加速基数 1.5 → 1.35 → 1.2 → 1.0,接近无加速线性
             Pair<Integer, Integer> pointerPos = computePointerPos(-cumulatedX, -cumulatedY, 1.0f);
 
             // 动量采样:用光标坐标位移(而非手指位移)除以采样间隔,量纲对齐惯性线程

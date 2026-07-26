@@ -258,8 +258,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             fpsCounter.countInput();
         }
 
-        // 加速基数 2.1 → 1.68:与 Touchpad 的 1.35 协调,统一再降 20%
-        Pair<Integer, Integer> pointerPos = computePointerPos(diffX, diffY, 1.68f);
+        Pair<Integer, Integer> pointerPos = computePointerPos(diffX, diffY, 0.8f);
         int x = pointerPos.first;
         int y = pointerPos.second;
 
