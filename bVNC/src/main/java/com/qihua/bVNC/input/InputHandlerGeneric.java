@@ -44,7 +44,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         implements InputHandler, ScaleGestureDetector.OnScaleGestureListener {
     private static final String TAG = "InputHandlerGeneric";
     public static final int POINTER_SAMPLING_MS = 13;
-    public static final int SCROLL_SAMPLING_MS = 30;
 
     protected final boolean debugLogging;
 
@@ -177,10 +176,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         return (int) (canvas.getAbsY() + (e.getY() - 1.f * canvas.getTop()) / scale);
     }
 
-    private long lastPointerEventTime = 0;
-    private long lastScrollEventTime = 0;
     protected static final float SPEED_ACCELERATION_FACTOR = 1.2f; // 加速度因子:0.5 → 1.2,快滚加速感更明显
-    protected static final float MAX_ACCELERATION = 8f; // 最大加速度乘数:5 → 8,允许更快滚速突破上限
+    protected static final float MAX_ACCELERATION = 3f; // 最大加速度乘数:3,允许更快滚速突破上限
     
     // 添加指针加速助手
     protected PointerAccelerationHelper pointerAccelerationHelper;
@@ -215,25 +212,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
         long currentTime = System.currentTimeMillis();
 
-        if (action == MotionEvent.ACTION_MOVE) {
-            if (currentTime - lastPointerEventTime < POINTER_SAMPLING_MS) {
-                cumulatedX += diffX;
-                cumulatedY += diffY;
-
-                return true;
-            }
-
-            lastPointerEventTime = currentTime;
-        }
-
-        if (action == MotionEvent.ACTION_SCROLL) {
-            if (currentTime - lastScrollEventTime < SCROLL_SAMPLING_MS) {
-                return true;
-            }
-
-            lastScrollEventTime = currentTime;
-        }
-
         if (pointer.pointerY >= canvas.getHeight()
                 && action == MotionEvent.ACTION_DOWN
                 && canvas.isOutDisplay()) {
@@ -246,12 +224,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         // the cursor may be hidden in touch direct mode here, since every touch there
         // will trigger pointer hide event
         canvas.showCursor();
-
-        diffX += cumulatedX;
-        diffY += cumulatedY;
-
-        cumulatedX = 0;
-        cumulatedY = 0;
 
         FpsCounter fpsCounter = canvas.getFpsCounter();
         if (fpsCounter != null) {
