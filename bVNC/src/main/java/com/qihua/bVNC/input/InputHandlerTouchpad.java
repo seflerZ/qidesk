@@ -127,8 +127,8 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         return ID;
     }
 
-    // Add the following variables in the class member variable area
-    private long lastScrollTimeMs = System.currentTimeMillis();
+    // make sure first scroll triggers
+    private long lastScrollTimeMs = 0;
     // 边缘滑条重绘的独立节流门:不能复用 lastScrollTimeMs——onScroll 的 immersive 分支
     // 每次事件都会写 lastScrollTimeMs,同一事件流里紧接着调 updateActiveEdgeSlider 时
     // 时间差恒为 ~0,复用会让滑条永远被跳过。用独立时间戳与 SCROLL_SAMPLING_MS 对齐。
@@ -386,6 +386,9 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
 
                         totalMoveX = 0;
                         totalMoveY = 0;
+
+                        // scroll ends, reset to make sure next event trigger immediately
+                        lastScrollTimeMs = 0;
 
                         break;
                 }
