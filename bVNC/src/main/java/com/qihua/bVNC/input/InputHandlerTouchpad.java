@@ -378,9 +378,9 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                                 // 重置触摸分析器，避免下次拖拽立即触发放大
                                 touchMovementAnalyzer.reset();
                             }
-
-                            endDragModesAndScrolling();
                         }
+
+                        endDragModesAndScrolling();
 
                         cumulatedX = 0;
                         cumulatedY = 0;
@@ -460,9 +460,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
 
             // for single finger movement
             if (inertiaScrollingEnabled && !wasDragging && !inSwiping) {
-                if (activity.isToolbarShowing() && canvas.connection.getEnableGesture()) {
-
-                } else {
+                if (!activity.isToolbarShowing() || !canvas.connection.getEnableGesture()) {
                     // 仅快甩才滑行:松手速度(每 tick 光标位移)超阈值,且松手距最后一次采样未停顿
                     float flingSpeedX = lastSpeedX * inertiaBaseInterval;
                     float flingSpeedY = lastSpeedY * inertiaBaseInterval;
@@ -614,6 +612,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
 
             // no drag after double click, consider it a double click
             pointer.leftButtonDown(getDragPointerX(e), getDragPointerY(e), 0);
+            SystemClock.sleep(50);
             pointer.releaseButton(getDragPointerX(e), getDragPointerY(e), 0);
         }, 150);
 
@@ -627,9 +626,13 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
     @Override
     public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
         if (activity.isToolbarShowing()) {
-            return true;
+            return false;
         }
-    
+
+        if (inScaling || thirdPointerWasDown) {
+            return false;
+        }
+
         cumulatedX += distanceX;
         cumulatedY += distanceY;
     
@@ -666,11 +669,6 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             lastScrollTimeMs = System.currentTimeMillis();
 
             return true;
-        }
-    
-        if (inScaling || thirdPointerWasDown) {
-            // let other processor handle this
-            return false;
         }
 
         // 协议感知采样门:
@@ -711,22 +709,17 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         distanceX = (cumulatedX / displayDensity) * canvas.getZoomFactor() * speedMultiplier;
         distanceY = (cumulatedY / displayDensity) * canvas.getZoomFactor() * speedMultiplier;
 
-        // If in swiping mode, indicate a swipe at regular intervals.
-        if (inSwiping || immersiveSwipeX || immersiveSwipeY) {
-            scrollDown = false;
-            scrollUp = false;
-            scrollRight = false;
-            scrollLeft = false;
+        scrollDown = false;
+        scrollUp = false;
+        scrollRight = false;
+        scrollLeft = false;
 
-            cumulatedX = 0;
-            cumulatedY = 0;
+        cumulatedX = 0;
+        cumulatedY = 0;
 
-            lastScrollTimeMs = System.currentTimeMillis();
-    
-            return doScroll(getDragPointerX(e2), getDragPointerY(e2), distanceX, distanceY, meta);
-        }
-    
-        return false;
+        lastScrollTimeMs = System.currentTimeMillis();
+
+        return doScroll(getDragPointerX(e2), getDragPointerY(e2), distanceX, distanceY, meta);
     }
 
     public boolean doScroll(int x, int y, float distanceX, float distanceY, int meta) {
