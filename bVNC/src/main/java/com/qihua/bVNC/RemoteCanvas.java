@@ -1528,6 +1528,10 @@ public class RemoteCanvas extends SurfaceView implements Viewable
         this.displayDensity = displayDensity;
     }
 
+    public int getDisplayDpi() {
+        return (int) (getResources().getDisplayMetrics().densityDpi);
+    }
+
     public boolean isColorModel(COLORMODEL cm) {
         if (getProtocolType() == ProtocolType.VNC && decoder != null) {
             return (decoder.getColorModel() != null) && decoder.getColorModel().equals(cm);

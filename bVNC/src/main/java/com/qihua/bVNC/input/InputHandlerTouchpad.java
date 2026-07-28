@@ -681,7 +681,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         boolean lowFpsScroll = pointer instanceof RemoteRdpPointer || pointer instanceof RemoteVncPointer;
         long scrollSamplingTimeMs;
         if (lowFpsScroll) {
-            scrollSamplingTimeMs = 100;
+            scrollSamplingTimeMs = 80;
         } else {
             scrollSamplingTimeMs = SCROLL_SAMPLING_MS;
             if (canvas.fpsCounter.getAvgFps() > 0) {
@@ -704,10 +704,24 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         // Calculate swipe speed and apply acceleration using the helper
         float speedMultiplier = pointerAccelerationHelper.calculateAccelerationMultiplier(
                 System.currentTimeMillis(), cumulatedX, cumulatedY, 1.3f);
-    
+
+        // 等效缩放系数:单屏 = zoomFactor(zoom 越大越灵活,常规行为);
+        // 外屏 = 1.5 * dpiRatio,zoomFactor 显式抵消——dpi 补偿 + 远距离触控板加成,
+        // 且 zoom 越大越收敛(避免看细节时一划出屏)。
+        float effectiveZoom;
+        if (canvas.isOutDisplay()) {
+            int localDpi = (int) (touchpad.getDisplayDensity() * 160f);
+            int extDpi = canvas.getDisplayDpi();
+            float dpiRatio = (extDpi > 0 && localDpi > 0)
+                    ? ((float) localDpi / (float) extDpi) : 1.0f;
+            effectiveZoom = 1.5f * dpiRatio;
+        } else {
+            effectiveZoom = canvas.getZoomFactor();
+        }
+
         // Make distanceX/Y display density independent with speed-based acceleration.
-        distanceX = (cumulatedX / displayDensity) * canvas.getZoomFactor() * speedMultiplier;
-        distanceY = (cumulatedY / displayDensity) * canvas.getZoomFactor() * speedMultiplier;
+        distanceX = (cumulatedX / displayDensity) * effectiveZoom * speedMultiplier;
+        distanceY = (cumulatedY / displayDensity) * effectiveZoom * speedMultiplier;
 
         scrollDown = false;
         scrollUp = false;

@@ -176,8 +176,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         return (int) (canvas.getAbsY() + (e.getY() - 1.f * canvas.getTop()) / scale);
     }
 
-    protected static final float SPEED_ACCELERATION_FACTOR = 1.2f; // 加速度因子:0.5 → 1.2,快滚加速感更明显
-    protected static final float MAX_ACCELERATION = 3f; // 最大加速度乘数:3,允许更快滚速突破上限
+    protected static final float SPEED_ACCELERATION_FACTOR = 0.5f;
+    protected static final float MAX_ACCELERATION = 2f; // 最大加速度乘数:2.5,封顶降 17%,快滑不再无限放大
     
     // 添加指针加速助手
     protected PointerAccelerationHelper pointerAccelerationHelper;
