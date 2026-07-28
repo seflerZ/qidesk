@@ -278,11 +278,11 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                             inertiaThread.interrupt();
                         }
 
-                        lastX = e.getX();
-                        lastY = e.getY();
-
                         // Stop inertia scrolling
                         inertiaStartTime = System.currentTimeMillis();
+
+                        lastX = e.getX();
+                        lastY = e.getY();
 
                         if (touchpadFeedback) {
                             activity.sendShortVibration();
@@ -378,18 +378,9 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                                 // 重置触摸分析器，避免下次拖拽立即触发放大
                                 touchMovementAnalyzer.reset();
                             }
+
+                            endDragModesAndScrolling();
                         }
-
-                        endDragModesAndScrolling();
-
-                        cumulatedX = 0;
-                        cumulatedY = 0;
-
-                        lastDragX = 0;
-                        lastDragY = 0;
-
-                        totalMoveX = 0;
-                        totalMoveY = 0;
 
                         break;
                 }
@@ -425,13 +416,22 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         }
 
         if (action == MotionEvent.ACTION_UP) {
-            if (!inSwiping && !inScaling && secondPointerWasDown) {
+            if (totalMoveX < 1 && totalMoveY < 1 && secondPointerWasDown) {
                 pointer.rightButtonDown(getDragPointerX(e), getDragPointerY(e), meta);
                 SystemClock.sleep(50);
                 pointer.releaseButton(getDragPointerX(e), getDragPointerY(e), meta);
 
                 secondPointerWasDown = false;
             }
+
+            cumulatedX = 0;
+            cumulatedY = 0;
+
+            lastDragX = 0;
+            lastDragY = 0;
+
+            totalMoveX = 0;
+            totalMoveY = 0;
 
             if (!inSwiping && !inScaling && thirdPointerWasDown) {
                 String threePointerAction = Utils.querySharedPreferenceString(activity,
