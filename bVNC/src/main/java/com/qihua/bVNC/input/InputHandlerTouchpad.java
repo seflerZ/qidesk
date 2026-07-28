@@ -254,6 +254,10 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                         scalingJustFinished = false;
                         // Cancel drag modes and scrolling.
                         endDragModesAndScrolling();
+                        // Open scroll gate for this gesture. Must be ACTION_DOWN, not ACTION_UP:
+                        // ACTION_UP's inertia trigger still reads lastScrollTimeMs to judge "not paused",
+                        // so clearing it in the same handler would self-conflict.
+                        lastScrollTimeMs = 0;
                         canvas.cursorBeingMoved = true;
                         // If we are manipulating the desktop, turn off bitmap filtering for faster response.
                         canvas.bitmapData.paint.setFilterBitmap(false);
@@ -386,9 +390,6 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
 
                         totalMoveX = 0;
                         totalMoveY = 0;
-
-                        // scroll ends, reset to make sure next event trigger immediately
-                        lastScrollTimeMs = 0;
 
                         break;
                 }
