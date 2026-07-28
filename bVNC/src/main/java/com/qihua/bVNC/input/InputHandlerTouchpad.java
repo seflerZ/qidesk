@@ -668,12 +668,9 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             return true;
         }
     
-        if (inScaling) {
-            return true;
-        }
-    
-        if (thirdPointerWasDown) {
-            return true;
+        if (inScaling || thirdPointerWasDown) {
+            // let other processor handle this
+            return false;
         }
 
         // 协议感知采样门:
