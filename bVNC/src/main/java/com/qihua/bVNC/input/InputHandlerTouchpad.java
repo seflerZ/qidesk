@@ -681,7 +681,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         boolean lowFpsScroll = pointer instanceof RemoteRdpPointer || pointer instanceof RemoteVncPointer;
         long scrollSamplingTimeMs;
         if (lowFpsScroll) {
-            scrollSamplingTimeMs = 80;
+            scrollSamplingTimeMs = 100;
         } else {
             scrollSamplingTimeMs = SCROLL_SAMPLING_MS;
             if (canvas.fpsCounter.getAvgFps() > 0) {
@@ -749,17 +749,10 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             scrollLeft = true;
         }
 
-        // 边缘 / 双指 scroll:onScroll 在过 sampling 门时已经把 cumulatedX/Y 累加并清零,
-        // 这里 distanceX/Y 已含本窗合并值。
-        // ratioY / 4:distanceY 已经被 zoomFactor(常 ≥ 2)放大,除 4 让单 tick 位移
-        // 在服务器端转 notch 时更平滑,且与服务器 WHEEL_DELTA 数值匹配。
-        // 频率上由 onScroll 那一道 30ms sampling 门统一节流,本函数不再叠加门。
-        float ratioY = distanceY * displayDensity / 4;
-        float ratioX = distanceX * displayDensity / 4;
-
-        // The direction is just up side down.
-        int newY = (int) -(ratioY);
-        int newX = (int) (ratioX);
+        // The direction is just upside down. divide zoom factor to keep the scroll reasonable
+        // after zoom in, otherwise it will be too fast then
+        int newY = (int) (-distanceY / canvas.getZoomFactor());
+        int newX = (int) (distanceX / canvas.getZoomFactor());
 
         if (Math.abs(distanceY) >= Math.abs(distanceX)) {
             scrollRight = false;
@@ -772,55 +765,45 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         if ((scrollUp || scrollDown) && !immersiveSwipeX) {
             // 双指 / 沉浸边缘 scroll 的 30ms 采样门由 onScroll line 691 统一处理,
             // 这里不重复门。delta 系数 /4 让单 tick 位移减半,与服务器端 wheelDelta 配合。
-            int delta = newY;  // newY == 0 已被下方 if 跳过
-
-            if (delta != 0) {
-                if (delta > 255) {
-                    delta = 255;
-                } else if (delta < -255) {
-                    delta = -255;
-                }
-
-                if (delta < 0) {
-                    // use positive number to represent the component directly for
-                    // the least two bytes
-                    delta = 256 + delta;
-                }
-
-                lastDelta = delta;
-
-                sendScrollEvents(x, y, delta, meta);
-
-                swipeSpeed = 1;
-            }
+            sendChunkedScroll(x, y, newY, meta);
         }
 
         if ((scrollRight || scrollLeft) && !immersiveSwipeY) {
             // 见上 Y 分支注释
-            int delta = newX;  // newX == 0 已被下方 if 跳过
-
-            if (delta != 0) {
-                if (delta > 255) {
-                    delta = 255;
-                } else if (delta < -255) {
-                    delta = -255;
-                }
-
-                if (delta < 0) {
-                    // use positive number to represent the component directly for
-                    // the least two bytes
-                    delta = 256 + delta;
-                }
-
-                lastDelta = delta;
-
-                sendScrollEvents(x, y, delta, meta);
-
-                swipeSpeed = 1;
-            }
+            sendChunkedScroll(x, y, newX, meta);
         }
 
+        // return false to continue processing in InputHandlerGeneric, such as inertial scrolling
         return false;
+    }
+
+    // 大 delta 拆成多个 255 包连发;不足 255 时循环只走一次,自然退化为单包。
+    private void sendChunkedScroll(int x, int y, int delta, int meta) {
+        if (delta == 0) {
+            return;
+        }
+
+        if (delta > 255) {
+            delta = 255;
+        } else if (delta < -255) {
+            delta = -255;
+        }
+
+        int chunk = delta > 0 ? 255 : -255;
+        int encoded = chunk < 0 ? 256 + chunk : chunk;
+        int remaining = Math.abs(delta);
+
+        while (remaining >= 255) {
+            sendScrollEvents(x, y, encoded, meta);
+            remaining -= 255;
+        }
+
+        int tail = delta > 0 ? remaining : -remaining;
+        lastDelta = encoded;
+        if (tail != 0) {
+            lastDelta = tail < 0 ? 256 + tail : tail;
+            sendScrollEvents(x, y, lastDelta, meta);
+        }
     }
 
     protected int getDragPointerX(MotionEvent e) {
