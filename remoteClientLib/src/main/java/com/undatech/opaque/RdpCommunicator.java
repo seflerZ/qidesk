@@ -143,15 +143,7 @@ public class RdpCommunicator extends RemoteConnectable implements RdpKeyboardMap
     public void writePointerEvent(int x, int y, int metaState, int pointerMask, boolean rel) {
         this.metaState = metaState;
 
-//        if ((pointerMask & RemotePointer.POINTER_DOWN_MASK) != 0) {
-//            sendModifierKeys(true);
-//        }
-
         LibFreeRDP.sendCursorEvent(session.getInstance(), x, y, pointerMask);
-
-//        if ((pointerMask & RemotePointer.POINTER_DOWN_MASK) == 0) {
-//            sendModifierKeys(false);
-//        }
     }
 
     public void writeTouchEvent(int x, int y, int flags, int contactId) {
