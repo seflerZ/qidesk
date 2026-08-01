@@ -645,7 +645,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                 return true;
             }
 
-            Pair<Integer, Integer> pointerPos = computePointerPos(-cumulatedX, -cumulatedY, 1.0f);
+            Pair<Integer, Integer> pointerPos = computePointerPos(-cumulatedX, -cumulatedY, 0.6f);
 
             // 动量采样:用光标坐标位移(而非手指位移)除以采样间隔,量纲对齐惯性线程
             // else 分支的 pointer.getX()+speed,松手滑行速度不会突变。
