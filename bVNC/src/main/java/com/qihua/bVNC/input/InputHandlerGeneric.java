@@ -151,7 +151,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                 , Constants.dragHelpEnabled, false);
 
         // 初始化指针加速助手
-        pointerAccelerationHelper = new PointerAccelerationHelper(SPEED_ACCELERATION_FACTOR, MAX_ACCELERATION);
+        pointerAccelerationHelper = new PointerAccelerationHelper();
     }
 
     /**
@@ -176,16 +176,13 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         return (int) (canvas.getAbsY() + (e.getY() - 1.f * canvas.getTop()) / scale);
     }
 
-    protected static final float SPEED_ACCELERATION_FACTOR = 0.5f;
-    protected static final float MAX_ACCELERATION = 2f; // 最大加速度乘数:2.5,封顶降 17%,快滑不再无限放大
-    
     // 添加指针加速助手
     protected PointerAccelerationHelper pointerAccelerationHelper;
 
     protected Pair<Integer, Integer> computePointerPos(float diffX, float diffY, float base) {
         long currentTime = System.currentTimeMillis();
         float speedMultiplier = pointerAccelerationHelper.calculateAccelerationMultiplier(
-                currentTime, diffX, diffY, base);
+                currentTime, diffX, diffY, base, 1f, 2f);
 
         // Make distanceX/Y display density independent and apply acceleration
         float sensitivity = pointer.getSensitivity();

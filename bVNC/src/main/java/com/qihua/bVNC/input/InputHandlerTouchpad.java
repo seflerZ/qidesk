@@ -76,8 +76,8 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                             && !inertiaThread.isInterrupted()) {
                         doScroll(pointer.getX(), pointer.getY(), -speedX, -speedY, inertiaMetaState);
 
-                        speedX *= INERTIA_DECAY;
-                        speedY *= INERTIA_DECAY;
+                        speedX *= INERTIA_DECAY_SCROLL;
+                        speedY *= INERTIA_DECAY_SCROLL;
 
                         SystemClock.sleep(inertiaBaseInterval);
                     }
@@ -94,8 +94,8 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                         // return false),没有越界时不会触发 resetScroll/layout,代价可控。
                         canvas.movePanToMakePointerVisible();
 
-                        speedX *= INERTIA_DECAY;
-                        speedY *= INERTIA_DECAY;
+                        speedX *= INERTIA_DECAY_MOVE;
+                        speedY *= INERTIA_DECAY_MOVE;
 
                         SystemClock.sleep(inertiaBaseInterval);
                     }
@@ -157,8 +157,12 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
     private boolean sshSelectionMode = false;
     private float sshAnchorViewX = 0f, sshAnchorViewY = 0f;
 
-    // 指数衰减近似: 0.92 每 16ms tick ≈ e^(-0.083*16) ≈ 0.92,30 帧 ≈ 8% 残余
-    private static final float INERTIA_DECAY = 0.92f;
+    // 光标移动惯性衰减:0.92 每 16ms tick ≈ e^(-0.083*16),30 帧 ≈ 8% 残余,
+    // 沿用旧值(短促、跟手)
+    private static final float INERTIA_DECAY_MOVE = 0.92f;
+    // 滚动惯性衰减:0.96 每 16ms tick ≈ e^(-0.041*16),30 帧 ≈ 30% 残余,
+    // 调慢后滚动惯性尾巴更柔顺
+    private static final float INERTIA_DECAY_SCROLL = 0.96f;
     // 速度小于此阈值(px/tick)即停止,避免无限逼近 0
     private static final float INERTIA_STOP_THRESHOLD = 0.5f;
     // 单指移动动量:松手时每 tick 光标位移低于此值不触发滑行,精细微调不飘(仅快甩才滑)
@@ -681,7 +685,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         boolean lowFpsScroll = pointer instanceof RemoteRdpPointer || pointer instanceof RemoteVncPointer;
         long scrollSamplingTimeMs;
         if (lowFpsScroll) {
-            scrollSamplingTimeMs = 100;
+            scrollSamplingTimeMs = 60;
         } else {
             scrollSamplingTimeMs = SCROLL_SAMPLING_MS;
             if (canvas.fpsCounter.getAvgFps() > 0) {
@@ -701,9 +705,12 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             inSwiping = true;
         }
     
-        // Calculate swipe speed and apply acceleration using the helper
+        // Calculate swipe speed and apply acceleration using the helper.
+        // 传本帧 delta（onScroll 已经把多帧 distance 累进 cumulatedX/Y，本 tick 增量即 cumulatedX/Y 自身——
+        // helper 内部存的是上一次发送时的累计值，差分得到的就是这一发送周期里的总位移，单位 px/ms 反映真实速度）。
         float speedMultiplier = pointerAccelerationHelper.calculateAccelerationMultiplier(
-                System.currentTimeMillis(), cumulatedX, cumulatedY, 1.3f);
+                System.currentTimeMillis(), cumulatedX, cumulatedY, 1.3f
+                , 1.4f, 10f);
 
         // 等效缩放系数:单屏 = zoomFactor(zoom 越大越灵活,常规行为);
         // 外屏 = 1.5 * dpiRatio,zoomFactor 显式抵消——dpi 补偿 + 远距离触控板加成,
@@ -719,7 +726,8 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             effectiveZoom = canvas.getZoomFactor();
         }
 
-        // Make distanceX/Y display density independent with speed-based acceleration.
+        // Make distanceX/Y display density independent. 加速直接吃在 dpi 归一化之后的 px/ms
+        // 速度上 —— 飞速 swipe 时本帧 delta 大,speedMultiplier 自然冲上去,符合直觉。
         distanceX = (cumulatedX / displayDensity) * effectiveZoom * speedMultiplier;
         distanceY = (cumulatedY / displayDensity) * effectiveZoom * speedMultiplier;
 
@@ -777,16 +785,11 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         return false;
     }
 
-    // 大 delta 拆成多个 255 包连发;不足 255 时循环只走一次,自然退化为单包。
+    // 大 delta 拆成多个 255 包连发;包之间 sleep 让 native queue 有消化时间,
+    // 避免飞速滑动时主线程一帧塞爆 native 端导致状态错乱。
     private void sendChunkedScroll(int x, int y, int delta, int meta) {
         if (delta == 0) {
             return;
-        }
-
-        if (delta > 255) {
-            delta = 255;
-        } else if (delta < -255) {
-            delta = -255;
         }
 
         int chunk = delta > 0 ? 255 : -255;
@@ -796,6 +799,8 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         while (remaining >= 255) {
             sendScrollEvents(x, y, encoded, meta);
             remaining -= 255;
+
+            SystemClock.sleep(5);
         }
 
         int tail = delta > 0 ? remaining : -remaining;

@@ -565,15 +565,22 @@ public class RdpCommunicator extends RemoteConnectable implements RdpKeyboardMap
             return;
         }
 
-        DrawTask drawTask = new DrawTask(x, y, width, height, true);
+        // [CrashFix] 与 UltraCompactBitmapData.copyRect 同步对齐:lockPixels/写/unlockPixels
+        // 期间防止 DrawWorker 线程并发访问同一 Bitmap 像素内存(hwuiTask1 渲染撞上时
+        // 会触发 libc FORTIFY 检测 destroyed mutex → SIGABRT)。
+        // synchronized 只防 Java 层并发;native lockPixels 与 hwui GPU 渲染仍有部分窗口,
+        // 但显著缩小了三线程撞上的概率。
+        synchronized (bitmap) {
+            DrawTask drawTask = new DrawTask(x, y, width, height, true);
 
-        LibFreeRDP.updateGraphics(session.getInstance(), bitmap
-                , 0
-                , 0
-                , bitmap.getWidth()
-                , bitmap.getHeight());
+            LibFreeRDP.updateGraphics(session.getInstance(), bitmap
+                    , 0
+                    , 0
+                    , bitmap.getWidth()
+                    , bitmap.getHeight());
 
-        viewable.reDraw(drawTask);
+            viewable.reDraw(drawTask);
+        }
     }
 
     @Override
