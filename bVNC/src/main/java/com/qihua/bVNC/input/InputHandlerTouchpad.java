@@ -50,9 +50,13 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
 
         this.displayDensity = activity.getResources().getDisplayMetrics().density;
 
-        // 惯性滚动:高级功能,受用户开关控制,且 free 版(EDGE_ENABLED=false)运行时强制关闭
+        // 惯性滚动:高级功能,受用户开关控制,且 free 版(EDGE_ENABLED=false)运行时强制关闭。
+        // SSH 也禁用:终端文本滚动由 libvterm 渲染,惯性导致越界 scroll 会出现
+        // alt-buffer / scrollback 状态错乱;另外 SSH 文本选择(长按选词)在惯性尾巴
+        // 里会跟着滑,体感不稳。
         inertiaScrollingEnabled = Utils.querySharedPreferenceBoolean(activity.getApplicationContext(),
-                Constants.inertiaEnabled, true) && BuildConfig.EDGE_ENABLED;
+                Constants.inertiaEnabled, true) && BuildConfig.EDGE_ENABLED
+                && !(pointer instanceof RemoteSshPointer);
 
         // for inertia scrolling
         inertiaThread = new Thread(() -> {
