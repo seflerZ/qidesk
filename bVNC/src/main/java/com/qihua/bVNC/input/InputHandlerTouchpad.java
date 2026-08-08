@@ -68,12 +68,12 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                     continue;
                 }
 
-                if (lastSpeedX == 0 && lastSpeedY == 0) {
+                if (inertiaInitialSpeedX == 0 && inertiaInitialSpeedY == 0) {
                     continue;
                 }
 
-                float speedX = lastSpeedX * inertiaBaseInterval;
-                float speedY = lastSpeedY * inertiaBaseInterval;
+                float speedX = inertiaInitialSpeedX * inertiaBaseInterval;
+                float speedY = inertiaInitialSpeedY * inertiaBaseInterval;
 
                 if (inertiaSwiping) {
                     while ((Math.abs(speedX) > INERTIA_STOP_THRESHOLD || Math.abs(speedY) > INERTIA_STOP_THRESHOLD)
@@ -145,8 +145,8 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
     private boolean inertiaScrollingEnabled = false;
     private boolean inertiaSwiping = false;
     private int inertiaMetaState = 0;
-    private float lastSpeedX = 0;
-    private float lastSpeedY = 0;
+    private float inertiaInitialSpeedX = 0;
+    private float inertiaInitialSpeedY = 0;
     private float lastX = 0;
     private float lastY = 0;
     // 单指移动动量采样:上次在 onScroll 单指分支更新光标的时刻,用于算松手速度 + 停顿判定
@@ -276,7 +276,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                         lastDragX = e.getX();
                         lastDragY = e.getY();
 
-                        lastSpeedX = lastSpeedY = 0;
+                        inertiaInitialSpeedX = inertiaInitialSpeedY = 0;
                         // 新手势开始,清采样时间戳,避免用上次手势的旧时刻算出巨大 dt
                         lastMoveSampleMs = 0;
 
@@ -304,13 +304,13 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
 
                         if (timeElapsed > interval) {
                             if (lastX != 0) {
-                                lastSpeedX = ((e.getX() - lastX) / timeElapsed) / canvas.getZoomFactor() / 1.6f;
-                                lastSpeedX = lastSpeedX * Utils.querySharedPreferenceInt(activity, Constants.touchpadCursorSpeed, 1) / 10;
+                                inertiaInitialSpeedX = ((e.getX() - lastX) / timeElapsed) / canvas.getZoomFactor() / 1.6f;
+                                inertiaInitialSpeedX = inertiaInitialSpeedX * Utils.querySharedPreferenceInt(activity, Constants.touchpadCursorSpeed, 1) / 10;
                             }
 
                             if (lastY != 0) {
-                                lastSpeedY = ((e.getY() - lastY) / timeElapsed) / canvas.getZoomFactor() / 1.6f;
-                                lastSpeedY = lastSpeedY * Utils.querySharedPreferenceInt(activity, Constants.touchpadCursorSpeed, 1) / 10;
+                                inertiaInitialSpeedY = ((e.getY() - lastY) / timeElapsed) / canvas.getZoomFactor() / 1.6f;
+                                inertiaInitialSpeedY = inertiaInitialSpeedY * Utils.querySharedPreferenceInt(activity, Constants.touchpadCursorSpeed, 1) / 10;
                             }
 
                             inertiaStartTime = System.currentTimeMillis();
@@ -470,8 +470,8 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             if (inertiaScrollingEnabled && !wasDragging && !inSwiping) {
                 if (!activity.isToolbarShowing() || !canvas.connection.getEnableGesture()) {
                     // 仅快甩才滑行:松手速度(每 tick 光标位移)超阈值,且松手距最后一次采样未停顿
-                    float flingSpeedX = lastSpeedX * inertiaBaseInterval;
-                    float flingSpeedY = lastSpeedY * inertiaBaseInterval;
+                    float flingSpeedX = inertiaInitialSpeedX * inertiaBaseInterval;
+                    float flingSpeedY = inertiaInitialSpeedY * inertiaBaseInterval;
                     boolean fastEnough = Math.abs(flingSpeedX) > INERTIA_FLING_MIN_SPEED
                             || Math.abs(flingSpeedY) > INERTIA_FLING_MIN_SPEED;
                     boolean notPaused = lastMoveSampleMs != 0
@@ -488,8 +488,8 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             if (inertiaScrollingEnabled && inSwiping) {
                 // 与单指一致:仅快甩才滑行,松手速度超阈值且未停顿。停顿判定用 lastScrollTimeMs
                 // (滚动路径走 doScroll,不经过单指分支,lastMoveSampleMs 不会被更新)。
-                float flingSpeedX = lastSpeedX * inertiaBaseInterval;
-                float flingSpeedY = lastSpeedY * inertiaBaseInterval;
+                float flingSpeedX = inertiaInitialSpeedX * inertiaBaseInterval;
+                float flingSpeedY = inertiaInitialSpeedY * inertiaBaseInterval;
                 boolean fastEnough = Math.abs(flingSpeedX) > INERTIA_FLING_MIN_SPEED
                         || Math.abs(flingSpeedY) > INERTIA_FLING_MIN_SPEED;
                 boolean notPaused = System.currentTimeMillis() - lastScrollTimeMs <= INERTIA_FLING_TIMEOUT_MS;
@@ -660,10 +660,10 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             long now = System.currentTimeMillis();
             long dt = now - lastMoveSampleMs;
             if (lastMoveSampleMs != 0 && dt > 0) {
-                lastSpeedX = (pointerPos.first - pointer.getX()) / (float) dt;
-                lastSpeedY = (pointerPos.second - pointer.getY()) / (float) dt;
+                inertiaInitialSpeedX = (pointerPos.first - pointer.getX()) / (float) dt;
+                inertiaInitialSpeedY = (pointerPos.second - pointer.getY()) / (float) dt;
             } else {
-                lastSpeedX = lastSpeedY = 0;
+                inertiaInitialSpeedX = inertiaInitialSpeedY = 0;
             }
             lastMoveSampleMs = now;
 
