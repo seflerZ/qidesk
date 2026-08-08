@@ -1,9 +1,9 @@
-# QiDesk
+# QxRemtoes
 <img src="https://github.com/user-attachments/assets/b801786b-ff35-4a8c-91dd-127def5345e4" width="128">
 
 🌼 **RDP\VNC\Moonlight\SSH High-Performance Remote Desktop Client. All in one.**  🌼
 
-QiDesk is a feature-rich remote desktop client supporting multiple protocols. It is a customized fork of the aRDP project (by iiordanov) with extensive optimizations, new features and bug fixes.
+QxRemotes is a feature-rich remote desktop client supporting multiple protocols. It is a customized fork of the aRDP project (by iiordanov) with extensive optimizations, new features and bug fixes.
 
 # Core Features
 - ✅ **High Performance**: Native 60fps rendering for a smooth remote control experience
@@ -26,9 +26,9 @@ QiDesk is a feature-rich remote desktop client supporting multiple protocols. It
 |<img src="https://github.com/user-attachments/assets/e1f3c93c-0388-4896-942e-4b8ca1808165" width="300">|<img src="https://github.com/user-attachments/assets/d1f149fc-5a3b-4e8b-a0c2-4960499ca592" width="300">|<img src="https://github.com/user-attachments/assets/5b9f6f99-da82-46f4-af8d-cfcfae57113d" width="300">|
 |<img src="https://github.com/user-attachments/assets/43e16542-7203-4bf0-a580-c46a0c452f9a" width="300">|<img src="https://github.com/user-attachments/assets/e47e1fbd-67ab-4c64-be1f-4df964647061" width="300">| |
 
-# Support QiDesk
+# Support QxRemotes
 
-If you find QiDesk useful and want to support its continued development, you can purchase the **Donation Version** on Google Play.
+If you find QxRemotes useful and want to support its continued development, you can purchase the **Donation Version** on Google Play.
 Your support helps fund ongoing improvements, new features, and maintenance.
 
 Purchasing the Donation Version unlocks these exclusive premium features:
