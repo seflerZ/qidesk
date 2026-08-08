@@ -1,6 +1,9 @@
 docker/.env
 .settings
 .idea/
+.claude/
+.agents/
+skills-lock.json
 
 # Vendored Android-Terminal-Emulator source (used to rebuild emulatorview-release.aar).
 # Track the source; ignore its build output and per-machine SDK pin.

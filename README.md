@@ -1,4 +1,4 @@
-# QxRemtoes
+# QxRemotes
 <img src="https://github.com/user-attachments/assets/b801786b-ff35-4a8c-91dd-127def5345e4" width="128">
 
 🌼 **RDP\VNC\Moonlight\SSH High-Performance Remote Desktop Client. All in one.**  🌼
