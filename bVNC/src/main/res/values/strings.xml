@@ -949,7 +949,7 @@ Below that is where you configure your connection.
     <string name="spice_main_screen_help_text">spice intro</string>
     <string name="rdp_main_screen_help_text">rdp</string>
 
-    <string name="configure_gesture">Configure Gesture</string>
+    <string name="configure_gesture">Configure Gestures</string>
     <string name="configure_connection">Configure Connection</string>
     <string name="save_gesture">Save Gesture</string>
     <string name="copy_gesture">Copy Gesture</string>
