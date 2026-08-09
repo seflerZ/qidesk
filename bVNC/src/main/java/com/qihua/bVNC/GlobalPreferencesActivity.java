@@ -14,8 +14,10 @@ public class GlobalPreferencesActivity extends AppCompatActivity {
 
         setTitle(getString(R.string.action_edit_default_settings));
 
+        setContentView(R.layout.global_preferences_activity);
+
         getSupportFragmentManager().beginTransaction()
-                .replace(android.R.id.content, new GlobalPreferencesFragment())
+                .replace(R.id.globalPreferencesContainer, new GlobalPreferencesFragment())
                 .commit();
     }
 }

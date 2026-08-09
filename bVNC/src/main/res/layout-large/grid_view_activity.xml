@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/something"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     android:gravity="top|center"
@@ -11,7 +10,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:orientation="vertical">
 
 <!--        <androidx.appcompat.widget.AppCompatImageButton-->
 <!--            android:id="@+id/addNewConnection"-->
@@ -23,17 +22,22 @@
 <!--            android:title="@string/action_new_connection"-->
 <!--            app:srcCompat="@drawable/ic_action_new" />-->
 
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="33dp"/>
+
         <EditText
             android:id="@+id/search"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
             android:layout_marginStart="2dp"
             android:layout_marginEnd="2dp"
             android:layout_weight="0.90"
+            android:gravity="center"
             android:hint="@string/search_connections"
             android:paddingBottom="10dp"
+            android:shadowColor="@color/theme"
             android:textAlignment="center"
-            android:gravity="center"
             android:textAppearance="?android:attr/textAppearanceLarge" />
 
         <androidx.appcompat.widget.AppCompatImageButton
