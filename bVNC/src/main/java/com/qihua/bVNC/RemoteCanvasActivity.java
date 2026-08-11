@@ -215,6 +215,10 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     RelativeLayout layoutKeys;
     boolean keyCtrlToggled;
     boolean keySuperToggled;
+    // Registered in onCreate on API 33+; the androidx OnBackPressedDispatcher
+    // bridge was observed not to deliver through AppCompat 1.4.1 on API 36,
+    // so we register directly on the platform dispatcher instead.
+    private android.window.OnBackInvokedCallback backInvokedCallback;
     boolean keyAltToggled;
     boolean keyShiftToggled;
     boolean extraKeysHidden = true;
@@ -315,13 +319,15 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     @Override
     public void onCreate(Bundle icicle) {
         Log.d(TAG, "OnCreate called");
+
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
+
         super.onCreate(icicle);
 
         // Bind to the ComputerManager service
         bindService(new Intent(RemoteCanvasActivity.this,
                 ComputerManagerService.class), serviceConnection, Service.BIND_AUTO_CREATE);
 
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
@@ -957,6 +963,21 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         toolbar.setLayoutParams(params);
         setSupportActionBar(toolbar);
         showToolbar();
+
+        // targetSdk 36 ⇒ BACK goes through OnBackInvokedDispatcher instead
+        // of Activity.onBackPressed; route to inputHandler.onKeyDown(KEYCODE_BACK)
+        // so the existing toolbar-toggle / disconnect flow runs.
+        if (Build.VERSION.SDK_INT >= 33) {
+            backInvokedCallback = () -> {
+                if (inputHandler != null) {
+                    inputHandler.onKeyDown(KeyEvent.KEYCODE_BACK,
+                            new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK));
+                }
+            };
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                    android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT,
+                    backInvokedCallback);
+        }
     }
 
     void relayoutViews(View rootView) {
@@ -1821,6 +1842,11 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     @Override
     protected void onDestroy() {
         super.onDestroy();
+
+        if (backInvokedCallback != null && Build.VERSION.SDK_INT >= 33) {
+            getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(backInvokedCallback);
+            backInvokedCallback = null;
+        }
 
         // already called when handling BACK_BUTTON
         disconnectAndClose();
