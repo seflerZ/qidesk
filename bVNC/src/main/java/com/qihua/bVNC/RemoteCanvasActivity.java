@@ -120,7 +120,6 @@ import com.qihua.util.UriIntentParser;
 import com.qihua.bVNC.util.SmartResolutionUtils;
 import com.undatech.opaque.Connection;
 import com.undatech.opaque.ConnectionSettings;
-import com.undatech.opaque.DrawTask;
 import com.undatech.opaque.MessageDialogs;
 import com.undatech.opaque.RemoteClientLibConstants;
 import com.undatech.opaque.util.FileUtils;
@@ -452,81 +451,43 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         }
 
         KeyBoardListenerHelper helper = new KeyBoardListenerHelper(this);
-        helper.setOnKeyBoardChangeListener((isShow, keyBoardHeight) -> {
+        helper.setOnKeyBoardChangeListener((isToolbarShow, keyBoardHeight) -> {
             // in external display mode, no need to handle soft keyboard changes
             if (canvas.isOutDisplay()) {
                 return;
             }
 
+            this.keyboardHeight = keyBoardHeight;
+
             Rect r = new Rect();
-            Rect re = new Rect();
-
             rootView.getWindowVisibleDisplayFrame(r);
-            getWindow().getDecorView().getWindowVisibleDisplayFrame(re);
 
-            // the absoluteYPosition is in image's coordinate system. if positive, the image on the screen will move upward
-            //
-            // SSH has no real pointer — RemoteSshPointer is a no-op
-            // (pointerY = 0). Substitute the libvterm cursor's bottom
-            // pixel as the "where the user is typing" coordinate so
-            // the RDP formula produces a meaningful panDistance. With
-            // SSH_SMART_RESOLUTION_FACTOR = 1 and the SshTerminalScaling
-            // installed by SshConnectionInitializer.initialize(),
-            // zoomFactor = 1 and the pan feeds DrawWorker's
-            // glCanvas.translate(-absoluteYPosition) on the next frame
-            // — the same machinery RDP uses to push the remote image
-            // up above the IME.
-            //
-            // SSH additionally grows the mbitmap by keyboardHeight
-            // when the IME is up (and shrinks it back when the IME
-            // hides) — see SshConnectionInitializer.onSoftKeyboardChanged
-            // — so the RDP pan can slide the (now transparent) top
-            // region off-screen instead of real terminal content. RDP/
-            // VNC have this headroom built-in via FitToScreenScaling;
-            // SSH achieves it on demand.
             boolean isSsh = canvas.connection != null
                     && canvas.connection.getConnectionType() == Constants.CONN_TYPE_SSH
                     && canvas.connInitializer != null;
             if (isSsh) {
-                canvas.connInitializer.onSoftKeyboardChanged(isShow, r.bottom);
+                canvas.connInitializer.onSoftKeyboardChanged(isToolbarShow, r.bottom);
             }
 
-            float pointerYPos;
-            if (isSsh) {
-                pointerYPos = ((com.qihua.bVNC.connection.SshConnectionInitializer) canvas.connInitializer).getCursorPixelY();
-            } else {
-                pointerYPos = (canvas.pointer.getY() - canvas.absoluteYPosition) * canvas.getZoomFactor();
-            }
-
-            float panDistance = pointerYPos + keyBoardHeight - canvas.getHeight();
-            if (isShow && panDistance > 0) {
-                // Undo the previous pan (if any) before applying the
-                // new one. The IME listener fires many times during
-                // the keyboard's show/hide animation (KeyBoardListenerHelper
-                // is an OnGlobalLayoutListener), and each fire would
-                // otherwise add its panDistance to absoluteYPosition,
-                // compounding across animation frames. RDP doesn't see
-                // this because FitToScreenScaling's clamp
-                // (y + vH > h → y = h - vH) limits absoluteYPosition to
-                // the bottom of the larger-than-viewport mbitmap; SSH's
-                // mbitmap is exactly the canvas size, so the clamp has
-                // no slack and the accumulation goes straight to the
-                // top of the screen as "extra" push. Reversing first
-                // makes each fire an idempotent delta against the last.
-                if (lastPanDist > 0) {
-                    canvas.relativePan(0, -lastPanDist, false);
+            // SSH has its own cursor-aware path (repanCanvas4SSH);
+            // RDP/VNC keep the pointer-based formula below.
+            if (!isSsh) {
+                float pointerYPos = (canvas.pointer.getY() - canvas.absoluteYPosition) * canvas.getZoomFactor();
+                float panDistance = pointerYPos + keyBoardHeight - canvas.getHeight();
+                if (isToolbarShow && panDistance > 0) {
+                    if (lastPanDist > 0) {
+                        canvas.relativePan(0, -lastPanDist, false);
+                    }
+                    lastPanDist = panDistance;
+                    canvas.relativePan(0, panDistance, true);
                 }
-                lastPanDist = panDistance;
-                canvas.relativePan(0, panDistance, true);
+                if (!isToolbarShow && lastPanDist > 0) {
+                    canvas.relativePan(0, -lastPanDist, false);
+                    lastPanDist = 0;
+                }
+            } else {
+                repanCanvas4SSH(isToolbarShow);
             }
-
-            if (!isShow && lastPanDist > 0) {
-                canvas.relativePan(0, -lastPanDist, false);
-                lastPanDist = 0;
-            }
-
-            this.keyboardHeight = keyBoardHeight;
-//            canvas.setVisibleDesktopHeight(r.bottom - re.top);
         });
 
         gestureOverlayView = findViewById(R.id.gestureOverlay);
@@ -647,15 +608,6 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         Log.d(TAG, "OnCreate complete");
     }
 
-    /**
-     * Wire the keyboard's one-shot on-screen-modifier auto-reset to the
-     * extra-keys bar: after a key consumes an on-screen Ctrl/Alt/Shift/Meta,
-     * the toggle button is deactivated in the UI (not just in the keyboard's
-     * internal onScreenMetaState). Idempotent; called from
-     * {@link #onExtraKeySpecialButtonState} on every toggle so it wires up
-     * the moment both the keyboard (created asynchronously in
-     * startConnection) and the extra-keys bar exist.
-     */
     private void ensureOnScreenModsAutoResetRegistered() {
         com.undatech.opaque.input.RemoteKeyboard kb = canvas != null ? canvas.getKeyboard() : null;
         if (kb == null || extraKeysView == null) return;
@@ -2056,6 +2008,47 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             // Because the zoom action is relative, we should divide the current zoom factor
             canvas.scaler.changeZoom(this, zoomRatio / canvas.scaler.getZoomFactor(), (float) canvas.getWidth() / 2, 0);
         });
+    }
+
+    /**
+     * True iff the soft IME is currently shown (last {@code OnGlobalLayout}
+     * reported > 19% of screen covered). Volatile, safe to read from
+     * background threads; {@link com.qihua.bVNC.connection.SshConnectionInitializer}'s
+     * reader thread polls it before posting an IME-pan refresh.
+     */
+    public boolean isSoftKeyboardUp() {
+        return softKeyboardUp;
+    }
+
+    /**
+     * SSH cursor-aware IME push-up. Uses libvterm cursor Y instead of
+     * pointer Y (RemoteSshPointer is a no-op). Idempotent across
+     * IME-animation fires and content-update re-fires (undo+apply net
+     * to zero when cursor Y doesn't change). Must run on the main
+     * thread — touches absoluteYPosition / relativePan.
+     */
+    public void repanCanvas4SSH(boolean isShow) {
+        float pointerYPos = ((com.qihua.bVNC.connection.SshConnectionInitializer) canvas.connInitializer).getCursorPixelY();
+        float panDistance = pointerYPos + keyboardHeight - canvas.getHeight();
+
+        if (isShow) {
+            if (panDistance > 0) {
+                // Undo first, then apply — keeps each fire idempotent.
+                if (lastPanDist > 0) {
+                    canvas.relativePan(0, -lastPanDist, false);
+                }
+                lastPanDist = panDistance;
+                canvas.relativePan(0, panDistance, true);
+            } else if (lastPanDist > 0) {
+                // Cursor is above the keyboard band now (e.g. after
+                // `clear`) — drop the previous push-up.
+                canvas.relativePan(0, -lastPanDist, false);
+                lastPanDist = 0;
+            }
+        } else if (lastPanDist > 0) {
+            canvas.relativePan(0, -lastPanDist, false);
+            lastPanDist = 0;
+        }
     }
 
     public void showKeyboard() {
