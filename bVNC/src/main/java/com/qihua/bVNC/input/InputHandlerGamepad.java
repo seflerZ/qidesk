@@ -572,12 +572,14 @@ public class InputHandlerGamepad extends InputHandlerGeneric {
 
     @Override
     public void cleanup() {
+        // super first so pointerAccelerationHelper is reset.
+        super.cleanup();
         // Clean up RemoteGamepad resources through abstracted interface
         if (remoteGamepad != null) {
             remoteGamepad.cleanup();
             remoteGamepad = null;
         }
-        
+
         // 移除游戏手柄覆盖层
         // Remove the gamepad overlay
         if (gamepadOverlay != null && gamepadOverlay.getParent() != null) {

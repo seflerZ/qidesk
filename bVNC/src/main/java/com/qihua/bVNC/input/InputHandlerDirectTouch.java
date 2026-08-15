@@ -359,6 +359,9 @@ public class InputHandlerDirectTouch extends InputHandlerGeneric {
 
     @Override
     public void cleanup() {
+        // super first so pointerAccelerationHelper is reset before
+        // the next Touchpad-mode session.
+        super.cleanup();
         canvas.showCursor();
     }
 

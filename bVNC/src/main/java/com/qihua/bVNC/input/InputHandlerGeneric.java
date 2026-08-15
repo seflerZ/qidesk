@@ -830,4 +830,13 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         GeneralUtils.debugLog(debugLogging, TAG, "onKeyDown, e: " + e);
         return canvas.getKeyboard().keyEvent(keyCode, e);
     }
+
+    @Override
+    public void cleanup() {
+        // Reset so DirectTouch → Touchpad doesn't reuse stale
+        // lastTimestamp / lastDistanceX/Y from the previous session.
+        if (pointerAccelerationHelper != null) {
+            pointerAccelerationHelper.reset();
+        }
+    }
 }
