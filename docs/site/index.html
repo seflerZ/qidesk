@@ -1,0 +1,857 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>QxRemotes — RDP, VNC, Moonlight & SSH on Android</title>
+  <meta name="description" content="QxRemotes is a high-performance Android remote desktop client that supports RDP, VNC, Moonlight (NVStream) and SSH — with native 60fps rendering, external display support, and built-in touchpad / gamepad / point-to-point touch input modes." />
+  <meta name="theme-color" content="#0b1020" />
+
+  <!-- Open Graph / social card (uses one of the hero screenshots once you drop them in) -->
+  <meta property="og:title" content="QxRemotes — RDP, VNC, Moonlight & SSH on Android" />
+  <meta property="og:description" content="Multi-protocol remote desktop for Android. Open source, 60fps, external-display ready." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://github.com/seflerZ/QxRemotes" />
+  <meta property="og:image" content="img/screenshots/01-hero.jpg" />
+
+  <style>
+    /* ---------- design tokens ---------- SHARP / cyberpunk ---------- */
+    :root {
+      --bg-0:        #05070f;
+      --bg-1:        #0a0e1c;
+      --bg-2:        #0f1428;
+      --bg-card:     rgba(255,255,255,0.025);
+      --bg-card-hi:  rgba(255,255,255,0.05);
+      --border:      rgba(255,255,255,0.10);
+      --border-hi:   rgba(0,229,255,0.50);
+      --text:        #e6ecff;
+      --text-dim:    #97a0c0;
+      --text-faint:  #5a6280;
+      --accent:      #00e5ff;   /* cyan */
+      --accent-2:    #7c5cff;   /* violet */
+      --accent-3:    #00ffa3;   /* mint for "free" */
+      --gold:        #ffb648;   /* for "pro" badges */
+      --radius:      2px;       /* hairline corners */
+      --radius-sm:   2px;
+      --radius-chip: 0;         /* pills become rectangles */
+      --shadow:      0 0 0 1px rgba(0,229,255,0.20), 0 10px 30px -10px rgba(0,229,255,0.15);
+      --mono: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    }
+
+    /* ---------- reset ---------- */
+    *,*::before,*::after { box-sizing: border-box; }
+    html,body { margin:0; padding:0; }
+    body {
+      font: 15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      color: var(--text);
+      background: var(--bg-0);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      overflow-x: hidden;
+      text-align: center;     /* everything centers; cells and images keep their own layout */
+    }
+    img { max-width:100%; height:auto; display:block; margin-left:auto; margin-right:auto; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ---------- background: scanlines + tight grid + glow ---------- */
+    body::before {
+      content: "";
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(1100px 600px at 80% -10%, rgba(124,92,255,0.22), transparent 60%),
+        radial-gradient(900px 500px at 10% 5%, rgba(0,229,255,0.20), transparent 60%),
+        linear-gradient(180deg, var(--bg-0) 0%, var(--bg-1) 100%);
+      z-index: -2;
+    }
+    body::after {
+      content: "";
+      position: fixed; inset: 0;
+      /* pointy-top honeycomb, side a=20, 3 hexes per 34.641x60 tile, seamless */
+      background-image: url("img/hex.svg");
+      background-size: 34.641px 60px;
+      background-repeat: repeat;
+      mask-image: linear-gradient(180deg, black 0%, black 70%, transparent 100%);
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    /* ---------- layout ---------- */
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+    section { padding: 64px 0; position: relative; }
+    section + section { border-top: 1px solid var(--border); }
+    h1,h2,h3 { font-weight: 700; letter-spacing: -0.025em; line-height: 1.1; margin: 0 0 .45em; }
+    h1 { font-size: clamp(2.1rem, 5.2vw, 3.6rem); text-transform: uppercase; }
+    h2 { font-size: clamp(1.45rem, 2.8vw, 1.9rem); text-transform: uppercase; letter-spacing: 0.01em; }
+    h3 { font-size: 1rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    p  { margin: 0 0 1em; color: var(--text-dim); }
+    .eyebrow {
+      display: inline-block;
+      font: 600 11px/1 var(--mono);
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--accent);
+      padding: 6px 10px;
+      border: 1px solid var(--border-hi);
+      background: rgba(0,229,255,0.06);
+      margin-bottom: 16px;
+      clip-path: polygon(0 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%);
+    }
+    .section-lead { font-size: 1rem; color: var(--text-dim); max-width: 720px; margin-left: auto; margin-right: auto; }
+
+    /* ---------- hero brand mark (replaces nav brand + eyebrow) ---------- */
+    .hero-brand {
+      display: inline-flex; align-items: center; gap: 12px;
+      margin-bottom: 18px;
+      text-decoration: none;
+      color: var(--text);
+    }
+    .hero-brand:hover { text-decoration: none; }
+    .hero-brand img {
+      width: 48px; height: 48px;
+      box-shadow: 0 0 0 1px var(--border-hi), 0 0 24px -4px rgba(0,229,255,0.35);
+      /* diagonal chamfer: only top-left + bottom-right are cut (6px on 48px = 12.5%) */
+      clip-path: polygon(12.5% 0, 100% 0, 100% 87.5%, 87.5% 100%, 0 100%, 0 12.5%);
+    }
+    .hero-brand-fallback {
+      width: 48px; height: 48px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      clip-path: polygon(12.5% 0, 100% 0, 100% 87.5%, 87.5% 100%, 0 100%, 0 12.5%);
+    }
+    .hero-brand-name {
+      font: 700 30px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+      letter-spacing: 0.02em;
+    }
+    /* ---------- buttons ---------- SHARP, squared, clipped corners ---------- */
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 16px;
+      font: 600 13px/1 inherit;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      border: 1px solid var(--border);
+      color: var(--text);
+      background: var(--bg-card);
+      transition: border-color .12s ease, background .12s ease, color .12s ease;
+      clip-path: polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%);
+    }
+    .btn:hover { border-color: var(--border-hi); background: var(--bg-card-hi); color: var(--accent); text-decoration: none; }
+    .btn-primary {
+      background: var(--accent);
+      color: #04111a; border-color: var(--accent);
+    }
+    .btn-primary:hover { background: #2bf0ff; border-color: #2bf0ff; color: #04111a; }
+    .btn-ghost { background: transparent; }
+
+    /* Store "badge" button — left logo, right two-line text label.
+       Used for both Google Play (.btn-play) and GitHub (.btn-gh).
+       Logo on the left, small line ("GET IT ON" / "VIEW ON") + brand big line stacked on the right. */
+    .btn-play, .btn-gh {
+      display: inline-flex; align-items: center;
+      gap: 12px;
+      padding: 10px 20px 10px 16px;
+      background: var(--bg-card-hi);
+      color: #fff;
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 16px -6px rgba(0,0,0,0.6);
+      transition: background .12s ease, border-color .12s ease, color .12s ease;
+      text-decoration: none;
+    }
+    .btn-play:hover, .btn-gh:hover { background: var(--bg-2); border-color: var(--accent); color: var(--accent); text-decoration: none; }
+    .btn-play .play-logo, .btn-gh .gh-logo { width: 28px; height: 28px; flex: 0 0 auto; display: block; }
+    .btn-gh .gh-logo { fill: currentColor; }
+    .btn-play .play-text, .btn-gh .gh-text {
+      display: flex; flex-direction: column; line-height: 1.1; text-align: left;
+    }
+    .btn-play .play-text .small, .btn-gh .gh-text .small {
+      font: 500 10px/1.1 var(--mono); letter-spacing: .14em; opacity: .75; text-transform: uppercase;
+    }
+    .btn-play .play-text .big, .btn-gh .gh-text .big {
+      font: 600 15px/1.1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; letter-spacing: .01em; margin-top: 2px;
+    }
+
+    /* ---------- hero ---------- */
+    .hero { padding: 72px 0 32px; position: relative; }
+    .hero::before {
+      content: "";
+      position: absolute; left: 0; top: 32px; width: 4px; height: 64px;
+      background: linear-gradient(180deg, var(--accent), var(--accent-2));
+    }
+    .hero-grid {
+      display: grid; gap: 40px;
+      grid-template-columns: 1fr;        /* single column — image below text */
+      align-items: center;
+      justify-items: center;
+    }
+    .hero h1 .grad {
+      background: linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 100%);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .hero .lede { font-size: 1.05rem; color: var(--text-dim); max-width: 640px; margin-left: auto; margin-right: auto; }
+
+    /* hero protocol row — 4 icons, no box, free layout */
+    .hero-protocols {
+      list-style: none;
+      padding: 0;
+      margin: 32px auto 0;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 36px;
+      max-width: 720px;
+    }
+    .hero-protocols li {
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+      padding: 6px 4px;
+      color: var(--text);
+      transition: color .15s ease, transform .15s ease;
+    }
+    .hero-protocols li:hover { color: var(--accent); transform: translateY(-2px); }
+    .hero-protocols svg { width: 40px; height: 40px; color: var(--text); transition: color .15s ease; }
+    .hero-protocols li:hover svg { color: var(--accent); }
+    .hero-protocols span {
+      font: 600 11px/1 var(--mono);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+    @media (max-width: 520px) {
+      .hero-protocols { gap: 24px; }
+    }
+    .hero-cta { display: flex; flex-wrap: wrap; gap: 10px; margin: 24px auto 0; justify-content: center; }
+
+    .hero-art {
+      position: relative;
+      width: 100%;
+      margin: 0 auto;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: 0 30px 80px -20px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,229,255,0.10);
+      background: var(--bg-1);
+      clip-path: polygon(0 0, 100% 0, 100% calc(100% - 24px), calc(100% - 24px) 100%, 0 100%);
+    }
+    .hero-art .ph {
+      aspect-ratio: 16 / 10;
+      display: grid; place-items: center;
+      color: var(--text-faint);
+      font: 500 12px/1 var(--mono);
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      background:
+        linear-gradient(135deg, rgba(0,229,255,0.06), rgba(124,92,255,0.06));
+    }
+    .hero-art img { width:100%; height:100%; object-fit: cover; }
+    .hero-art .corner-tag {
+      position: absolute; top: 10px; right: 10px;
+      font: 600 10px/1 var(--mono);
+      letter-spacing: 0.18em;
+      color: var(--accent);
+      padding: 5px 8px;
+      border: 1px solid var(--border-hi);
+      background: rgba(5,7,15,0.7);
+    }
+
+    /* ---------- feature grid ---------- */
+    .features {
+      display: grid; gap: 1px;                 /* hairline gaps, no rounding */
+      grid-template-columns: repeat(2, 1fr);
+      background: var(--border);                /* the gap is the border color */
+      border: 1px solid var(--border);
+    }
+    @media (max-width: 760px) { .features { grid-template-columns: 1fr; } }
+    .card {
+      position: relative;
+      padding: 24px;
+      background: var(--bg-1);
+      transition: background .15s ease, color .15s ease;
+      overflow: hidden;            /* mask fade stays inside the card */
+    }
+    .card:hover { background: var(--bg-2); }
+    .card > h3,
+    .card > p { position: relative; z-index: 1; }
+    /* The image is absolutely positioned to the right half of the card.
+       The mask-image fades the LEFT edge of the image into transparent,
+       so it blends smoothly into the text column on its left. */
+    .card .card-img {
+      position: absolute;
+      top: 0; left: 0; bottom: 0;
+      width: 55%;
+      background-size: 115% auto;       /* +15% horizontal — image overflows the right edge,
+                                          so the black border on tall portrait images is hidden
+                                          under the mask fade rather than visible as empty space */
+      background-position: left center;
+      background-repeat: no-repeat;
+      /* image fades to transparent on its RIGHT edge so it blends into the text column */
+      -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 65%, transparent 100%);
+              mask-image: linear-gradient(90deg, #000 0%, #000 65%, transparent 100%);
+      opacity: 0.85;
+      pointer-events: none;
+      z-index: 0;
+    }
+    /* Push text away from the image: reserve the LEFT ~55% column for the image */
+    .card > h3,
+    .card > p { padding-left: 56%; padding-right: 0; }
+    /* Wider title for the cross-column card */
+    .features > .card:last-child:nth-child(odd) > p,
+    .features > .card:last-child:nth-child(odd) > h3 { padding-right: 0; }
+    .card::before {
+      content: "";
+      position: absolute; left: 0; top: 0;
+      width: 0; height: 2px;
+      background: var(--accent);
+      transition: width .25s ease;
+    }
+    .card:hover::before { width: 100%; }
+    .card h3 { margin-bottom: 6px; }
+    .card p { margin: 0; }
+
+    /* ---------- screenshot gallery ---------- */
+    .gallery {
+      display: grid; gap: 1px;
+      grid-template-columns: repeat(3, 1fr);
+      background: var(--border);
+      border: 1px solid var(--border);
+    }
+    @media (max-width: 860px) { .gallery { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 520px) { .gallery { grid-template-columns: 1fr; } }
+    .shot {
+      position: relative;
+      aspect-ratio: 9 / 19.5;
+      background: var(--bg-1);
+      overflow: hidden;
+    }
+    .shot img { width:100%; height:100%; object-fit: cover; }
+    .shot .ph {
+      position:absolute; inset:0; display:grid; place-items:center;
+      color: var(--text-faint);
+      font: 500 11px/1 var(--mono);
+      letter-spacing: .15em;
+      text-transform: uppercase;
+    }
+    .shot .cap {
+      position:absolute; left:0; right:0; bottom:0;
+      padding: 8px 10px;
+      font: 600 10.5px/1.2 var(--mono);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text);
+      background: linear-gradient(0deg, rgba(5,7,15,0.92), transparent);
+    }
+
+    /* ---------- input modes ---------- */
+    .modes {
+      display: grid; gap: 1px;
+      grid-template-columns: repeat(3, 1fr);
+      background: var(--border);
+      border: 1px solid var(--border);
+    }
+    @media (max-width: 860px) { .modes { grid-template-columns: 1fr; } }
+    .mode {
+      padding: 22px;
+      background: var(--bg-1);
+    }
+    .mode h3 { display: flex; align-items: center; gap: 12px; }
+    .mode h3 .mode-icon {
+      width: 36px; height: 36px;
+      flex: 0 0 auto;
+      color: var(--accent);
+    }
+    /* Gamepad SVG has more internal detail (cross + 4 buttons) — keep it
+       slightly larger so the small features stay legible at this scale. */
+    .mode h3 .mode-icon--lg { width: 44px; height: 44px; }
+
+    /* ---------- download / pricing ---------- */
+    .download-grid {
+      display: grid; gap: 1px;
+      grid-template-columns: 1.05fr 0.95fr;
+      align-items: stretch;
+      background: var(--border);
+      border: 1px solid var(--border);
+    }
+    @media (max-width: 920px) { .download-grid { grid-template-columns: 1fr; } }
+    .tier {
+      position: relative;
+      padding: 26px;
+      background: var(--bg-1);
+      display: flex; flex-direction: column;
+    }
+    .tier.pro {
+      background:
+        linear-gradient(180deg, rgba(255,182,72,0.06), transparent 60%),
+        var(--bg-1);
+    }
+    .tier::before {
+      content: "";
+      position: absolute; left: 0; top: 0; right: 0; height: 2px;
+      background: var(--border);
+    }
+    .tier.pro::before { background: var(--gold); }
+    .tier-head { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px; margin-bottom: 6px; }
+    .tier h3 { font-size: 1rem; }
+    .badge {
+      font: 700 10px/1 var(--mono);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      padding: 5px 8px;
+      border: 1px solid currentColor;
+    }
+    .badge.free { color: var(--accent-3); }
+    .badge.pro  { color: var(--gold); }
+    .tier .price { color: var(--text-dim); margin: 4px 0 18px; font-size: 13.5px; }
+    .tier ul { list-style: none; padding: 0; margin: 0 0 22px; }
+    .tier li {
+      display: flex; gap: 10px; justify-content: center;
+      padding: 9px 0;
+      border-top: 1px solid var(--border);
+      font-size: 14px; color: var(--text);
+      text-align: center;
+    }
+    .tier li:first-child { border-top: 0; }
+    .tier li .ck { color: var(--accent-3); flex: 0 0 auto; font-family: var(--mono); }
+    .tier li.pro-only { align-items: flex-start; }
+    .tier li.pro-only .ck { color: var(--gold); padding-top: 2px; }
+    .tier .cta { margin-top: auto; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+
+    /* ---------- footer ---------- */
+    footer { padding: 32px 0 48px; border-top: 1px solid var(--border); color: var(--text-faint); font-size: 12.5px; }
+    .foot-row { display: flex; flex-wrap: wrap; gap: 18px; justify-content: center; align-items: center; }
+    .foot-links { display: flex; gap: 16px; flex-wrap: wrap; }
+    .foot-links a { color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; font-size: 11px; }
+
+    /* ---------- utility ---------- */
+    .center { text-align: center; }
+    .muted  { color: var(--text-faint); }
+    .nowrap { white-space: nowrap; }
+  </style>
+</head>
+<body>
+
+<!-- ====================== HERO ====================== -->
+<section class="hero" id="top">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div>
+        <a class="hero-brand" href="#top" aria-label="QxRemotes">
+          <img src="img/app-icon.png" alt=""
+               onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'hero-brand-fallback'}))" />
+          <span class="hero-brand-name">QxRemotes</span>
+        </a>
+        <h1>
+          REMOTE DESKTOPS,<br>
+          <span class="grad">ALL IN ONE</span>
+        </h1>
+        <p class="lede">
+          QxRemotes is a high-performance remote desktop client — native 60fps rendering,
+          an external-display mode that turns your phone into a desktop,
+          and built-in touchpad, gamepad, and point-to-point touch input.
+        </p>
+
+        <ul class="hero-protocols" aria-label="Supported protocols">
+          <li>
+            <!-- Microsoft RDP mark: monitor with Windows "田字格" 2x2 logo (RDP = Microsoft Remote Desktop) -->
+            <svg viewBox="0 0 32 32" fill="currentColor" aria-hidden="true">
+              <rect x="3" y="5" width="26" height="17" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
+              <path d="M11 27h10M16 22v5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+              <!-- Windows 4-square "田字格" mark, 4 cells of 5x5 with 1px gap, integer-aligned y -->
+              <g fill="currentColor">
+                <rect x="10" y="8"  width="5" height="5"/>
+                <rect x="16" y="8"  width="5" height="5"/>
+                <rect x="10" y="14" width="5" height="5"/>
+                <rect x="16" y="14" width="5" height="5"/>
+              </g>
+            </svg>
+            <span>RDP</span>
+          </li>
+          <li>
+            <!-- RealVNC-inspired: monitor with a dark filled badge containing "VNC" wordmark,
+                 echoing RealVNC's actual mark (dark rounded square + white VNC letters). -->
+            <svg viewBox="0 0 32 32" aria-hidden="true">
+              <rect x="3" y="5" width="26" height="18" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
+              <path d="M9 27h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+              <!-- dark badge inside the screen (echoes RealVNC's solid block) -->
+              <rect x="7" y="9" width="18" height="10" rx="1" fill="currentColor"/>
+              <!-- "VNC" wordmark, cut out of the dark badge in background color -->
+              <g fill="var(--bg-0)" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-weight="800" font-size="6" text-anchor="middle" letter-spacing="0.3">
+                <text x="16" y="16.5">VNC</text>
+              </g>
+            </svg>
+            <span>VNC</span>
+          </li>
+          <li>
+            <!-- Moonlight Streaming — official 8-pointed star, stroked (line-art style) -->
+            <svg viewBox="0 0 256 256" aria-hidden="true">
+              <circle cx="128" cy="128" r="96" fill="none" stroke="currentColor" stroke-width="14"/>
+              <polygon points="128.0,32.0 155.1,62.7 195.9,60.1 193.3,100.9 224.0,128.0 193.3,155.1 195.9,195.9 155.1,193.3 128.0,224.0 100.9,193.3 60.1,195.9 62.7,155.1 32.0,128.0 62.7,100.9 60.1,60.1 100.9,62.7" fill="none" stroke="currentColor" stroke-width="14" stroke-linejoin="miter"/>
+            </svg>
+            <span>Moonlight</span>
+          </li>
+          <li>
+            <!-- SSH terminal: window with title bar + blinking cursor + chevron prompt (">") -->
+            <svg viewBox="0 0 32 32" fill="currentColor" aria-hidden="true">
+              <!-- window outline -->
+              <rect x="4" y="6" width="24" height="20" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
+              <!-- title bar separator -->
+              <line x1="4" y1="11" x2="28" y2="11" stroke="currentColor" stroke-width="2"/>
+              <!-- window dots (traffic lights as small circles) -->
+              <circle cx="7.5" cy="8.5" r="0.9" fill="currentColor"/>
+              <circle cx="10.5" cy="8.5" r="0.9" fill="currentColor"/>
+              <circle cx="13.5" cy="8.5" r="0.9" fill="currentColor"/>
+              <!-- prompt chevron ">" -->
+              <path d="M9 16 L13 19 L9 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <!-- blinking cursor (filled block) -->
+              <rect x="14.5" y="16" width="2" height="6" fill="currentColor"/>
+              <!-- prompt underscore line (typing area) -->
+              <rect x="18" y="21" width="7" height="1.5" fill="currentColor" opacity="0.55"/>
+            </svg>
+            <span>SSH</span>
+          </li>
+        </ul>
+
+        <div class="hero-cta">
+          <a class="btn-play" href="https://play.google.com/store/apps/details?id=com.qihua.rmt" aria-label="Get QxRemotes on Google Play">
+            <svg class="play-logo" viewBox="0 0 60 60" aria-hidden="true">
+              <defs>
+                <linearGradient id="plg2" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#00d7fe"/>
+                  <stop offset="1" stop-color="#00a4ff"/>
+                </linearGradient>
+              </defs>
+              <path d="M10.5 6.5 L46 30 L10.5 53.5 Z" fill="url(#plg2)"/>
+              <path d="M10.5 6.5 L34 30 L10.5 53.5 Z" fill="#00f076" opacity="0.85"/>
+              <path d="M10.5 6.5 L46 30 L34 30 Z" fill="#ffcb00" opacity="0.9"/>
+              <path d="M10.5 53.5 L34 30 L46 30 Z" fill="#ff3a44" opacity="0.9"/>
+            </svg>
+            <span class="play-text">
+              <span class="small">GET IT ON</span>
+              <span class="big">Google Play</span>
+            </span>
+          </a>
+          <a class="btn-gh" href="https://github.com/seflerZ/QxRemotes/releases/latest" aria-label="Free download on GitHub">
+            <svg class="gh-logo" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 .5C5.7.5.6 5.6.6 12c0 5 3.3 9.3 7.8 10.8.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.8-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.4-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.2 1.2.9-.3 1.9-.4 2.9-.4s2 .1 2.9.4c2.2-1.5 3.2-1.2 3.2-1.2.6 1.6.2 2.8.1 3.1.7.8 1.2 1.8 1.2 3.1 0 4.5-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.2c0 .3.2.7.8.6 4.5-1.5 7.8-5.8 7.8-10.8C23.4 5.6 18.3.5 12 .5z"/>
+            </svg>
+            <span class="gh-text">
+              <span class="small">FREE ON</span>
+              <span class="big">GitHub</span>
+            </span>
+          </a>
+        </div>
+      </div>
+
+      <div class="hero-art">
+        <!-- Drop your main screenshot as img/screenshots/01-hero.jpg -->
+        <img src="img/screenshots/01-hero.jpg" alt="QxRemotes in action" loading="eager"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='grid';" />
+        <div class="ph" style="display:none">screenshots / 01-hero.jpg</div>
+        <div class="corner-tag"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== HIGHLIGHTS ====================== -->
+<section id="features">
+  <div class="wrap">
+    <span class="eyebrow">Highlights</span>
+    <h2>Built for serious remote work</h2>
+    <p class="section-lead">
+      Four pillars — multi-protocol coverage, a truly free open-source build,
+      an external-display workflow, and input modes that feel natural on a phone.
+    </p>
+
+    <div class="features" style="margin-top: 36px;">
+      <div class="card">
+        <h3>All the protocols you need</h3>
+        <p>
+          RDP, VNC, Moonlight / NVStream and SSH in a single app.
+          One connection list, one set of gestures, one tool for every machine on your desk.
+        </p>
+        <div class="card-img" style="background-image:url('img/highlights/01-protocols.jpg')"></div>
+      </div>
+
+      <div class="card">
+        <h3>Open source & zero data collection</h3>
+        <p>
+          Source on GitHub under a permissive license. The free build on GitHub Releases
+          collects <strong>no telemetry, no analytics, no account</strong> —
+          your phone talks directly to your machines, nothing in between.
+        </p>
+        <div class="card-img" style="background-image:url('img/highlights/02-open-source.jpg')"></div>
+      </div>
+
+      <div class="card">
+        <h3>External display · phone becomes a PC</h3>
+        <p>
+          Plug into a TV or monitor, pair a Bluetooth mouse and keyboard,
+          and your phone is a real desktop. QxRemotes routes input from any HID device you attach.
+        </p>
+        <div class="card-img" style="background-image:url('img/highlights/03-external-display.jpg')"></div>
+      </div>
+
+      <div class="card">
+        <h3>Customisable gestures</h3>
+        <p>
+          Bind swipe, pinch, two-finger tap, and edge swipes to any remote action —
+          scroll, zoom, switch input mode, invoke the keyboard, or fire a macro.
+          One-handed, no menu digging.
+        </p>
+        <div class="card-img" style="background-image:url('img/highlights/05-gestures.jpg')"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== INPUT MODES ====================== -->
+<section id="modes">
+  <div class="wrap">
+    <span class="eyebrow">Input</span>
+    <h2>Three ways to control the remote</h2>
+    <p class="section-lead">
+      Each mode is a first-class citizen, not a buried toggle. Switch from the in-session toolbar.
+    </p>
+
+    <div class="modes" style="margin-top: 36px;">
+      <div class="mode">
+        <h3>
+          <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <!-- touchpad: rounded rect with 2 finger dots -->
+            <rect x="3" y="5" width="18" height="14" rx="2"/>
+            <circle cx="9" cy="11" r="1.2" fill="currentColor" stroke="none"/>
+            <circle cx="14" cy="14" r="1.2" fill="currentColor" stroke="none"/>
+          </svg>
+          Touchpad simulation
+        </h3>
+        <p>
+          A two-finger trackpad on glass. One finger moves the cursor,
+          two fingers scroll, tap-to-click, long-press for drag.
+          Feels like a laptop trackpad the moment you pick up the phone.
+        </p>
+      </div>
+      <div class="mode">
+        <h3>
+          <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <!-- point-to-point: crosshair / target -->
+            <circle cx="12" cy="12" r="8"/>
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+          </svg>
+          Point-to-point touch
+        </h3>
+        <p>
+          Direct mapping — wherever your finger lands on the screen is
+          exactly where it lands on the remote. Best for drawing, drawing tools,
+          and any UI where absolute coordinates matter.
+        </p>
+      </div>
+      <div class="mode">
+        <h3>
+          <svg class="mode-icon mode-icon--lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" stroke-width="1.6">
+            <!-- gamepad (lucide design): rounded rect body + d-pad cross + 2 face dots -->
+            <rect width="20" height="12" x="2" y="6" rx="2"/>
+            <path d="M6 12h4m-2-2v4"/>
+            <circle cx="15" cy="11" r="0.6" fill="currentColor" stroke="none"/>
+            <circle cx="18" cy="14" r="0.6" fill="currentColor" stroke="none"/>
+          </svg>
+          Gamepad mapping
+        </h3>
+        <p>
+          On-screen controller with remappable buttons and stick zones.
+          Perfect for Moonlight game streaming and any remote app that wants
+          a console-style input device.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== SCREENSHOTS (hidden until screenshots are ready) ====================== -->
+<!--
+<section id="screenshots">
+  <div class="wrap">
+    <span class="eyebrow">Screenshots</span>
+    <h2>See it in action</h2>
+    <p class="section-lead">
+      Six real shots from the running app. Drop the matching PNGs into
+      <code style="color:var(--accent)">img/screenshots/</code> with the names shown —
+      no code changes required, placeholders disappear automatically.
+    </p>
+
+    <div class="gallery" style="margin-top: 36px;">
+      <div class="shot">
+        <img src="img/screenshots/02-pc-mode.png" alt="PC mode on external display"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='grid';" />
+        <div class="ph" style="display:none">02-pc-mode</div>
+        <div class="cap">PC mode</div>
+      </div>
+      <div class="shot">
+        <img src="img/screenshots/03-connection-list.png" alt="Connection list"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='grid';" />
+        <div class="ph" style="display:none">03-connection-list</div>
+        <div class="cap">Connections</div>
+      </div>
+      <div class="shot">
+        <img src="img/screenshots/04-rdp-session.png" alt="RDP session"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='grid';" />
+        <div class="ph" style="display:none">04-rdp-session</div>
+        <div class="cap">RDP session</div>
+      </div>
+      <div class="shot">
+        <img src="img/screenshots/05-moonlight.png" alt="Moonlight streaming"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='grid';" />
+        <div class="ph" style="display:none">05-moonlight</div>
+        <div class="cap">Moonlight</div>
+      </div>
+      <div class="shot">
+        <img src="img/screenshots/06-ssh.png" alt="SSH terminal"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='grid';" />
+        <div class="ph" style="display:none">06-ssh</div>
+        <div class="cap">SSH terminal</div>
+      </div>
+      <div class="shot">
+        <img src="img/screenshots/07-gamepad.png" alt="Gamepad mode"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='grid';" />
+        <div class="ph" style="display:none">07-gamepad</div>
+        <div class="cap">Gamepad mode</div>
+      </div>
+    </div>
+  </div>
+</section>
+-->
+
+<!-- ====================== DOWNLOAD ====================== -->
+<section id="download">
+  <div class="wrap">
+    <span class="eyebrow">Download</span>
+    <h2>Pick your build</h2>
+    <p class="section-lead">
+      Both builds come from the same codebase. The Pro build on Google Play adds
+      four quality-of-life assists — the core remote experience is fully usable on the free build.
+    </p>
+
+    <div class="download-grid" style="margin-top: 36px;">
+      <!-- ============ FREE ============ -->
+      <div class="tier">
+        <div class="tier-head">
+          <h3>Free · Open Source</h3>
+          <span class="badge free">Free</span>
+        </div>
+        <p class="price">
+          All protocols, all input modes, 60fps rendering. Forever.
+        </p>
+        <ul>
+          <li><span class="ck">✓</span> RDP / VNC / Moonlight / SSH</li>
+          <li><span class="ck">✓</span> Native 60fps rendering</li>
+          <li><span class="ck">✓</span> External display, mouse & keyboard</li>
+          <li><span class="ck">✓</span> Touchpad, point-to-point touch, gamepad</li>
+          <li><span class="ck">✓</span> Source on GitHub · permissive license</li>
+        </ul>
+        <div class="cta">
+          <a class="btn-gh" href="https://github.com/seflerZ/QxRemotes/releases/latest" aria-label="Free download on GitHub">
+            <svg class="gh-logo" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 .5C5.7.5.6 5.6.6 12c0 5 3.3 9.3 7.8 10.8.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.8-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.4-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.2 1.2.9-.3 1.9-.4 2.9-.4s2 .1 2.9.4c2.2-1.5 3.2-1.2 3.2-1.2.6 1.6.2 2.8.1 3.1.7.8 1.2 1.8 1.2 3.1 0 4.5-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.2c0 .3.2.7.8.6 4.5-1.5 7.8-5.8 7.8-10.8C23.4 5.6 18.3.5 12 .5z"/>
+            </svg>
+            <span class="gh-text">
+              <span class="small">FREE ON</span>
+              <span class="big">GitHub</span>
+            </span>
+          </a>
+        </div>
+      </div>
+
+      <!-- ============ PRO ============ -->
+      <div class="tier pro">
+        <div class="tier-head">
+          <h3>Pro · Google Play</h3>
+          <span class="badge pro">Donation build</span>
+        </div>
+        <p class="price">
+          Everything in Free, plus four assist features that make long sessions easier on small screens.
+        </p>
+        <ul>
+          <li><span class="ck">✓</span> <strong>Everything in Free</strong></li>
+
+          <li class="pro-only">
+            <span class="ck">★</span>
+            <div>
+              <strong>Smart Zoom Assist</strong><br>
+              <span class="muted">Temporarily zooms in when dragging slowly to help select text.</span>
+            </div>
+          </li>
+          <li class="pro-only">
+            <span class="ck">★</span>
+            <div>
+              <strong>Inertial Scrolling</strong><br>
+              <span class="muted">Cursor and scrolling keep gliding after a fast flick.</span>
+            </div>
+          </li>
+          <li class="pro-only">
+            <span class="ck">★</span>
+            <div>
+              <strong>Use Screen Edges as Wheels</strong><br>
+              <span class="muted">Swipe to scroll and click to call the soft keyboard — one-handed friendly.</span>
+            </div>
+          </li>
+          <li class="pro-only">
+            <span class="ck">★</span>
+            <div>
+              <strong>Back Tap to Show Keyboard</strong><br>
+              <span class="muted">Double-tap the back of the phone (or shake) to summon the soft keyboard.</span>
+            </div>
+          </li>
+        </ul>
+        <div class="cta">
+          <a class="btn-play" href="https://play.google.com/store/apps/details?id=com.qihua.rmt" aria-label="Get QxRemotes Pro on Google Play">
+            <svg class="play-logo" viewBox="0 0 60 60" aria-hidden="true">
+              <defs>
+                <linearGradient id="plg3" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#00d7fe"/>
+                  <stop offset="1" stop-color="#00a4ff"/>
+                </linearGradient>
+              </defs>
+              <path d="M10.5 6.5 L46 30 L10.5 53.5 Z" fill="url(#plg3)"/>
+              <path d="M10.5 6.5 L34 30 L10.5 53.5 Z" fill="#00f076" opacity="0.85"/>
+              <path d="M10.5 6.5 L46 30 L34 30 Z" fill="#ffcb00" opacity="0.9"/>
+              <path d="M10.5 53.5 L34 30 L46 30 Z" fill="#ff3a44" opacity="0.9"/>
+            </svg>
+            <span class="play-text">
+              <span class="small">GET IT ON</span>
+              <span class="big">Google Play</span>
+            </span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <p class="center muted" style="margin-top: 28px;">
+      The Pro build exists to fund development — its source lives in this same repo.
+      Features marked ★ are donation-supported and may land in the free build in a later release.
+    </p>
+  </div>
+</section>
+
+<!-- ====================== FOOTER ====================== -->
+<footer>
+  <div class="wrap">
+    <div class="foot-row">
+      <div>
+        <strong style="color:var(--text)">QxRemotes</strong> · © seflerZ
+      </div>
+      <div class="foot-links">
+        <a href="https://github.com/seflerZ/QxRemotes">GitHub</a>
+        <a href="https://github.com/seflerZ/QxRemotes/releases">Releases</a>
+        <a href="https://play.google.com/store/apps/details?id=com.qihua.rmt">Google Play</a>
+        <a href="https://github.com/seflerZ/QxRemotes/issues">Issues</a>
+      </div>
+    </div>
+    <p class="muted" style="margin-top: 18px; font-size: 12.5px;">
+      Originally forked from
+      <a href="https://github.com/iiordanov/remote-desktop-clients">aRDP by iiordanov</a>.
+      Built on top of
+      <a href="https://github.com/FreeRDP/FreeRDP">FreeRDP</a>,
+      <a href="https://github.com/LibVNC/libvncserver">LibVNCServer</a>,
+      and <a href="https://github.com/moonlight-stream">Moonlight</a>.
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>
