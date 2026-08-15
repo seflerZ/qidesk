@@ -13,7 +13,6 @@ import android.view.Display;
 import com.qihua.bVNC.App;
 import com.qihua.bVNC.Constants;
 import com.qihua.bVNC.RemoteCanvas;
-import com.qihua.bVNC.RemoteCanvasActivity;
 import com.qihua.bVNC.ssh.SshTerminalConnection;
 import com.qihua.bVNC.communicator.SshCommunicator;
 import com.qihua.bVNC.input.RemoteSshKeyboard;
@@ -83,13 +82,13 @@ public class SshConnectionInitializer extends ConnectionInitializer {
                 renderer.getTermSession().scrollToBottom();
             }
 
-            // Refresh IME push-up against the live cursor (scrollback
-            // was just snapped to bottom above). Posted to main —
-            // repanCanvas4SSH touches absoluteYPosition / relativePan.
+            // Refresh IME push-up. The 100ms debounce in repanCanvas4SSH
+            // absorbs the cursor row flicker that comes from cursor blink
+            // and rapid shell output, so the image doesn't flip on every
+            // callback.
             if (canvas.activity != null
                     && canvas.activity.isSoftKeyboardUp()) {
-                final RemoteCanvasActivity act = canvas.activity;
-                canvas.handler.post(() -> act.repanCanvas4SSH(true));
+                canvas.activity.repanCanvas4SSH(true);
             }
 
             paintAndRedraw();

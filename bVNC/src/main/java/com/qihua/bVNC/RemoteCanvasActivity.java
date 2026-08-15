@@ -212,21 +212,16 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     Panner panner;
     Handler handler;
     RelativeLayout layoutKeys;
-    boolean keyCtrlToggled;
-    boolean keySuperToggled;
     // Registered in onCreate on API 33+; the androidx OnBackPressedDispatcher
     // bridge was observed not to deliver through AppCompat 1.4.1 on API 36,
     // so we register directly on the platform dispatcher instead.
     private android.window.OnBackInvokedCallback backInvokedCallback;
-    boolean keyAltToggled;
-    boolean keyShiftToggled;
     boolean extraKeysHidden = true;
     volatile boolean softKeyboardUp;
     RemoteToolbar toolbar;
     View rootView;
     GestureOverlayView gestureOverlayView;
     ToolbarHiderRunnable toolbarHider = new ToolbarHiderRunnable();
-    private Vibrator myVibrator;
     private RemoteCanvas canvas;
     private RemoteCanvas touchpad;
     private CanvasPresentation canvasPresentation;
@@ -237,10 +232,18 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     private GestureLibrary gestureLibrary;
     private GestureActionLibrary gestureActionLibrary;
     private float lastPanDist = 0f;
+    // Whether the cursor is currently in the keyboard-occluded band,
+    // sampled from the last REPAN. Used together with cursorStateChangedAt
+    // to debounce fast cursor oscillations between rows.
+    private boolean cursorIsInKeyboard = false;
+    // Wall-clock time when cursorIsInKeyboard last changed. A change
+    // is only acted on once the cursor has stayed in the new state
+    // for at least CURSOR_SETTLE_MS — anything less is treated as a
+    // transient flicker and ignored.
+    private long cursorStateChangedAt = 0L;
+    private static final long CURSOR_SETTLE_MS = 200L;
     private ExtraKeysView extraKeysView;
     private int keyboardHeight;
-    // 记录当前连接已显示过的输入模式提示，避免重复显示
-    private Set<String> displayedInputModeTips = new HashSet<>();
     private static final String PREFS_INPUT_TIPS = "input_mode_tips";
     private BackTapKeyboardHelper backTapKeyboardHelper;
 
@@ -424,8 +427,6 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 
         StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
         StrictMode.setThreadPolicy(policy);
-
-        myVibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
 
         Runnable setModes = () -> {
             try {
@@ -1150,12 +1151,6 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
                 rootView.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
             }
         }
-
-//        if (myVibrator != null) {
-//            myVibrator.vibrate(VibrationEffect.createOneShot(12, 30));
-//        } else {
-//            Log.i(TAG, "Device cannot vibrate, not sending vibration");
-//        }
     }
 
     /**A
@@ -1603,7 +1598,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
                 if (getInputHandlerById(item.getItemId()) == inputHandler)
                     item.setChecked(true);
             }
-        } catch (NullPointerException e) {
+        } catch (NullPointerException ignored) {
         }
     }
 
@@ -1614,8 +1609,6 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
      * @return
      */
     InputHandler getInputHandlerById(int id) {
-        myVibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
-
         if (inputModeHandlers == null) {
             inputModeHandlers = new InputHandler[inputModeIds.length];
         }
@@ -1713,45 +1706,12 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         if (k != null) {
             k.setAfterMenu(true);
         }
+
         int itemId = item.getItemId();
-        if (itemId == R.id.itemInfo) {
-            canvas.showConnectionInfo();
-            return true;
-//        } else if (itemId == R.id.itemSpecialKeys) {
-//            showDialog(R.layout.metakey);
-//            return true;
-//        } else if (itemId == R.id.itemColorMode) {
-//            selectColorModel();
-//            return true;
-//            // Following sets one of the scaling options
-        } else if (itemId == R.id.itemZoomable || itemId == R.id.itemOneToOne || itemId == R.id.itemFitToScreen) {
+        if (itemId == R.id.itemZoomable || itemId == R.id.itemOneToOne || itemId == R.id.itemFitToScreen) {
             AbstractScaling.getById(item.getItemId()).setScaleTypeForActivity(this);
             item.setChecked(true);
             showPanningState(false);
-            return true;
-//        } else if (itemId == R.id.itemCenterMouse) {
-//            canvas.getPointer().movePointer(canvas.absoluteXPosition + canvas.getVisibleDesktopWidth() / 2,
-//                    canvas.absoluteYPosition + canvas.getVisibleDesktopHeight() / 2);
-//            return true;
-        } else if (itemId == R.id.itemDisconnect) {
-            canvas.closeConnection();
-            Utils.justFinish(this);
-            return true;
-//        } else if (itemId == R.id.itemEnterText) {
-//            showDialog(R.layout.entertext);
-//            return true;
-//        } else if (itemId == R.id.itemCtrlAltDel) {
-//            canvas.getKeyboard().sendMetaKey(MetaKeyBean.keyCtrlAltDel);
-//            return true;
-//        } else if (itemId == R.id.itemSendKeyAgain) {
-//            sendSpecialKeyAgain();
-//            return true;
-//            // Disabling Manual/Wiki Menu item as the original does not correspond to this project anymore.
-//            //case R.id.itemOpenDoc:
-//            //    Utils.showDocumentation(this);
-//            //    return true;
-        } else if (itemId == R.id.itemHelpInputMode) {
-            showDialog(R.id.itemHelpInputMode);
             return true;
         } else {
             boolean inputModeSet = setInputMode(item.getItemId());
@@ -2032,22 +1992,40 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         float panDistance = pointerYPos + keyboardHeight - canvas.getHeight();
 
         if (isShow) {
+            boolean nowInKeyboard = panDistance > 0;
+            if (nowInKeyboard != cursorIsInKeyboard) {
+                // Cursor moved between in-keyboard and out-of-keyboard
+                // bands. Don't act yet — record the transition and wait
+                // for it to settle. Shell output / cursor blink can move
+                // state->pos by a row or two within 1 ms (captured in
+                // earlier logcat), which would otherwise flip absY on
+                // every REPAN and cause the visible flicker.
+                cursorIsInKeyboard = nowInKeyboard;
+                cursorStateChangedAt = System.currentTimeMillis();
+                return;
+            }
+            if (System.currentTimeMillis() - cursorStateChangedAt < CURSOR_SETTLE_MS) {
+                // Same zone as last call but hasn't been stable long
+                // enough — keep the previous pan.
+                return;
+            }
             if (panDistance > 0) {
-                // Undo first, then apply — keeps each fire idempotent.
                 if (lastPanDist > 0) {
                     canvas.relativePan(0, -lastPanDist, false);
                 }
                 lastPanDist = panDistance;
                 canvas.relativePan(0, panDistance, true);
             } else if (lastPanDist > 0) {
-                // Cursor is above the keyboard band now (e.g. after
-                // `clear`) — drop the previous push-up.
                 canvas.relativePan(0, -lastPanDist, false);
                 lastPanDist = 0;
             }
-        } else if (lastPanDist > 0) {
-            canvas.relativePan(0, -lastPanDist, false);
-            lastPanDist = 0;
+        } else {
+            if (lastPanDist > 0) {
+                canvas.relativePan(0, -lastPanDist, false);
+                lastPanDist = 0;
+            }
+            cursorIsInKeyboard = false;
+            cursorStateChangedAt = 0L;
         }
     }
 
