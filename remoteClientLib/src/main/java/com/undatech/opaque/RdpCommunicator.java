@@ -104,16 +104,25 @@ public class RdpCommunicator extends RemoteConnectable implements RdpKeyboardMap
 
     @Override
     public int framebufferWidth() {
+        if (session == null) {
+            return 0;
+        }
         return session.getBookmark().getActiveScreenSettings().getWidth();
     }
 
     @Override
     public int framebufferHeight() {
+        if (session == null) {
+            return 0;
+        }
         return session.getBookmark().getActiveScreenSettings().getHeight();
     }
 
     @Override
     public String desktopName() {
+        if (session == null) {
+            return "";
+        }
         return ((ManualBookmark) session.getBookmark()).getHostname();
     }
 
