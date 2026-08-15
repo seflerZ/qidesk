@@ -30,8 +30,10 @@
             android:id="@+id/search"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_marginStart="2dp"
-            android:layout_marginEnd="2dp"
+            android:layout_marginStart="5dp"
+            android:layout_marginEnd="5dp"
+            android:layout_marginTop="5dp"
+            android:paddingTop="5dp"
             android:layout_weight="0.90"
             android:gravity="center"
             android:hint="@string/search_connections"
@@ -57,6 +59,7 @@
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
         android:gravity="top|center"
+        android:padding="5dp"
         android:numColumns="3"
         android:stretchMode="columnWidth">
     </GridView>

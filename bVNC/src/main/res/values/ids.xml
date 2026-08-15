@@ -4,4 +4,5 @@
     <item name="sshSelectionCopy" type="id" />
     <item name="sshSelectionSelectAll" type="id" />
     <item name="sshSelectionCancel" type="id" />
+    <item name="statusBarOverlay" type="id" />
 </resources>
