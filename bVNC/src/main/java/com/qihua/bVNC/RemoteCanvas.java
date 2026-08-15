@@ -1801,13 +1801,6 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     }
 
     public long getLastDrawMs() {
-        // drawWorker is only initialized when !isTouchpad() in the
-        // constructor (line 245-247). On SSH connection, the global
-        // layout listener can fire before RemoteCanvas finishes
-        // constructing, sending a relayoutViews() → checkAndAdjustRemoteResolution()
-        // call into getLastDrawMs() while drawWorker is still null.
-        // Return 0 (never-drawn) so the caller's existing
-        // `getLastDrawMs() <= 0` early-return path runs cleanly.
         return drawWorker != null ? drawWorker.getLastDraw() : 0L;
     }
 

@@ -56,6 +56,9 @@
                 <item
                     android:id="@+id/itemInputDirectTouch"
                     android:title="@string/input_method_direct_touch" />
+                <item
+                    android:id="@+id/itemInputGamepad"
+                    android:title="@string/input_method_gamepad" />
             </group>
         </menu>
     </item>

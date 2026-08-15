@@ -21,14 +21,11 @@ public class RdpRemoteGamepad extends RemoteGamepad {
     @Override
     public void initialize() {
         GeneralUtils.debugLog(debugLogging, TAG, "Initializing RDP gamepad");
-        // RDP协议的游戏手柄初始化逻辑
-        showUnsupportedToast(context.getString(R.string.rdp_gamepad_not_supported));
     }
     
     @Override
     public void cleanup() {
         GeneralUtils.debugLog(debugLogging, TAG, "Cleaning up RDP gamepad");
-        // RDP协议的游戏手柄清理逻辑
     }
     
     @Override

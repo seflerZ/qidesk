@@ -1164,7 +1164,6 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     @Override
     protected void onResume() {
         super.onResume();
-        Log.i(TAG, "onResume called.");
 
         // Start back tap keyboard helper if enabled
         SharedPreferences prefs = getSharedPreferences(Constants.generalSettingsTag, Context.MODE_PRIVATE);
@@ -2243,8 +2242,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     private void checkAndAdjustRemoteResolution() {
         // 仅智能分辨率模式下才会自适应分辨率
         if (connection.getRdpResType() != Constants.RDP_GEOM_SELECT_SMART) {
-            android.util.Log.d(TAG, "checkAndAdjustRemoteResolution: not smart resolution mode, resType: " + connection.getRdpResType());
-            return;
+           return;
         }
 
         if (canvas.getLastDrawMs() <= 0 || !canvas.rfbconn.isInNormalProtocol()) {
@@ -2260,7 +2258,6 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             Display display = getDisplayFromCanvas(canvas);
             display.getRealMetrics(metrics);
             newResolution = SmartResolutionUtils.calculateSmartResolution(metrics);
-            android.util.Log.d(TAG, "checkAndAdjustRemoteResolution: external display mode, using external display metrics");
         } else {
             // 普通模式：使用默认显示器的分辨率
             newResolution = SmartResolutionUtils.calculateSmartResolution(this);
@@ -2271,7 +2268,6 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 
         if (newWidth == canvas.rfbconn.framebufferWidth()
                 && newHeight == canvas.rfbconn.framebufferHeight()) {
-            android.util.Log.d(TAG, "checkAndAdjustRemoteResolution: resolution not changed");
             return;
         }
 
