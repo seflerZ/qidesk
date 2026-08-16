@@ -155,13 +155,6 @@ public abstract class RemotePointer {
 
     public void setRelativeEvents(boolean relativeEvents) {
         this.relativeEvents = relativeEvents;
-        if (relativeEvents) {
-            setSensitivity(1.0f);
-            setAccelerated(false);
-        } else {
-            setSensitivity(DEFAULT_SENSITIVITY);
-            setAccelerated(DEFAULT_ACCELERATED);
-        }
     }
 
     public float getSensitivity() {
