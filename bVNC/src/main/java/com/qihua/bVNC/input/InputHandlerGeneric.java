@@ -310,8 +310,8 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         final int meta = e.getMetaState();
         final int bstate = e.getButtonState();
 
-        float diffX = e.getX();
-        float diffY = e.getY();
+        float newX = e.getX();
+        float newY = e.getY();
 
         // shortcut for releasing pointer when in external monitor mode
         if (canvas.isOutDisplay() &&
@@ -332,7 +332,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
             fpsCounter.countInput();
         }
 
-        Pair<Integer, Integer> pointerPos = computePointerPos(diffX, diffY, 0.8f);
+        Pair<Integer, Integer> pointerPos = computePointerPos(newX, newY, 0.8f);
         int x = pointerPos.first;
         int y = pointerPos.second;
 
@@ -354,10 +354,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                         pointer.middleButtonDown(x, y, meta);
 
                         break;
-                    default:
-                        // move only
-                        pointer.moveMouse(x, y, meta);
-                        canvas.movePanToMakePointerVisible();
                 }
                 used = true;
                 break;
@@ -374,6 +370,7 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                         // move only
                         pointer.moveMouse(x, y, meta);
                         canvas.movePanToMakePointerVisible();
+                        break;
                 }
                 used = true;
                 break;
@@ -398,8 +395,9 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
                     scrollRight = true;
                 } else if (hscroll > 0) {
                     scrollLeft = true;
-                } else
+                } else {
                     break;
+                }
 
                 sendScrollEvents(x, y, -1, meta);
                 used = true;
