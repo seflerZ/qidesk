@@ -37,8 +37,6 @@ import com.undatech.opaque.util.GeneralUtils;
 import com.qihua.bVNC.R;
 import com.qihua.bVNC.connection.ProtocolType;
 
-import java.util.concurrent.Semaphore;
-
 public class InputHandlerTouchpad extends InputHandlerGeneric {
     public static final String ID = "TOUCHPAD_MODE";
     static final String TAG = "InputHandlerTouchpad";
@@ -54,63 +52,10 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         // SSH 也禁用:终端文本滚动由 libvterm 渲染,惯性导致越界 scroll 会出现
         // alt-buffer / scrollback 状态错乱;另外 SSH 文本选择(长按选词)在惯性尾巴
         // 里会跟着滑,体感不稳。
-        inertiaScrollingEnabled = Utils.querySharedPreferenceBoolean(activity.getApplicationContext(),
+        // 后台线程本身由基类启动(总在跑、信号量驱动),这里只决定要不要 release。
+        enableInertiaScrolling(Utils.querySharedPreferenceBoolean(activity.getApplicationContext(),
                 Constants.inertiaEnabled, true) && BuildConfig.EDGE_ENABLED
-                && !(pointer instanceof RemoteSshPointer);
-
-        // for inertia scrolling
-        inertiaThread = new Thread(() -> {
-            while (true) {
-                try {
-                    inertiaSemaphore.acquire();
-                } catch (Exception ignored) {
-                    // stop immediately
-                    continue;
-                }
-
-                if (inertiaInitialSpeedX == 0 && inertiaInitialSpeedY == 0) {
-                    continue;
-                }
-
-                float speedX = inertiaInitialSpeedX * inertiaBaseInterval;
-                float speedY = inertiaInitialSpeedY * inertiaBaseInterval;
-
-                if (inertiaSwiping) {
-                    while ((Math.abs(speedX) > INERTIA_STOP_THRESHOLD || Math.abs(speedY) > INERTIA_STOP_THRESHOLD)
-                            && !inertiaThread.isInterrupted()) {
-                        doScroll(pointer.getX(), pointer.getY(), -speedX, -speedY, inertiaMetaState);
-
-                        speedX *= INERTIA_DECAY_SCROLL;
-                        speedY *= INERTIA_DECAY_SCROLL;
-
-                        SystemClock.sleep(inertiaBaseInterval);
-                    }
-                } else {
-                    while ((Math.abs(speedX) > INERTIA_STOP_THRESHOLD || Math.abs(speedY) > INERTIA_STOP_THRESHOLD)
-                            && !inertiaThread.isInterrupted()) {
-                        int nextX = Math.round(pointer.getX() + speedX);
-                        int nextY = Math.round(pointer.getY() + speedY);
-                        pointer.moveMouse(nextX, nextY, inertiaMetaState);
-
-                        // 每一 tick 都调一次:惯性尾巴速度已衰得很小,但光标可能正好停在视图
-                        // 可见边界外侧仍向同方向推,这时不调就会一直留在屏外。
-                        // movePanToMakePointerVisible 内部自己判是否需要 pan(没越界时直接
-                        // return false),没有越界时不会触发 resetScroll/layout,代价可控。
-                        canvas.movePanToMakePointerVisible();
-
-                        speedX *= INERTIA_DECAY_MOVE;
-                        speedY *= INERTIA_DECAY_MOVE;
-
-                        SystemClock.sleep(inertiaBaseInterval);
-                    }
-                }
-
-                inertiaSwiping = false;
-            }
-        });
-
-        inertiaThread.setDaemon(true);
-        inertiaThread.start();
+                && !isSshPointer());
     }
 
     /**
@@ -137,20 +82,11 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
     // 每次事件都会写 lastScrollTimeMs,同一事件流里紧接着调 updateActiveEdgeSlider 时
     // 时间差恒为 ~0,复用会让滑条永远被跳过。用独立时间戳与 SCROLL_SAMPLING_MS 对齐。
     private long lastEdgeUpdateMs = 0;
-    // inertia scrolling state (moved down from InputHandlerGeneric; touchpad-only)
-    private Thread inertiaThread;
-    private final Semaphore inertiaSemaphore = new Semaphore(0);
-    private long inertiaStartTime = 0;
-    private long inertiaBaseInterval = 16;
-    private boolean inertiaScrollingEnabled = false;
-    private boolean inertiaSwiping = false;
-    private int inertiaMetaState = 0;
-    private float inertiaInitialSpeedX = 0;
-    private float inertiaInitialSpeedY = 0;
+    // inertia scrolling state lives in InertiaScroller (owned by the
+    // base class); this class just opts in via enableInertiaScrolling(...)
+    // and drives the sampling API exposed through InputHandlerGeneric.
     private float lastX = 0;
     private float lastY = 0;
-    // 单指移动动量采样:上次在 onScroll 单指分支更新光标的时刻,用于算松手速度 + 停顿判定
-    private long lastMoveSampleMs = 0;
 
     // SSH text selection. Set by onSshLongPress (driven by the standard
     // InputHandlerGeneric.onLongPress path when the active protocol
@@ -159,20 +95,6 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
     // button. Anchor coords are kept so the popup can be positioned
     // at the long-press point.
     private boolean sshSelectionMode = false;
-    private float sshAnchorViewX = 0f, sshAnchorViewY = 0f;
-
-    // 光标移动惯性衰减:0.92 每 16ms tick ≈ e^(-0.083*16),30 帧 ≈ 8% 残余,
-    // 沿用旧值(短促、跟手)
-    private static final float INERTIA_DECAY_MOVE = 0.92f;
-    // 滚动惯性衰减:0.96 每 16ms tick ≈ e^(-0.041*16),30 帧 ≈ 30% 残余,
-    // 调慢后滚动惯性尾巴更柔顺
-    private static final float INERTIA_DECAY_SCROLL = 0.96f;
-    // 速度小于此阈值(px/tick)即停止,避免无限逼近 0
-    private static final float INERTIA_STOP_THRESHOLD = 0.5f;
-    // 单指移动动量:松手时每 tick 光标位移低于此值不触发滑行,精细微调不飘(仅快甩才滑)
-    private static final float INERTIA_FLING_MIN_SPEED = 4f;
-    // 松手距最后一次移动超过此时长视为已停顿,不触发滑行,避免"移动-停顿-松手"误滑
-    private static final long INERTIA_FLING_TIMEOUT_MS = 60;
 
     @Override
     public boolean onTouchEvent(MotionEvent e) {
@@ -276,18 +198,10 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                         lastDragX = e.getX();
                         lastDragY = e.getY();
 
-                        inertiaInitialSpeedX = inertiaInitialSpeedY = 0;
-                        // 新手势开始,清采样时间戳,避免用上次手势的旧时刻算出巨大 dt
-                        lastMoveSampleMs = 0;
-
-                        inertiaSwiping = false;
-
-                        if (inertiaThread != null) {
-                            inertiaThread.interrupt();
-                        }
-
-                        // Stop inertia scrolling
-                        inertiaStartTime = System.currentTimeMillis();
+                        // 新手势开始:基类负责清采样时间戳 + 中断上一手惯性尾巴,
+                        // 避免用上次手势的旧时刻算出巨大 dt。
+                        resetInertiaSampling();
+                        stopInertia();
 
                         lastX = e.getX();
                         lastY = e.getY();
@@ -299,22 +213,8 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
                         detectImmersiveSwipe(e.getX(), e.getY());
                         break;
                     case MotionEvent.ACTION_MOVE:
-                        long timeElapsed = System.currentTimeMillis() - inertiaStartTime;
-                        long interval = inertiaBaseInterval * 2;
-
-                        if (timeElapsed > interval) {
-                            if (lastX != 0) {
-                                inertiaInitialSpeedX = ((e.getX() - lastX) / timeElapsed) / canvas.getZoomFactor() / 1.6f;
-                                inertiaInitialSpeedX = inertiaInitialSpeedX * Utils.querySharedPreferenceInt(activity, Constants.touchpadCursorSpeed, 1) / 10;
-                            }
-
-                            if (lastY != 0) {
-                                inertiaInitialSpeedY = ((e.getY() - lastY) / timeElapsed) / canvas.getZoomFactor() / 1.6f;
-                                inertiaInitialSpeedY = inertiaInitialSpeedY * Utils.querySharedPreferenceInt(activity, Constants.touchpadCursorSpeed, 1) / 10;
-                            }
-
-                            inertiaStartTime = System.currentTimeMillis();
-                        }
+                        // 手指位移动量采样(松手速度 → 惯性尾巴)
+                        recordFingerMoveSample(e.getX(), e.getY(), lastX, lastY, canvas.getZoomFactor());
 
                         // Send scroll up/down events if swiping is happening.
                         if (dragMode || rightDragMode || middleDragMode) {
@@ -467,69 +367,41 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             canEnlarge = true;
 
             // for single finger movement
-            if (inertiaScrollingEnabled && !wasDragging && !inSwiping) {
+            if (isInertiaEnabled() && !wasDragging && !inSwiping) {
                 if (!activity.isToolbarShowing() || !canvas.connection.getEnableGesture()) {
-                    // 仅快甩才滑行:松手速度(每 tick 光标位移)超阈值,且松手距最后一次采样未停顿
-                    float flingSpeedX = inertiaInitialSpeedX * inertiaBaseInterval;
-                    float flingSpeedY = inertiaInitialSpeedY * inertiaBaseInterval;
-                    boolean fastEnough = Math.abs(flingSpeedX) > INERTIA_FLING_MIN_SPEED
-                            || Math.abs(flingSpeedY) > INERTIA_FLING_MIN_SPEED;
-                    boolean notPaused = lastMoveSampleMs != 0
-                            && System.currentTimeMillis() - lastMoveSampleMs <= INERTIA_FLING_TIMEOUT_MS;
-
-                    if (fastEnough && notPaused) {
-                        inertiaMetaState = e.getMetaState();
-                        inertiaSemaphore.release();
-                    }
+                    tryStartSingleFingerInertia(meta);
                 }
             }
 
             // for two finger inertia scrolling
-            if (inertiaScrollingEnabled && inSwiping) {
-                // 与单指一致:仅快甩才滑行,松手速度超阈值且未停顿。停顿判定用 lastScrollTimeMs
-                // (滚动路径走 doScroll,不经过单指分支,lastMoveSampleMs 不会被更新)。
-                float flingSpeedX = inertiaInitialSpeedX * inertiaBaseInterval;
-                float flingSpeedY = inertiaInitialSpeedY * inertiaBaseInterval;
-                boolean fastEnough = Math.abs(flingSpeedX) > INERTIA_FLING_MIN_SPEED
-                        || Math.abs(flingSpeedY) > INERTIA_FLING_MIN_SPEED;
-                boolean notPaused = System.currentTimeMillis() - lastScrollTimeMs <= INERTIA_FLING_TIMEOUT_MS;
-
-                if (fastEnough && notPaused) {
-                    // ============================================================
-                    // 低帧率协议 (RDP / VNC) 上的 scroll inertia 显式禁用
-                    // ============================================================
-                    // 背景:doScroll 对边缘 / 双指滚动做了两层降频处理——
-                    //   1. delta 系数减半 (distanceY * density / 4,原 /2)
-                    //   2. RDP 路径计划用 RdpScrollCoalescer 32ms 窗合包 (FLUSH_MS=32)
-                    // 这两层处理后每包 delta 翻倍,RDP 服务器侧 wheel 累加更稳定
-                    // (参见相关 RdpScrollCoalescer 调研历史)。但在松手阶段,
-                    // inertia 路径再走 doScroll 时,中间只有几个 tick,
-                    // 这些 tick 各被合 1~2 个 30Hz 窗口,服务器可能收不到或
-                    // 被新一轮手势覆盖,体感是"手指在快、松手后慢"。
-                    //
-                    // 与 NVStream/SPICE/SSH 的差异:NVStream 内部 batch
-                    // 路径天然无此问题,所以不需要在这里 bypass。
-                    //
-                    // 副作用说明:这里的 return-true 只阻止 scroll inertia
-                    // 释放,不影响 doScroll 本体,也不影响单指 pointer inertia
-                    // (pointer inertia 走 inertiaThread 的 else 分支
-                    // → pointer.moveMouse,跟此处分支无关)。
-                    //
-                    // 未来如果加了新的 RFB 派生指针类型 (如 RemoteSpiceRfbPointer),
-                    // 想继承同样的处理就把它的 instanceof 加进下面这个或判断里。
-                    // ============================================================
-                    if (pointer instanceof RemoteRdpPointer || pointer instanceof RemoteVncPointer) {
-                        return true;
-                    }
-                    // 惯性阶段手指已离开,immersive(跟随手指在边缘的位置)语义已不存在。
-                    // 边缘滚动松手不走 endDragModesAndScrolling,immersiveSwipeX/Y 残留为 true,
-                    // 会在 doScroll(638/671 行)门掉某方向分量,导致边缘惯性不如双指顺。
-                    // 这里清掉,让边缘惯性与双指走完全相同的 doScroll 路径。
-                    immersiveSwipeX = false;
-                    immersiveSwipeY = false;
-                    inertiaSwiping = true;
-                    inertiaSemaphore.release();
+            if (isInertiaEnabled() && inSwiping) {
+                // ============================================================
+                // 低帧率协议 (RDP / VNC) 上的 scroll inertia 显式禁用
+                // ============================================================
+                // 背景:doScroll 对边缘 / 双指滚动做了两层降频处理——
+                //   1. delta 系数减半 (distanceY * density / 4,原 /2)
+                //   2. RDP 路径计划用 RdpScrollCoalescer 32ms 窗合包 (FLUSH_MS=32)
+                // 这两层处理后每包 delta 翻倍,RDP 服务器侧 wheel 累加更稳定
+                // (参见相关 RdpScrollCoalescer 调研历史)。但在松手阶段,
+                // inertia 路径再走 doScroll 时,中间只有几个 tick,
+                // 这些 tick 各被合 1~2 个 30Hz 窗口,服务器可能收不到或
+                // 被新一轮手势覆盖,体感是"手指在快、松手后慢"。
+                //
+                // 与 NVStream/SPICE/SSH 的差异:NVStream 内部 batch
+                // 路径天然无此问题,所以不需要在这里 bypass。
+                //
+                // 副作用说明:这里的 return-true 只阻止 scroll inertia
+                // 释放,不影响 doScroll 本体,也不影响单指 pointer inertia
+                // (pointer inertia 走 inertiaThread 的 else 分支
+                // → pointer.moveMouse,跟此处分支无关)。
+                //
+                // 未来如果加了新的 RFB 派生指针类型 (如 RemoteSpiceRfbPointer),
+                // 想继承同样的处理就把它的 instanceof 加进下面这个或判断里。
+                // ============================================================
+                if (isLowFrameRateScrollProtocol()) {
+                    return true;
                 }
+                tryStartScrollInertia(meta, lastScrollTimeMs);
             }
         }
 
@@ -584,8 +456,6 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         // selection mode. The base class has already vibrated once
         // — we deliberately do NOT vibrate again.
         sshSelectionMode = true;
-        sshAnchorViewX = e.getX();
-        sshAnchorViewY = e.getY();
         if (pointer instanceof RemoteSshPointer) {
             ((RemoteSshPointer) pointer).enterSelectionPx((int) e.getX(), (int) e.getY());
         }
@@ -657,15 +527,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
 
             // 动量采样:用光标坐标位移(而非手指位移)除以采样间隔,量纲对齐惯性线程
             // else 分支的 pointer.getX()+speed,松手滑行速度不会突变。
-            long now = System.currentTimeMillis();
-            long dt = now - lastMoveSampleMs;
-            if (lastMoveSampleMs != 0 && dt > 0) {
-                inertiaInitialSpeedX = (pointerPos.first - pointer.getX()) / (float) dt;
-                inertiaInitialSpeedY = (pointerPos.second - pointer.getY()) / (float) dt;
-            } else {
-                inertiaInitialSpeedX = inertiaInitialSpeedY = 0;
-            }
-            lastMoveSampleMs = now;
+            recordScrollCursorSample(pointerPos.first, pointerPos.second);
 
             pointer.moveMouse(pointerPos.first, pointerPos.second, meta);
 
@@ -686,7 +548,7 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
         //     完成 notch 累加。合并效果同 pointer 移动的 30ms 同窗逻辑,但 RDP/VNC
         //     可以容忍更大窗。
         // 同时保留:高于屏刷的速率下不至于一秒百次发包。
-        boolean lowFpsScroll = pointer instanceof RemoteRdpPointer || pointer instanceof RemoteVncPointer;
+        boolean lowFpsScroll = isLowFrameRateScrollProtocol();
         long scrollSamplingTimeMs;
         if (lowFpsScroll) {
             scrollSamplingTimeMs = 60;
@@ -785,7 +647,9 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             sendChunkedScroll(x, y, newX, meta);
         }
 
-        // return false to continue processing in InputHandlerGeneric, such as inertial scrolling
+        // return false so the gestureDetector's onScroll() pipeline lets the
+        // scroll inertia tail (handled by InertiaScroller via the base
+        // class's doScroll() callback) keep firing on the background thread
         return false;
     }
 

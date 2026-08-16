@@ -119,6 +119,9 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
     // 滑动窗口分析器，用于检测慢速精细操作
     protected TouchMovementAnalyzer touchMovementAnalyzer;
 
+    /** 惯性滚动后台执行器:状态、采样、松手判定、daemon worker 一体封装 */
+    protected final InertiaScroller inertiaScroller;
+
     InputHandlerGeneric(RemoteCanvasActivity activity, RemoteCanvas canvas, RemoteCanvas touchpad, RemotePointer pointer,
                         boolean debugLogging) {
         this.activity = activity;
@@ -152,6 +155,109 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
 
         // 初始化指针加速助手
         pointerAccelerationHelper = new PointerAccelerationHelper();
+
+        // 惯性后台执行器:daemon worker 始终在跑,无信号时空转 acquire()。
+        // 是否真正 release 信号由 enable(...) 决定。
+        // 双指 scroll inertia 走回调 lambda 回到子类自己的 doScroll() 实现,
+        // 保证惯性尾巴的 scroll 行为与正常 onScroll 完全一致(同样的 immersive / edge 语义)。
+        inertiaScroller = new InertiaScroller(activity, canvas, pointer,
+                (x, y, dx, dy, meta) -> doScroll(x, y, dx, dy, meta));
+    }
+
+    /**
+     * 子类在 super(...) 构造完成后调用,声明本会话是否启用惯性滚动。
+     * <p>
+     * 默认 false。{@link InertiaScroller} daemon worker 始终在跑,只是
+     * 无信号时永远空转 acquire(),所以 SSH / RDP-low-fps / free 版这类
+     * 想关掉的子类,只要传 false 进来即可。
+     */
+    protected void enableInertiaScrolling(boolean enabled) {
+        inertiaScroller.enable(enabled);
+    }
+
+    /** 当前是否启用了惯性滚动。子类用于 ACTION_UP 分支短路决策。 */
+    protected boolean isInertiaEnabled() {
+        return inertiaScroller.isEnabled();
+    }
+
+    /**
+     * 中断正在跑的惯性尾巴(新手势开始时调用,防止上一手惯性残留)。
+     * 不必关心 enabled 状态——若已禁用,中断本身也无副作用。
+     */
+    protected void stopInertia() {
+        inertiaScroller.stop();
+    }
+
+    /**
+     * 标记手势开始:清采样时间戳,避免用上次手势的旧时刻算出巨大 dt。
+     * 在 ACTION_DOWN 里调一下即可。
+     */
+    protected void resetInertiaSampling() {
+        inertiaScroller.resetSampling();
+    }
+
+    /**
+     * 单指手指 MOVE 时的动量采样(以手指位移 / 时间算松手速度)。
+     *
+     * @param fingerX    当前手指 view-X
+     * @param fingerY    当前手指 view-Y
+     * @param lastFingerX 上一次采样手指 view-X
+     * @param lastFingerY 上一次采样手指 view-Y
+     * @param zoomFactor canvas.getZoomFactor() —— 光标位置 = 手指位置 / zoom
+     */
+    protected void recordFingerMoveSample(float fingerX, float fingerY,
+                                          float lastFingerX, float lastFingerY,
+                                          float zoomFactor) {
+        inertiaScroller.recordFingerMoveSample(fingerX, fingerY, lastFingerX, lastFingerY, zoomFactor);
+    }
+
+    /**
+     * onScroll 单指分支的动量采样(以光标位移 / 时间算松手速度)。
+     *
+     * @param cursorX 本帧目标光标 X(已算入加速 + sensitivity)
+     * @param cursorY 本帧目标光标 Y
+     */
+    protected void recordScrollCursorSample(int cursorX, int cursorY) {
+        inertiaScroller.recordScrollCursorSample(cursorX, cursorY);
+    }
+
+    /**
+     * ACTION_UP 单指分支调用,内部已封 enable + fastEnough + notPaused 三道关。
+     */
+    protected void tryStartSingleFingerInertia(int metaState) {
+        inertiaScroller.tryStartSingleFinger(metaState);
+    }
+
+    /**
+     * 双指 / 沉浸边缘 scroll 惯性触发。
+     * <p>
+     * RDP/VNC 等低帧率协议子类必须自己加短路,本类不持有 {@code pointer}
+     * 协议字段以外的协议知识(子类内部还有 immersive 残留清零等协议细节)。
+     *
+     * @param metaState          ACTION_UP 时的 metaState
+     * @param lastScrollSampleMs 子类 onScroll 双指分支记录的 lastScrollTimeMs
+     */
+    protected void tryStartScrollInertia(int metaState, long lastScrollSampleMs) {
+        boolean started = inertiaScroller.tryStartScroll(metaState, lastScrollSampleMs);
+        if (started) {
+            // 惯性阶段手指已离开,immersive(跟随手指在边缘的位置)语义已不存在。
+            // 边缘滚动松手不走 endDragModesAndScrolling,immersiveSwipeX/Y 残留为 true,
+            // 会在 doScroll 门掉某方向分量,导致边缘惯性不如双指顺。
+            // 这里清掉,让边缘惯性与双指走完全相同的 doScroll 路径。
+            // (这是 input handler 的 immersive 状态,与 inertia 系统本身无关,故留在基类)
+            immersiveSwipeX = false;
+            immersiveSwipeY = false;
+        }
+    }
+
+    /** 是否 RDP / VNC 类低帧率 scroll 协议;子类用于 scroll inertia bypass 短路。 */
+    protected boolean isLowFrameRateScrollProtocol() {
+        return inertiaScroller.isLowFrameRateScrollProtocol();
+    }
+
+    /** 是否 SSH 指针;子类构造里用于在 enable 之前显式关掉。 */
+    protected boolean isSshPointer() {
+        return inertiaScroller.isSshPointer();
     }
 
     /**
