@@ -4,10 +4,6 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="33dp" />
-
     <FrameLayout
         android:id="@+id/globalPreferencesContainer"
         android:layout_width="match_parent"

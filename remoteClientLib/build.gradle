@@ -52,6 +52,14 @@ android {
         }
     }
 
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+
     sourceSets.main {
         java.srcDirs += 'src/main/java'
     }
@@ -66,11 +74,10 @@ dependencies {
     implementation project(":remoteClientLib:jni:libs:deps:moonlight-android:app")
 
     api 'com.android.support:multidex:1.0.3'
-    implementation 'com.android.support:appcompat-v7:28.0.0'
     implementation 'org.apache.httpcomponents:httpcore:4.4.10'
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     implementation group: 'commons-validator', name: 'commons-validator', version: '1.7'
-    implementation 'androidx.appcompat:appcompat:1.4.1'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
 
     // SSH terminal state machine: libvterm, exposed to Java via the
     // JNI bridge at jni/src/vterm_jni.c. The .so files (libvterm.so,

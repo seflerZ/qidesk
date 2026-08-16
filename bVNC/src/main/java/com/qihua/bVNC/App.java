@@ -150,6 +150,56 @@ public class App extends MultiDexApplication {
             v.setLayoutParams(params);
             return insets;
         });
+
+        // Edge-to-edge on Android 15+ (forced on API 36+) makes the
+        // ActionBarOverlayLayout's ContentFrameLayout span the full
+        // DecorView, then draw the ActionBar as an overlay on top of
+        // it — so calls to setContentView(...) land at y=0 of the
+        // screen and the first row of content slides under the
+        // ActionBar. AppCompat 1.6.1 didn't fix this; the ActionBar is
+        // always overlay in the post-edge-to-edge layout flow. We
+        // resolve ?attr/actionBarSize from the activity's theme and
+        // add it to statusBars.top as padding-top on android.R.id.content
+        // so the user's setContentView root is naturally below the
+        // ActionBar — no per-layout 33dp spacer required. Cutout and
+        // nav-bar insets handled the same way so rotated / cutout
+        // devices don't fight this either.
+        //
+        // BUT: RemoteCanvasActivity uses AppTheme (NoActionBar) and
+        // needs full-screen real estate — adding actionBarSize there
+        // would leave a phantom 48dp gap. Only activities that actually
+        // host an ActionBar get the +actionBarSize offset; full-screen
+        // activities (RemoteCanvas) just get the bare statusBars.top.
+        // getSupportActionBar() returns null for NoActionBar themes
+        // and for activities that called requestWindowFeature(NO_TITLE),
+        // which is the gate we want.
+        int actionBarHeight = 0;
+        boolean hasActionBar = false;
+        if (activity instanceof AppCompatActivity) {
+            androidx.appcompat.app.ActionBar ab =
+                    ((AppCompatActivity) activity).getSupportActionBar();
+            hasActionBar = (ab != null);
+        }
+        if (hasActionBar) {
+            TypedValue abTv = new TypedValue();
+            if (activity.getTheme().resolveAttribute(androidx.appcompat.R.attr.actionBarSize, abTv, true)) {
+                actionBarHeight = TypedValue.complexToDimensionPixelSize(
+                        abTv.data, activity.getResources().getDisplayMetrics());
+            }
+        }
+        final int topInsetPadding = actionBarHeight;
+        View content = activity.findViewById(android.R.id.content);
+        if (content != null) {
+            ViewCompat.setOnApplyWindowInsetsListener(content, (v, insets) -> {
+                Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+                v.setPadding(
+                        bars.left,
+                        bars.top + topInsetPadding,
+                        bars.right,
+                        bars.bottom);
+                return insets;
+            });
+        }
     }
 
     /**
