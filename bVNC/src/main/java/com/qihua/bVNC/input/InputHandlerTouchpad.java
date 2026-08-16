@@ -112,6 +112,10 @@ public class InputHandlerTouchpad extends InputHandlerGeneric {
             return true;
         }
 
+        // the cursor may be hidden in touch direct mode here, since every touch there
+        // will trigger pointer hide event
+        canvas.showCursor();
+
         final int action = e.getActionMasked();
         final int index = e.getActionIndex();
         final int pointerID = e.getPointerId(index);
