@@ -207,11 +207,10 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
         float diffX = e.getX();
         float diffY = e.getY();
 
-        long currentTime = System.currentTimeMillis();
-
-        if (pointer.pointerY >= canvas.getHeight()
-                && action == MotionEvent.ACTION_DOWN
-                && canvas.isOutDisplay()) {
+        // shortcut for releasing pointer when in external monitor mode
+        if (canvas.isOutDisplay() &&
+                pointer.pointerY >= canvas.getHeight()
+                && action == MotionEvent.ACTION_DOWN) {
             pointer.pointerY = pointer.pointerY - 20;
             touchpad.releasePointerCapture();
 
@@ -331,8 +330,6 @@ abstract class InputHandlerGeneric extends MyGestureDectector.SimpleOnGestureLis
      */
     @Override
     public boolean onSingleTapConfirmed(MotionEvent e) {
-//        GeneralUtils.debugLog(debugLogging, TAG, "onSingleTapConfirmed, e: " + e);
-
         if (dragMode || rightDragMode || middleDragMode) {
             return true;
         }
