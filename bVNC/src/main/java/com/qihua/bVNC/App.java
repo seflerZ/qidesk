@@ -9,6 +9,7 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.widget.FrameLayout;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -180,21 +181,39 @@ public class App extends MultiDexApplication {
                     ((AppCompatActivity) activity).getSupportActionBar();
             hasActionBar = (ab != null);
         }
+
         if (hasActionBar) {
             TypedValue abTv = new TypedValue();
             if (activity.getTheme().resolveAttribute(androidx.appcompat.R.attr.actionBarSize, abTv, true)) {
                 actionBarHeight = TypedValue.complexToDimensionPixelSize(
                         abTv.data, activity.getResources().getDisplayMetrics());
+
+                // fine tune
+                actionBarHeight -= (int) (16 * activity.getResources().getDisplayMetrics().density);
             }
         }
-        final int topInsetPadding = actionBarHeight;
+
+        final int[] topInsetPadding = {actionBarHeight};
         View content = activity.findViewById(android.R.id.content);
         if (content != null) {
+            // padding.top = actionBarHeight + statusBars.top.
+            // In edge-to-edge mode (Android 15+, forced on API 36+),
+            // the system positions the ActionBar at y=statusBars.top,
+            // so the ActionBar visually occupies y=statusBars.top ..
+            // statusBars.top + actionBarHeight. Padding the content
+            // frame by only actionBarHeight puts content at
+            // y=actionBarHeight — well inside the ActionBar's vertical
+            // band, where the ActionBar's bottom half still occludes
+            // the first row. Adding statusBars.top moves content to
+            // y=statusBars.top + actionBarHeight, i.e. flush below the
+            // ActionBar's bottom edge. The other three sides still
+            // take nav-bar / cutout insets so the edge-to-edge
+            // contract is preserved elsewhere.
             ViewCompat.setOnApplyWindowInsetsListener(content, (v, insets) -> {
                 Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
                 v.setPadding(
                         bars.left,
-                        bars.top + topInsetPadding,
+                        topInsetPadding[0] + bars.top,
                         bars.right,
                         bars.bottom);
                 return insets;
