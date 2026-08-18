@@ -1337,12 +1337,9 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             com.qihua.bVNC.connection.SshConnectionInitializer init =
                     (com.qihua.bVNC.connection.SshConnectionInitializer) canvas.connInitializer;
             init.applyTheme();
-            // After the palette is in place, poke the remote shell
-            // so it re-queries OSC 10/11 and recalculates its
-            // prompt colours. Safe here — the SSH connection is
-            // live and the pipe won't spew garbled bytes into the
-            // shell startup.
-            init.queryShellTheme();
+            // Don't query OSC 10/11 here: libvterm 0.3.3 has no OSC reply
+            // parser, so the shell's `OSC 10 ; rgb:...` reply leaks to the
+            // screen as garbled text on every theme flip / rotation.
         }
     }
 
