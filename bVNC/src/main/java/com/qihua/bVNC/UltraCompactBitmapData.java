@@ -156,10 +156,11 @@ class UltraCompactBitmapData extends AbstractBitmapData {
 
         @Override
         public void draw(Canvas canvas) {
-            canvas.drawBitmap(data.mbitmap, 0, 0, _defaultPaint);
-
-            if (drawCursor) {
-                canvas.drawBitmap(softCursor, cursorRect.left, cursorRect.top, _defaultPaint);
+            synchronized (data.mbitmap) {
+                canvas.drawBitmap(data.mbitmap, 0, 0, _defaultPaint);
+                if (drawCursor) {
+                    canvas.drawBitmap(softCursor, cursorRect.left, cursorRect.top, _defaultPaint);
+                }
             }
         }
     }

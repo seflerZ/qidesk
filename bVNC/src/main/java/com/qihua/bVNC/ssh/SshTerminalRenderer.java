@@ -290,7 +290,11 @@ public class SshTerminalRenderer {
             targetCanvas = new Canvas(target);
             targetCanvasBitmap = target;
         }
-        targetCanvas.drawBitmap(backBitmap, 0f, 0f, null);
+        // Lock mbitmap so the blit doesn't tear DrawWorker's upload of
+        // mbitmap as a GL texture (flicker on every keystroke, worst on BS).
+        synchronized (target) {
+            targetCanvas.drawBitmap(backBitmap, 0f, 0f, null);
+        }
     }
 
     /**
