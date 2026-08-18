@@ -1538,9 +1538,8 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     void updateInputMenu() {
         try {
             for (MenuItem item : inputModeMenuItems) {
-                item.setEnabled(canvas.scaler.isValidInputMode(item.getItemId()));
-                if (getInputHandlerById(item.getItemId()) == inputHandler)
-                    item.setChecked(true);
+                String itemInputModeId = inputModeMap.get(item.getItemId());
+                item.setChecked(itemInputModeId != null && itemInputModeId.equals(inputHandler.getId()));
             }
         } catch (NullPointerException ignored) {
         }
