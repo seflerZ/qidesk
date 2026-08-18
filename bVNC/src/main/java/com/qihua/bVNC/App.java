@@ -187,9 +187,6 @@ public class App extends MultiDexApplication {
             if (activity.getTheme().resolveAttribute(androidx.appcompat.R.attr.actionBarSize, abTv, true)) {
                 actionBarHeight = TypedValue.complexToDimensionPixelSize(
                         abTv.data, activity.getResources().getDisplayMetrics());
-
-                // fine tune
-                actionBarHeight -= (int) (16 * activity.getResources().getDisplayMetrics().density);
             }
         }
 
@@ -210,12 +207,11 @@ public class App extends MultiDexApplication {
             // take nav-bar / cutout insets so the edge-to-edge
             // contract is preserved elsewhere.
             ViewCompat.setOnApplyWindowInsetsListener(content, (v, insets) -> {
-                Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
                 v.setPadding(
-                        bars.left,
-                        topInsetPadding[0] + bars.top,
-                        bars.right,
-                        bars.bottom);
+                        0,
+                        topInsetPadding[0],
+                        0,
+                        0);
                 return insets;
             });
         }
