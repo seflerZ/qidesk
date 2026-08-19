@@ -12,6 +12,7 @@ import android.view.Display;
 
 import com.qihua.bVNC.App;
 import com.qihua.bVNC.Constants;
+import com.qihua.bVNC.DoubleBufferBitmapData;
 import com.qihua.bVNC.RemoteCanvas;
 import com.qihua.bVNC.ssh.SshTerminalConnection;
 import com.qihua.bVNC.communicator.SshCommunicator;
@@ -589,13 +590,10 @@ public class SshConnectionInitializer extends ConnectionInitializer {
         // Reseed the mbitmap with the new background so the user
         // sees the flip immediately rather than waiting for the
         // next byte from the remote shell.
-        if (canvas != null && canvas.bitmapData != null
-                && canvas.bitmapData.mbitmap != null
-                && !canvas.bitmapData.mbitmap.isRecycled()) {
-            renderer.seedBackground(canvas.bitmapData.mbitmap);
-            canvas.reDraw(0, 0,
-                    canvas.bitmapData.mbitmap.getWidth(),
-                    canvas.bitmapData.mbitmap.getHeight());
+        if (canvas != null && canvas.bitmapData instanceof DoubleBufferBitmapData) {
+            DoubleBufferBitmapData dbb = (DoubleBufferBitmapData) canvas.bitmapData;
+            renderer.seedBackground(dbb);
+            canvas.reDraw(0, 0, dbb.getWidth(), dbb.getHeight());
         }
     }
 
@@ -681,18 +679,15 @@ public class SshConnectionInitializer extends ConnectionInitializer {
      * subsequent screen mutations; this call IS the first-frame trigger.
      */
     private void openRenderer() {
-        if (canvas.bitmapData == null || canvas.bitmapData.mbitmap == null) {
-            Log.w(TAG, "openRenderer: bitmapData or mbitmap is null");
+        if (!(canvas.bitmapData instanceof DoubleBufferBitmapData)) {
+            Log.w(TAG, "openRenderer: bitmapData is not DoubleBufferBitmapData");
             return;
         }
+        DoubleBufferBitmapData dbb = (DoubleBufferBitmapData) canvas.bitmapData;
 
-        int w = canvas.bitmapData.mbitmap.getWidth();
-        int h = canvas.bitmapData.mbitmap.getHeight();
-        // Seed the freshly-allocated bitmap with our background colour so
-        // empty cells (which drawText doesn't repaint) start out blue
-        // instead of the default transparent black. Called every time
-        // the bitmap is (re)allocated, including fold/unfold rebuilds.
-        renderer.seedBackground(canvas.bitmapData.mbitmap);
+        int w = dbb.getWidth();
+        int h = dbb.getHeight();
+        renderer.seedBackground(dbb);
         renderer.open(w, h, sshUpdateRunnable);
         // Wire scrollback: the pointer decodes scroll deltas into the state
         // machine's view offset and requests a coalesced repaint per event.
@@ -759,11 +754,11 @@ public class SshConnectionInitializer extends ConnectionInitializer {
         public void run() {
             if (renderer == null) return;
             if (canvas == null) return;
-            if (canvas.bitmapData == null || canvas.bitmapData.mbitmap == null) return;
+            if (!(canvas.bitmapData instanceof DoubleBufferBitmapData)) return;
             if (canvas.rfbconn == null) return;
             paintCounter++;
             try {
-                renderer.renderInto(canvas.bitmapData.mbitmap);
+                renderer.renderInto((DoubleBufferBitmapData) canvas.bitmapData);
                 // reDraw schedules DrawTask onto DrawWorker (which paints
                 // mbitmap to the SurfaceView). Kept INSIDE the try so a
                 // teardown race (drawWorker nulled by onDestroy, rfbconn
@@ -857,8 +852,8 @@ public class SshConnectionInitializer extends ConnectionInitializer {
             //    bitmap is uninitialised (transparent black) — seed the
             //    BG so the first paint of empty cells isn't a black flash.
             canvas.reallocateDrawable(w, h);
-            if (renderer != null && canvas.bitmapData != null && canvas.bitmapData.mbitmap != null) {
-                renderer.seedBackground(canvas.bitmapData.mbitmap);
+            if (renderer != null && canvas.bitmapData instanceof DoubleBufferBitmapData) {
+                renderer.seedBackground((DoubleBufferBitmapData) canvas.bitmapData);
             }
 
             // 4. Restart the SSH-Paint thread (it was stopped in step 1).

@@ -8,6 +8,7 @@ import android.graphics.Typeface;
 import android.util.Log;
 
 import com.qihua.bVNC.Constants;
+import com.qihua.bVNC.DoubleBufferBitmapData;
 import com.qihua.bVNC.ssh.libvterm.SshTermStateMachine;
 import com.qihua.bVNC.ssh.libvterm.VTermCanvasRenderer;
 
@@ -52,29 +53,11 @@ public class SshTerminalRenderer {
     private VTermCanvasRenderer canvasRenderer;
     private int currentCols = -1;
     private int currentRows = -1;
-    private boolean open;
     private boolean closed;
     /** Notified when the terminal grid size changes (fold/unfold/etc). */
     private GridSizeListener gridSizeListener;
     /** Background thread that drains SSH bytes into the state machine. */
     private Thread readerThread;
-    /**
-     * Back-buffer for tear-free rendering. SSH-Paint renders the cell grid
-     * into this bitmap first (10-30 ms), then blits it to the target mbitmap
-     * in one fast {@code drawBitmap} call (~0.1 ms). Without it, SSH-Paint
-     * draws directly onto mbitmap while DrawWorker concurrently reads it —
-     * the per-cell bg fill prevents flicker for keystroke-level edits
-     * (a few cells), but scrolling changes every cell, so DrawWorker can
-     * snap a half-painted frame: upper half showing the new scroll position,
-     * lower half still the old one — visual tearing.
-     */
-    private Bitmap backBitmap;
-    /** Cached Canvas wrapping {@link #backBitmap} — recreated only on resize. */
-    private Canvas backCanvas;
-    /** Cached Canvas wrapping the target mbitmap — recreated only when target changes. */
-    private Canvas targetCanvas;
-    /** The Bitmap that {@link #targetCanvas} currently wraps (for change detection). */
-    private Bitmap targetCanvasBitmap;
 
     public SshTerminalRenderer(float density, SshShellChannel channel, Context ctx) throws IOException {
         this.density = density;
@@ -86,9 +69,9 @@ public class SshTerminalRenderer {
     }
 
     /** Initialise the target bitmap with our background colour. */
-    public void seedBackground(Bitmap target) {
-        if (target == null || target.isRecycled()) return;
-        target.eraseColor(currentBgColor());
+    public void seedBackground(DoubleBufferBitmapData target) {
+        if (target == null) return;
+        target.eraseFront(currentBgColor());
     }
 
     /**
@@ -195,61 +178,41 @@ public class SshTerminalRenderer {
         // (SshShellChannel.getTerminalIn() returns an InputStream
         //  from which the shell's output is read.)
         final java.io.InputStream sshOut = channel.getTerminalIn();
-        readerThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    long totalRead = 0;
-                    while (!Thread.currentThread().isInterrupted()) {
-                        int n = sshOut.read(readBuffer);
-                        if (n < 0) {
-                            Log.i(TAG, "readerThread: EOF on SSH channel, totalRead=" + totalRead);
-                            return;
-                        }
-                        if (n > 0) {
-                            totalRead += n;
-                            Log.i(TAG, "readerThread: read n=" + n + " total=" + totalRead
-                                    + " bytes=" + formatBytes(readBuffer, n));
-                            if (stateMachine != null) {
-                                stateMachine.write(readBuffer, 0, n);
-                            }
-                            if (onUpdate != null) onUpdate.run();
-                        }
+        readerThread = new Thread(() -> {
+            try {
+                long totalRead = 0;
+                while (!Thread.currentThread().isInterrupted()) {
+                    int n = sshOut.read(readBuffer);
+                    if (n < 0) {
+                        Log.i(TAG, "readerThread: EOF on SSH channel, totalRead=" + totalRead);
+                        return;
                     }
-                } catch (IOException e) {
-                    Log.w(TAG, "readerThread: SSH read failed", e);
+                    if (n > 0) {
+                        totalRead += n;
+                        Log.i(TAG, "readerThread: read n=" + n + " total=" + totalRead
+                                + " bytes=" + formatBytes(readBuffer, n));
+                        if (stateMachine != null) {
+                            stateMachine.write(readBuffer, 0, n);
+                        }
+                        if (onUpdate != null) onUpdate.run();
+                    }
                 }
+            } catch (IOException e) {
+                Log.w(TAG, "readerThread: SSH read failed", e);
             }
         }, "SSH-VTerm-Reader");
         readerThread.setDaemon(true);
         readerThread.start();
         channel.start();
-        open = true;
         Log.i(TAG, "open: " + cols + " cols x " + rows + " rows, charW="
                 + canvasRenderer.charWidth + " charH=" + canvasRenderer.charHeight
                 + " pad=" + pad + "px");
     }
 
-    public void renderInto(Bitmap target) {
-        if (closed || target == null || target.isRecycled()) return;
+    public void renderInto(DoubleBufferBitmapData target) {
+        if (closed || target == null) return;
         int w = target.getWidth();
         int h = target.getHeight();
-        // Ensure the back-buffer + its Canvas match the current target dimensions.
-        if (backBitmap == null
-                || backBitmap.getWidth() != w || backBitmap.getHeight() != h
-                || backBitmap.isRecycled()) {
-            if (backBitmap != null && !backBitmap.isRecycled()) {
-                backBitmap.recycle();
-            }
-            backBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
-            backCanvas = new Canvas(backBitmap);
-        }
-        // Erase the back-buffer to the current bg colour. This seeds the
-        // padding ring and any grid-overshoot gaps, so the cell loop + the
-        // gap fills in VTermCanvasRenderer.render together produce a
-        // complete frame with no transparent / stale pixels.
-        backBitmap.eraseColor(currentBgColor());
-
         int pad = paddingPx();
         int cols = Math.max(20, (w - 2 * pad) / (int) canvasRenderer.charWidth);
         int rows = Math.max(10, (h - 2 * pad) / canvasRenderer.charHeight);
@@ -259,18 +222,6 @@ public class SshTerminalRenderer {
             if (stateMachine != null) {
                 int smCols = stateMachine.getCols();
                 int smRows = stateMachine.getRows();
-                // Only push a size change to the state machine when the
-                // mbitmap is SMALLER (or equal) than what the PTY is
-                // currently running at. When the mbitmap grows beyond
-                // the PTY — which happens on IME-up when
-                // resizeSSHFramebuffer adds a transparent backup
-                // region above the terminal rows — we keep the PTY at
-                // its current size. libvterm's getCell() returns null
-                // for out-of-range rows, and VTermCanvasRenderer skips
-                // null cells, so the extra bitmap rows just stay as the
-                // BG_COLOR seed that seedBackground paints, which is
-                // exactly what we want for the "overflow region" that
-                // the RDP-style IME pan eats into.
                 if (cols <= smCols && rows <= smRows) {
                     stateMachine.setSize(cols, rows);
                     if (gridSizeListener != null) {
@@ -279,22 +230,13 @@ public class SshTerminalRenderer {
                 }
             }
         }
-        if (stateMachine != null) {
-            canvasRenderer.render(stateMachine, backCanvas);
-        }
-        // Atomic blit: copy the complete frame to mbitmap in ~0.1 ms.
-        // Reuse a cached Canvas wrapping target — avoids allocating a new
-        // Canvas object every frame (15-30 FPS fast-scroll path).
-        if (targetCanvas == null || targetCanvasBitmap != target
-                || targetCanvasBitmap.isRecycled()) {
-            targetCanvas = new Canvas(target);
-            targetCanvasBitmap = target;
-        }
-        // Lock mbitmap so the blit doesn't tear DrawWorker's upload of
-        // mbitmap as a GL texture (flicker on every keystroke, worst on BS).
-        synchronized (target) {
-            targetCanvas.drawBitmap(backBitmap, 0f, 0f, null);
-        }
+        final int bgColor = currentBgColor();
+        target.paintAndPublish(canvas -> {
+            canvas.drawColor(bgColor);
+            if (stateMachine != null) {
+                canvasRenderer.render(stateMachine, canvas);
+            }
+        });
     }
 
     /**
@@ -408,7 +350,6 @@ public class SshTerminalRenderer {
     public void close() {
         if (closed) return;
         closed = true;
-        open = false;
         if (readerThread != null) {
             readerThread.interrupt();
             try { readerThread.join(200); } catch (InterruptedException ignored) {}
@@ -419,13 +360,6 @@ public class SshTerminalRenderer {
         } catch (Throwable t) {
             Log.w(TAG, "stateMachine.destroy failed", t);
         }
-        if (backBitmap != null && !backBitmap.isRecycled()) {
-            backBitmap.recycle();
-            backBitmap = null;
-        }
-        backCanvas = null;
-        targetCanvas = null;
-        targetCanvasBitmap = null;
         channel.close();
     }
 

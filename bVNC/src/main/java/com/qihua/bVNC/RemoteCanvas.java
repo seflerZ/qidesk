@@ -753,11 +753,17 @@ public class RemoteCanvas extends SurfaceView implements Viewable
                 || protocol == ProtocolType.NVSTREAM
                 || protocol == ProtocolType.SSH;
         boolean isUltraCompactProtocol = isPushlessProtocol || protocol == ProtocolType.SPICE;
-        if (isPushlessProtocol) {
-            // SSH Phase 0 reuses UltraCompactBitmapData: its drawable
-            // overrides Drawable.draw(Canvas), its constructor creates
-            // mbitmap, and the SshConnectionInitializer.start path then
-            // paints the hardcoded "Hello SSH" text into mbitmap once.
+        if (protocol == ProtocolType.SSH) {
+            // SSH paints whole frames from its own thread, so the
+            // double-buffered bitmap class — front/back swap, no torn
+            // frames — fits cleanly. Other pushless protocols (RDP,
+            // NVSTREAM, SPICE) keep their incremental-update model via
+            // UltraCompactBitmapData for now.
+            int w = Math.max(1, rfbconn.framebufferWidth());
+            int h = Math.max(1, rfbconn.framebufferHeight());
+            bitmapData = new DoubleBufferBitmapData(rfbconn, this, w, h, Bitmap.Config.ARGB_8888);
+            Log.i(TAG, "Using DoubleBufferBitmapData (SSH).");
+        } else if (isPushlessProtocol) {
             bitmapData = new UltraCompactBitmapData(rfbconn, this, isUltraCompactProtocol);
             Log.i(TAG, "Using UltraCompactBufferBitmapData.");
         } else if (!useFull) {

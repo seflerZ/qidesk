@@ -72,11 +72,6 @@ public class SshTerminalScaling extends AbstractScaling {
     }
 
     @Override
-    public float getZoomFactor() {
-        return 1.0f;
-    }
-
-    @Override
     public Matrix getMatrix() {
         return matrix;
     }

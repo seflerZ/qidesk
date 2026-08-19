@@ -126,7 +126,6 @@ class CompactBitmapData extends AbstractBitmapData {
                 }
                 System.arraycopy(bitmapPixels, srcOffset, bitmapPixels, dstOffset, dstW);
             } catch (Exception e) {
-                // There was an index out of bounds exception, but we continue copying what we can.
                 e.printStackTrace();
             }
             dstY += deltaY;
@@ -197,7 +196,6 @@ class CompactBitmapData extends AbstractBitmapData {
          */
         @Override
         public void draw(Canvas canvas) {
-            //android.util.Log.i(TAG, "draw");
             try {
                 synchronized (this) {
                     canvas.drawBitmap(data.mbitmap, 0.0f, 0.0f, _defaultPaint);

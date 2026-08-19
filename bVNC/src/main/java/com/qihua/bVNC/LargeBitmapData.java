@@ -206,7 +206,6 @@ class LargeBitmapData extends AbstractBitmapData {
         try {
             mbitmap.setPixels(bitmapPixels, offset(x, y), bitmapwidth, xo, yo, w, h);
         } catch (IllegalArgumentException e) {
-            // Do not update the bitmap if the coordinates are out of bounds.
             e.printStackTrace();
         }
     }
