@@ -72,6 +72,7 @@ public final class SshTermStateMachine {
             throw new IllegalArgumentException("cols/rows must be >= 1, got " + cols + "x" + rows);
         }
         synchronized (this) {
+            if (nativeHandle == 0) return;
             nativeSetSize(nativeHandle, cols, rows);
         }
     }
@@ -86,6 +87,7 @@ public final class SshTermStateMachine {
      * the activity's night mode flips.
      */
     public void setDefaultColors(int fgArgb, int bgArgb) {
+        if (nativeHandle == 0) return;
         nativeSetDefaultColors(nativeHandle, fgArgb, bgArgb);
     }
 
@@ -104,12 +106,14 @@ public final class SshTermStateMachine {
 
     public int getCols() {
         synchronized (this) {
+            if (nativeHandle == 0) return 0;
             return nativeGetCols(nativeHandle);
         }
     }
 
     public int getRows() {
         synchronized (this) {
+            if (nativeHandle == 0) return 0;
             return nativeGetRows(nativeHandle);
         }
     }
@@ -119,6 +123,7 @@ public final class SshTermStateMachine {
         if (len <= 0) return;
         byte[] out;
         synchronized (this) {
+            if (nativeHandle == 0) return;
             nativeWrite(nativeHandle, data, offset, len);
             // Drain any output libvterm generated in response (e.g. replies to
             // terminal queries) and forward it to the SSH channel's stdin.
@@ -158,6 +163,7 @@ public final class SshTermStateMachine {
     public void writeInput(int codepoint, int mods) {
         byte[] out;
         synchronized (this) {
+            if (nativeHandle == 0) return;
             out = nativeWriteInput(nativeHandle, codepoint, mods);
         }
         if (out != null && out.length > 0 && outputSink != null) {
@@ -181,6 +187,7 @@ public final class SshTermStateMachine {
     public void writeKey(int vtermKey, int mods) {
         byte[] out;
         synchronized (this) {
+            if (nativeHandle == 0) return;
             out = nativeWriteKey(nativeHandle, vtermKey, mods);
         }
         if (out != null && out.length > 0 && outputSink != null) {
@@ -223,6 +230,7 @@ public final class SshTermStateMachine {
     /** True if any row is dirty since the last {@link #takeDirtyRows}. */
     public boolean pollDirty() {
         synchronized (this) {
+            if (nativeHandle == 0) return false;
             return nativePollDirty(nativeHandle);
         }
     }
@@ -234,6 +242,7 @@ public final class SshTermStateMachine {
      */
     public int takeDirtyRows(int[] outRows) {
         synchronized (this) {
+            if (nativeHandle == 0) return 0;
             return nativeTakeDirtyRows(nativeHandle, outRows);
         }
     }
@@ -241,6 +250,7 @@ public final class SshTermStateMachine {
     /** Read the cell at (row, col). */
     public TermCell getCell(int row, int col) {
         synchronized (this) {
+            if (nativeHandle == 0) return null;
             return nativeGetCell(nativeHandle, row, col);
         }
     }
@@ -279,6 +289,7 @@ public final class SshTermStateMachine {
      */
     public void scrollByPixels(float delta) {
         synchronized (this) {
+            if (nativeHandle == 0) return;
             int ch = charHeightForScroll;
             // Cap per-event delta to ±2 rows. The touchpad/inertia `speed`
             // (RDP 255-complement, clamped [-255,255]) yields huge magnitudes
@@ -354,6 +365,7 @@ public final class SshTermStateMachine {
     /** Number of history lines currently captured in the scrollback ring. */
     public int getScrollbackCount() {
         synchronized (this) {
+            if (nativeHandle == 0) return 0;
             return nativeGetScrollbackCount(nativeHandle);
         }
     }
@@ -364,6 +376,7 @@ public final class SshTermStateMachine {
      */
     public TermCell getScrollbackCell(int line, int col) {
         synchronized (this) {
+            if (nativeHandle == 0) return null;
             return nativeGetScrollbackCell(nativeHandle, line, col);
         }
     }
@@ -371,6 +384,7 @@ public final class SshTermStateMachine {
     /** Read cursor position + visibility. */
     public CursorInfo getCursor() {
         synchronized (this) {
+            if (nativeHandle == 0) return null;
             return nativeGetCursor(nativeHandle);
         }
     }

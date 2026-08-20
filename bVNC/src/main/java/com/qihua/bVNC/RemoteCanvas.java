@@ -1159,8 +1159,6 @@ public class RemoteCanvas extends SurfaceView implements Viewable
      * @return True if the pan changed the view (did not move view out of bounds); false otherwise
      */
     public boolean relativePan(float dX, float dY) {
-        Log.d(TAG, "relativePan: " + dX + ", " + dY);
-
         // We only pan if the current scaling is able to pan.
         if (scaler != null && !scaler.isAbleToPan())
             return false;
@@ -1185,8 +1183,6 @@ public class RemoteCanvas extends SurfaceView implements Viewable
     }
 
     public boolean relativePan(float dX, float dY, boolean force) {
-        android.util.Log.d(TAG, "relativePan: " + dX + ", " + dY);
-
         // We only pan if the current scaling is able to pan.
         if (scaler != null && !scaler.isAbleToPan())
             return false;

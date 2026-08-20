@@ -77,7 +77,21 @@ public class VncConnectionInitializer extends ConnectionInitializer {
     }
 
     @Override
-    public void start(RemoteCanvas canvas) throws Exception {
+    public void start(RemoteCanvas canvas) {
+        // The handshake and processProtocol()'s read loop both block. start() is
+        // posted to the main looper, so running them inline wedges it and BACK
+        // never gets dispatched. RDP/SPICE/SSH all connect off the main thread.
+        Thread cThread = new Thread(() -> {
+            try {
+                doStart(canvas);
+            } catch (Throwable e) {
+                canvas.handleUncaughtException(e);
+            }
+        }, "VNC-Connect");
+        cThread.start();
+    }
+
+    private void doStart(RemoteCanvas canvas) throws Exception {
         try {
             String address = canvas.getAddress();
             int vncPort = canvas.getRemoteProtocolPort(canvas.connection.getPort());

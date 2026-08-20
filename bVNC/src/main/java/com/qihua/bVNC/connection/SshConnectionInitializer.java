@@ -52,7 +52,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * (TermSession); the UpdateCallback fires {@link #paintAndRedraw()},
  * which is the only paint driver. The difference is the worker outputs
  * a state mutation (a character grid) rather than raw pixels, so
- * {@link SshTerminalRenderer#renderInto(Bitmap)} is the in-place write
+ * {@link SshTerminalRenderer#renderInto} is the in-place write
  * into the bitmap, in lieu of {@code LibFreeRDP.updateGraphics} or
  * {@code PixelCopy.request}.
  */
@@ -83,13 +83,28 @@ public class SshConnectionInitializer extends ConnectionInitializer {
                 renderer.getTermSession().scrollToBottom();
             }
 
-            // Refresh IME push-up. The 100ms debounce in repanCanvas4SSH
-            // absorbs the cursor row flicker that comes from cursor blink
-            // and rapid shell output, so the image doesn't flip on every
-            // callback.
+            // Refresh IME push-up only when the cursor actually moved or the
+            // mbitmap size changed. UpdateCallback fires millisecondly for
+            // every byte burst from the shell; if we re-call repanCanvas4SSH
+            // unconditionally it re-runs the undo-then-reapply pan sequence
+            // on every callback even when panDistance is identical, producing
+            // the visible -panY/+panY flicker while IME is up.
             if (canvas.activity != null
                     && canvas.activity.isSoftKeyboardUp()) {
-                canvas.activity.repanCanvas4SSH(true);
+                int cursorY = renderer != null ? renderer.getCursorPixelY() : 0;
+                // canvas.bitmapData is typed AbstractBitmapData and
+                // getWidth/getHeight live on the DoubleBufferBitmapData
+                // subclass — go through canvas.rfbconn's SSH-reported
+                // framebuffer dimensions which are visible on the
+                // static type.
+                int fbW = canvas.rfbconn != null ? canvas.rfbconn.framebufferWidth() : 0;
+                int fbH = canvas.rfbconn != null ? canvas.rfbconn.framebufferHeight() : 0;
+                if (cursorY != lastPannedCursorY || fbW != lastPannedFbW || fbH != lastPannedFbH) {
+                    lastPannedCursorY = cursorY;
+                    lastPannedFbW = fbW;
+                    lastPannedFbH = fbH;
+                    canvas.activity.repanCanvas4SSH(true);
+                }
             }
 
             paintAndRedraw();
@@ -224,6 +239,15 @@ public class SshConnectionInitializer extends ConnectionInitializer {
     private Handler paintHandler;
 
     private float density;
+    // Cursor-Y / fb-size snapshot from the last IME push-up. Used by
+    // sshUpdateRunnable to skip repanCanvas4SSH when the inputs that
+    // drive panDistance (cursor Y, framebuffer dimensions) are unchanged
+    // — UpdateCallback fires millisecondly on every byte burst from the
+    // shell and would otherwise flip the +panY/-panY undo/apply pair on
+    // every callback while IME is up.
+    private int lastPannedCursorY = Integer.MIN_VALUE;
+    private int lastPannedFbW = -1;
+    private int lastPannedFbH = -1;
 
     public SshConnectionInitializer(Connection conn, Context ctx) {
         this.conn = conn;
