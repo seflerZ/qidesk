@@ -89,6 +89,10 @@ typedef struct {
     int             sb_count;    // lines currently stored
     int             sb_head;     // index of the OLDEST line
     pthread_mutex_t sb_lock;
+    // DEC private mode 2026 (synchronized output). TUIs wrap a frame in
+    // BSU/ESU so the terminal doesn't present the half-erased midpoint.
+    // Set while inside BSU; the Java paint path skips painting until ESU.
+    volatile int    sync_output;
 } jhandle_t;
 
 // Damage callback: called by libvterm when cells in [start_row,
@@ -162,8 +166,12 @@ static int jni_movecursor(VTermPos pos, VTermPos oldpos, int visible, void *user
 // existing scrollback" symptom. Force a full-screen damage in both
 // directions so Java's takeDirtyRows triggers renderInto.
 static int jni_settermprop(VTermProp prop, VTermValue *val, void *user) {
+    jhandle_t *h = (jhandle_t *) user;
+    if (prop == VTERM_PROP_SYNCOUTPUT) {
+        h->sync_output = val->boolean;
+        return 1;
+    }
     if (prop == VTERM_PROP_ALTSCREEN) {
-        jhandle_t *h = (jhandle_t *) user;
         VTermRect full = {
             .start_row = 0, .end_row = h->rows,
             .start_col = 0, .end_col = h->cols,
@@ -605,6 +613,15 @@ Java_com_qihua_bVNC_ssh_libvterm_SshTermStateMachine_nativeDrainOutput(
     h->output_len = 0;
     return result;
 }
+JNIEXPORT jboolean JNICALL
+Java_com_qihua_bVNC_ssh_libvterm_SshTermStateMachine_nativeIsSyncOutput(
+        JNIEnv *env, jclass clazz, jlong handle) {
+    (void) clazz;
+    jhandle_t *h = getHandle(env, handle);
+    if (!h) return JNI_FALSE;
+    return h->sync_output ? JNI_TRUE : JNI_FALSE;
+}
+
 JNIEXPORT jboolean JNICALL
 Java_com_qihua_bVNC_ssh_libvterm_SshTermStateMachine_nativePollDirty(
         JNIEnv *env, jclass clazz, jlong handle) {

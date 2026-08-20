@@ -21,6 +21,7 @@ import com.qihua.bVNC.input.RemoteSshPointer;
 import com.qihua.bVNC.ssh.SshShellChannel;
 import com.qihua.bVNC.ssh.SshTerminalRenderer;
 import com.qihua.bVNC.ssh.SshTerminalScaling;
+import com.qihua.bVNC.ssh.libvterm.SshTermStateMachine;
 import com.undatech.opaque.Connection;
 import com.undatech.opaque.DrawTask;
 
@@ -139,8 +140,13 @@ public class SshConnectionInitializer extends ConnectionInitializer {
      * introducing flicker.
      */
     private static final long HEARTBEAT_INTERVAL_MS = 200L;
-    private long lastPaintAt = 0;
+    private volatile long lastPaintAt = 0;
     private int paintCounter;
+    /** Minimum gap between paints (~60 FPS). Without it a TUI's end-of-frame
+     *  static re-dump paints once per 4K read chunk and visibly scrolls. */
+    private static final long MIN_PAINT_INTERVAL_MS = 16L;
+    /** Cap on how long a DEC 2026 synchronized update may hold off a paint. */
+    private static final long SYNC_OUTPUT_MAX_DEFER_MS = 150L;
     private final Runnable heartbeatRunnable = new Runnable() {
         @Override
         public void run() {
@@ -760,7 +766,14 @@ public class SshConnectionInitializer extends ConnectionInitializer {
         // than one paint queued — the latest TermSession state is the
         // only one that gets rendered.
         paintHandler.removeCallbacks(paintRunnable);
-        paintHandler.post(paintRunnable);
+        // Throttle to ~60 FPS: a burst of read chunks coalesces into one
+        // frame instead of painting each chunk separately.
+        long delay = MIN_PAINT_INTERVAL_MS - (System.currentTimeMillis() - lastPaintAt);
+        if (delay > 0) {
+            paintHandler.postDelayed(paintRunnable, delay);
+        } else {
+            paintHandler.post(paintRunnable);
+        }
     }
 
     /**
@@ -780,7 +793,18 @@ public class SshConnectionInitializer extends ConnectionInitializer {
             if (canvas == null) return;
             if (!(canvas.bitmapData instanceof DoubleBufferBitmapData)) return;
             if (canvas.rfbconn == null) return;
+            // Inside a DEC 2026 synchronized update the frame is half-drawn.
+            // Defer instead of presenting the midpoint; the ESU that ends the
+            // update triggers another paint. The retry bounds the wait so a
+            // TUI that dies mid-update can't freeze the terminal.
+            SshTermStateMachine sm = renderer.getTermSession();
+            if (sm != null && sm.isSyncOutput()
+                    && System.currentTimeMillis() - lastPaintAt < SYNC_OUTPUT_MAX_DEFER_MS) {
+                if (paintHandler != null) paintHandler.postDelayed(this, MIN_PAINT_INTERVAL_MS);
+                return;
+            }
             paintCounter++;
+            lastPaintAt = System.currentTimeMillis();
             try {
                 renderer.renderInto((DoubleBufferBitmapData) canvas.bitmapData);
                 // reDraw schedules DrawTask onto DrawWorker (which paints
@@ -877,6 +901,7 @@ public class SshConnectionInitializer extends ConnectionInitializer {
             //    BG so the first paint of empty cells isn't a black flash.
             canvas.reallocateDrawable(w, h);
             if (renderer != null && canvas.bitmapData instanceof DoubleBufferBitmapData) {
+                renderer.requestGridGrow();
                 renderer.seedBackground((DoubleBufferBitmapData) canvas.bitmapData);
             }
 

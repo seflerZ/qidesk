@@ -236,7 +236,18 @@ public final class SshTermStateMachine {
     }
 
     /**
-     * Drain all dirty rows into {@code outRows}. Returns the number
+     * True while the app is inside a DEC 2026 synchronized update
+     * (CSI ? 2026 h .. l). Painting mid-update shows the half-erased
+     * middle of a TUI frame, which reads as jitter.
+     */
+    public boolean isSyncOutput() {
+        synchronized (this) {
+            if (nativeHandle == 0) return false;
+            return nativeIsSyncOutput(nativeHandle);
+        }
+    }
+
+    /** Drain all dirty rows into {@code outRows}. Returns the number
      * of rows written. After this call {@link #pollDirty()} returns
      * false until libvterm reports new damage.
      */
@@ -471,6 +482,8 @@ public final class SshTermStateMachine {
     private static native byte[] nativeWriteInput(long h, int codepoint, int mods);
     private static native byte[] nativeWriteKey(long h, int key, int mods);
     private static native byte[] nativeDrainOutput(long h);
+    private static native boolean nativeIsSyncOutput(long h);
+
     private static native boolean nativePollDirty(long h);
     private static native int   nativeTakeDirtyRows(long h, int[] outRows);
     private static native TermCell  nativeGetCell(long h, int row, int col);

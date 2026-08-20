@@ -54,6 +54,9 @@ public class SshTerminalRenderer {
     private int currentCols = -1;
     private int currentRows = -1;
     private boolean closed;
+    /** Set by a real display resize (fold/unfold) to let the grid grow past
+     *  the PTY size, which renderInto otherwise rejects as an IME pan. */
+    private volatile boolean gridGrowPending;
     /** Notified when the terminal grid size changes (fold/unfold/etc). */
     private GridSizeListener gridSizeListener;
     /** Background thread that drains SSH bytes into the state machine. */
@@ -139,6 +142,12 @@ public class SshTerminalRenderer {
         return ctx.getResources().getColor(com.qihua.bVNC.R.color.ssh_terminal_bg, ctx.getTheme());
     }
 
+    /** Allow the next renderInto to grow the grid past the current PTY size.
+     *  Called from resizeSSHFramebuffer on a real display change. */
+    public void requestGridGrow() {
+        gridGrowPending = true;
+    }
+
     /** Notified when {@link #renderInto} detects cols/rows changed. */
     public void setGridSizeListener(GridSizeListener listener) {
         this.gridSizeListener = listener;
@@ -189,8 +198,10 @@ public class SshTerminalRenderer {
                     }
                     if (n > 0) {
                         totalRead += n;
-                        Log.i(TAG, "readerThread: read n=" + n + " total=" + totalRead
-                                + " bytes=" + formatBytes(readBuffer, n));
+                        if (Log.isLoggable(TAG, Log.VERBOSE)) {
+                            Log.v(TAG, "readerThread: read n=" + n + " total=" + totalRead
+                                    + " bytes=" + formatBytes(readBuffer, n));
+                        }
                         if (stateMachine != null) {
                             stateMachine.write(readBuffer, 0, n);
                         }
@@ -217,17 +228,28 @@ public class SshTerminalRenderer {
         int cols = Math.max(20, (w - 2 * pad) / (int) canvasRenderer.charWidth);
         int rows = Math.max(10, (h - 2 * pad) / canvasRenderer.charHeight);
         if (cols != currentCols || rows != currentRows) {
-            currentCols = cols;
-            currentRows = rows;
             if (stateMachine != null) {
                 int smCols = stateMachine.getCols();
                 int smRows = stateMachine.getRows();
-                if (cols <= smCols && rows <= smRows) {
+                // Growing past the PTY normally means the IME pan added an
+                // overflow region above the rows — keep the PTY as-is and let
+                // the extra bitmap rows stay on the BG seed. A real display
+                // resize (fold/unfold) sets gridGrowPending so growth goes
+                // through. Only commit currentCols/Rows when the size is
+                // actually pushed, otherwise a rejected grow would look
+                // unchanged forever and never retry.
+                if (gridGrowPending || (cols <= smCols && rows <= smRows)) {
+                    gridGrowPending = false;
+                    currentCols = cols;
+                    currentRows = rows;
                     stateMachine.setSize(cols, rows);
                     if (gridSizeListener != null) {
                         gridSizeListener.onGridSizeChanged(cols, rows);
                     }
                 }
+            } else {
+                currentCols = cols;
+                currentRows = rows;
             }
         }
         final int bgColor = currentBgColor();
