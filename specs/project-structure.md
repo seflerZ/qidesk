@@ -1,4 +1,4 @@
-# QiDesk 项目结构规格书
+# QxRemotes 项目结构规格书
 
 > 本文档面向"需要在该项目中新增一种协议 / 新增一类界面"的开发者,描述模块划分、类层级、统一的输入与绘制契约。
 > 配套:SSH 实现规格书见 [`ssh-feature-spec.md`](./ssh-feature-spec.md)。
@@ -7,7 +7,7 @@
 
 ## 1. 项目定位
 
-**QiDesk(奇花远程)** 是一个 Android 上的多协议远程客户端(代号"协议聚合"),基于 iiordanov 的 [aRDP](https://github.com/iiordanov/remote-desktop-clients) fork。
+**QxRemotes(奇花远程)** 是一个 Android 上的多协议远程客户端(代号"协议聚合"),基于 iiordanov 的 [aRDP](https://github.com/iiordanov/remote-desktop-clients) fork。
 
 - **支持的协议**:VNC / RDP / SPICE / NVStream(Moonlight)
 - **支持 SSH 是当前的扩展目标**(见 `ssh-feature-spec.md`)
@@ -62,13 +62,13 @@ bVNC ──→ pubkeyGenerator (公钥生成)
 
 | 协议 | 配置 Activity | 协议实现类 | 后端 |
 |------|---------------|------------|------|
-| VNC  | `ConfigVNC`   | `RfbProto`(纯 Java 自研)        | 自研 |
+| VNC  | `ConfigVNC`   | `RfbCommunicator`(纯 Java 自研 RFB)        | 自研 |
 | RDP  | `ConfigRDP`   | `RdpCommunicator` 包装 FreeRDP   | JNI |
 | SPICE| (复用 `ConfigRDP`,以 oVirt 模式) | `SpiceCommunicator` 包装 FreeRDP oVirt | JNI |
 | NVStream | `ConfigNVStream` | `NvCommunicator` 包装 Moonlight | JNI |
-| **SSH** | **`ConfigSSH`(待建)** | **走 Bitmap 渲染,无独立后端类** | **trilead-ssh2(JAR,已在 `SSHConnection.java` 中使用)** |
+| **SSH** | **`ConfigSSH`** | **`SshCommunicator`(薄 adapter)+ `SshTerminalRenderer` 渲染 libvterm cells** | **libvterm + trilead-ssh2 2.2.20** |
 
-> SSH 是个**特例**:它没有自己的"协议位图流"——它把文本渲染成位图后,沿用其他协议的 `AbstractBitmapData` 管线。
+> SSH 是个**特例**:它没有"协议位图流"——它把 libvterm cell grid 直接渲染成位图后,沿用通用 `DoubleBufferBitmapData` 管线;`SshCommunicator` 所有 `write*` 方法都是 no-op,真实 sink 是 libvterm `SshTermStateMachine`。详见 §11 和 [`architecture.md` §10](./architecture.md#10-ssh-现状详细)。
 
 ---
 
@@ -81,7 +81,8 @@ bVNC/src/main/java/
 │   ├── ConfigVNC/RDP/NVStream     # 各协议配置页
 │   ├── RemoteCanvas/RemoteCanvasActivity   # 核心 Activity
 │   ├── RfbProto.java              # VNC 协议实现
-│   ├── SSHConnection.java         # SSH 连接逻辑(trilead,753 行,半成品)
+│   ├── SSHConnection.java         # VNC-over-SSH 隧道(881 行,旧 SSHConnection)
+│   ├── ssh/                        # SSH 终端(完整 5 维协议栈,详见 §11)
 │   ├── AbstractBitmapData.java    # 协议位图抽象
 │   ├── FullBufferBitmapData.java  #   - 全缓冲
 │   ├── CompactBitmapData.java     #   - 紧凑缓冲
@@ -330,36 +331,64 @@ public void addNewConnection(String type) {
 
 ---
 
-## 11. 现有 SSH 半成品的位置
+## 11. SSH 现状(已完工,Phase 3.7+)
 
-`bVNC/src/main/java/com/qihua/bVNC/SSHConnection.java`(753 行)存在但**未跑通**,具体状态:
+> **2026-08 更新**:本文档早期版本把 SSH 描述为"半成品",**已过时**。SSH 现在是个完整的协议栈——5 维类继承齐全,UI picker 里可选,`Utils.getConnectionSetupClass("ssh")` 返回 `ConfigSSH.class` 不再抛异常。
 
-- ✅ 已实现 trilead-ssh2 连接、密码 / 密钥认证、端口跳转、KnownHosts
-- ✅ 已实现 `InteractiveCallback` 交互式认证
-- ✅ 已有 `Session.getStdout() / getStdin()` 字节流出口
-- ❌ **没有调用方**——没有 `SshConnectable`、没有 `SshBitmapData`、没有 `RemoteSshKeyboard/Pointer`、没有 `SshTerminalActivity`、没有 `ConfigSSH`
-- ❌ `Utils.getConnectionSetupClass("ssh")` 抛 `UnsupportedOperationException`
-- ❌ `ConnectionGridActivity.addNewConnection("ssh")` 被 guard 拦截
-- ❌ trilead-ssh2 库本身没在 `bVNC/build.gradle` 中声明
+`bVNC/src/main/java/com/qihua/bVNC/ssh/` 共 6 个 Java 文件 + 1 个 `libvterm/` 子包:
 
-**结论**:SSH 的"协议层"约 70% 已就绪,缺的是"与项目架构对接"的桥接代码 + 终端 UI。
+| 文件 | 行数 | 角色 |
+|------|------|------|
+| `SSHConnection.java` | 881 | **旧** VNC-over-SSH 隧道(自动 x11vnc / 端口转发),仍被 RemoteCanvas 用作 VNC-over-SSH 隧道——与终端流程**并存** |
+| `SshTerminalConnection.java` | 235 | Phase 3.1+:trilead `Connection` + `Session` 包装 |
+| `SshShellChannel.java` | 273 | 8 KB pipe pair,两个 pump 线程("SSH-Shell-ReadPump"/"SSH-Shell-WritePump") |
+| `SshTerminalRenderer.java` | 425 | Phase 3.7:libvterm 渲染宿主,启动 "SSH-VTerm-Reader" 线程 |
+| `SshTerminalScaling.java` | 97 | 1:1 `AbstractScaling` 子类,IME push-up 复用 RDP 管线 |
+| `TermFontFactory.java` | 92 | 加载 `assets/fonts/SarasaMonoSCNerd-Regular.ttf`(24 MB,CJK + Nerd PUA-A) |
+
+`bVNC/src/main/java/com/qihua/bVNC/ssh/libvterm/`:
+
+| 文件 | 行数 | 角色 |
+|------|------|------|
+| `SshTermStateMachine.java` | 496 | Java wrapper over JNI(18 个 JNIEXPORT,全部绑到本类) |
+| `VTermCanvasRenderer.java` | 472 | cell → Canvas 绘制(live rows + scrollback rows + cursor + selection 覆盖层) |
+| `TermCell.java` / `CursorInfo.java` | — | 渲染数据结构 |
+
+**搭桥层**:`bVNC/.../connection/SshConnectionInitializer.java`(938 行,SSH 5 维继承的胶水)。
+
+**已知未实现 / TODO**:
+- 主机指纹校验(`SshTerminalConnection.java:136-143`):首次连接**信任任何 host key**——Phase 3.6+ 计划加,未做
+- RDP-style gamepad:没有 `SshRemoteGamepad`(SSH 终端无 gamepad 语义)
+- 单元测试:**零**——`bVNC/src/test/`、`bVNC/src/androidTest/` 全部空或不存在
+- `AbstractConnectionBean.setConnectionType(99)` 在 default 分支里把 port 设成 3389——SSH 用户需手动改回 22
+
+**完整架构见 [`architecture.md` §10](./architecture.md#10-ssh-现状详细)**。
 
 ---
 
-## 12. 新增协议的标准做法(以 SSH 为例)
+## 12. 新增协议的标准做法
 
-按照本项目的架构,新增一种协议的标准动作:
+按照本项目的架构,新增一种**位图流协议**(模仿 VNC / RDP / SPICE / NVStream)的标准动作:
 
-1. **协议逻辑类**:继承 `RfbConnectable`(或像 VNC 一样不继承,自行实现),实现 `framebufferWidth/Height/desktopName/requestUpdate`
+1. **协议逻辑类**:继承 `RemoteConnectable`(VNC 例外,直接继承 `RfbCommunicator` 自研),实现 `framebufferWidth / Height / desktopName / requestUpdate / close`
 2. **位图数据类**:继承 `AbstractBitmapData`,实现 `updateBitmap(x,y,w,h)`、`copyRect`、`drawRect`,在内部维护 `mbitmap`
-3. **键盘类**:继承 `RemoteKeyboard`,重写 `sendKeyEvent`
-4. **鼠标类**:继承 `RemotePointer`,重写 `sendPointerEvent / sendScrollEvent`
-5. **配置页**:继承 `MainConfiguration`,字段为该协议特有
-6. **分发注册**:
-   - `Utils.getConnectionSetupClass()` 加 case
-   - `Utils.getConnectionTypeString()` 加分支
-   - `RemoteCanvas.declareConnection()` 加 if 分支,创建具体类 + 选 `bitmapData` 子类
-7. **AndroidManifest**:`aRDP-app/AndroidManifest.xml` + `bVNC/AndroidManifest.xml` 注册 Activity
-8. **资源**:图标、字符串(`description_*`)、连接类型列表
+3. **键盘类**:继承 `RemoteKeyboard`,重写 `processLocalKeyEvent`
+4. **鼠标类**:继承 `RemotePointer`,重写 `leftButtonDown / moveMouse / scrollUp / scrollDown / touchDown / touchUpdate` 等
+5. **(可选)Gamepad**:继承 `RemoteGamepad`
+6. **配置页**:继承 `MainConfiguration`,字段为该协议特有
+7. **Initializer**:继承 `ConnectionInitializer`,在 `initialize(canvas)` 里把上述实例注入 canvas 字段
+8. **分发注册**:
+   - `Constants.java` 加 `CONN_TYPE_X = <int>`(SSH 已占 99)
+   - `Utils.getConnectionSetupClass(String type)` 加 case(`Utils.java:372-385`)
+   - `Utils.getConnectionTypeString(int type)` 加 case(`Utils.java:327-340`)
+   - `ConnectionInitializerFactory.create` 加 case(`ConnectionInitializerFactory.java:17-37`)
+   - `RemoteCanvas.reallocateDrawable` 加 `if (protocol == ProtocolType.X) bitmapData = new XBitmapData(...)` 分支(`RemoteCanvas.java:756-790`)
+   - `AbstractConnectionBean.setConnectionType(<int>)` 加 default port 分支(否则会落到 RDP 默认 3389)
+   - `ConnectionGridActivity.connectionTypes` 数组加一项(`ConnectionGridActivity.java:422-425`)让用户在 picker 里能选
+9. **AndroidManifest**:`aRDP-app/AndroidManifest.xml` + `bVNC/AndroidManifest.xml` 注册 Activity / 权限
+10. **资源**:图标、字符串(`description_*`)
+11. **(可选)Native lib**:如果要借力现有 FreeRDP / Moonlight 模块,加 `implementation project(...)`;新增原生库则要扩 `build-deps.sh` + `settings.gradle`
 
-> SSH 是个特例:第 1 步不需要独立类(`RfbConnectable` 的协议层可由 `TermSession` 状态承担),其余标准动作照做。
+> **SSH 不适用于本模板**——SSH 是"文本/终端协议"而非"位图流协议",它把 libvterm cell grid 直接渲染成位图后,沿用通用 `DoubleBufferBitmapData` 管线。SSH 不是"待完成的新协议",而是已完工的特例(见 §11)。**第 6 个协议若属位图流,按本节;若属终端/文本流,按 SSH 模板(见 [`architecture.md` §13.3](./architecture.md#133-ssh-是个反例))**。
+
+**完整架构与示例见 [`architecture.md`](./architecture.md)**。

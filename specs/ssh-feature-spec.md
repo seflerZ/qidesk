@@ -46,7 +46,9 @@ implementation files('libs/trilead-ssh2-1.0.0-build222.jar')
 
 > ⚠️ **版本号修正(2026-06)**:原规格书写的 `1.2.0` 在 mavenCentral / jcenter / aliyun / jboss nexus 等所有仓库**均不存在**(HTTP 404)。该版本号是规格书笔误。真实存在的最高稳定版本是 **`1.0.0-build222`**(2025-01 jenkinsci/trilead-ssh2 维护版,248KB),与 `SSHConnection.java` 已有的 import 路径 `com.trilead.ssh2.*` 完全兼容,API 不变。
 >
-> 原规格书指定的 Apache MINA sshd **不再使用**。理由:`SSHConnection.java`(753 行)已基于 trilead 实现了完整的连接 / 认证 / 端口跳转 / KnownHosts / InteractiveCallback / 密码+公私钥认证 逻辑,改用 MINA 等于把这部分全部作废。沿用 trilead 可节省 60% 的协议层工作量。
+> 原规格书指定的 Apache MINA sshd **不再使用**。理由:`SSHConnection.java`(当时 753 行,现已 881 行)已基于 trilead 实现了完整的连接 / 认证 / 端口跳转 / KnownHosts / InteractiveCallback / 密码+公私钥认证 逻辑,改用 MINA 等于把这部分全部作废。沿用 trilead 可节省 60% 的协议层工作量。
+> 
+> **2026-08 更新**:Phase 3.7+ SSH 已完工,完整状态见 [`architecture.md` §10](./architecture.md#10-ssh-现状详细)。本规格书主体描述的"待实施 Phase 1/2/3"已全部落地,trilead 版本固定为 `org.connectbot:sshlib:2.2.20`。
 > MINA 的优势(更新活跃、对现代 SSH 特性支持好)对本项目影响有限,因为我们只需要密码 / 密钥认证 + 一个 shell channel。trilead-ssh2 build222 已经覆盖了 RSA / ECDSA / Ed25519 等所有现代密钥类型(底层走 JCE / BouncyCastle)。
 
 ---
@@ -132,7 +134,7 @@ remote-desktop-clients/
 │
 ├── bVNC/                               # 应用代码,Phase 1 增量
 │   └── src/main/java/com/qihua/bVNC/
-│       ├── SSHConnection.java         # 已有(753 行,trilead),Phase 2 复用
+│       ├── SSHConnection.java         # 已有(881 行,trilead),Phase 2 复用
 │       ├── ssh/
 │       │   ├── SshTerminalRenderer.java  # 新增:持 TermSession + FakeShellLoopback + TermRenderHelper
 │       │   └── FakeShellLoopback.java    # 新增:本地 tty 桥(Phase 2 删,换 trilead Session)
@@ -603,7 +605,7 @@ public class SshConnectionInitializer extends ConnectionInitializer {
   - `RemotePointer` 抽象类:`remoteClientLib/.../input/RemotePointer.java:25`
   - `RemoteCanvas.declareConnection()`:`bVNC/.../RemoteCanvas.java:1330-1368`
   - `Utils.getConnectionSetupClass`:`bVNC/.../Utils.java:370`
-  - 现有 `SSHConnection.java`:`bVNC/.../SSHConnection.java`(753 行,trilead 半成品)
+  - 现有 `SSHConnection.java`:`bVNC/.../ssh/SSHConnection.java`(881 行,旧 VNC-over-SSH 隧道,与终端流程并存)
 
 ---
 
