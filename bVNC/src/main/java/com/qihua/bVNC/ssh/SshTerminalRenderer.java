@@ -198,10 +198,6 @@ public class SshTerminalRenderer {
                     }
                     if (n > 0) {
                         totalRead += n;
-                        if (Log.isLoggable(TAG, Log.VERBOSE)) {
-                            Log.v(TAG, "readerThread: read n=" + n + " total=" + totalRead
-                                    + " bytes=" + formatBytes(readBuffer, n));
-                        }
                         if (stateMachine != null) {
                             stateMachine.write(readBuffer, 0, n);
                         }

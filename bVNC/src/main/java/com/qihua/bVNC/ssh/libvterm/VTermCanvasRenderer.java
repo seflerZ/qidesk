@@ -76,6 +76,10 @@ public final class VTermCanvasRenderer {
     private volatile boolean selectionActive = false;
     private int selAnchorRow = -1, selAnchorCol = -1;
     private int selEndRow = -1, selEndCol = -1;
+    // Dedup set for emoji-adv debug logs — paintCell runs every
+    // keystroke and replays grid cell-by-cell; without dedup the log
+    // buffer fills with thousands of lines for the same codepoint.
+    private final java.util.HashSet<Integer> loggedEmoji = new java.util.HashSet<>();
 
     public VTermCanvasRenderer(int fontSizePx, int paddingPx, Typeface typeface, Context ctx) {
         this.fontSizePx = fontSizePx;
@@ -390,7 +394,40 @@ public final class VTermCanvasRenderer {
             // Char-to-glyph: TextPaint.drawText takes a String, codepoint
             // may be surrogate-pair. Build a 1-char string.
             String str = new String(Character.toChars(cell.codepoint));
-            canvas.drawText(str, cellLeft, baselineY, textPaint);
+            if (isEmojiCodepoint(cell.codepoint)) {
+                // Treat emoji as 2-cell wide regardless of what the emoji
+                // font's own advance says — CJK in this renderer uses the
+                // same 2 × charWidth rule, see v68 CJK scale logic.
+                //
+                // Some emoji codepoints (e.g. 🫠 U+1FAE0) are NOT in
+                // libvterm's fullwidth.inc width table — only ranges like
+                // {0x1FA70,0x1FA73}, {0x1FA80,0x1FA82} are listed, so libvterm
+                // returns cell.width=1 for them. We override that here:
+                // every emoji we paint at all gets a 2-cell box, so its
+                // glyph never bleeds into the next column even when the
+                // emoji font's measured advance (~52px vs 42px cellBox) is
+                // larger than 1 cell.
+                float cellBox = charWidth * 2f;
+                float adv = textPaint.measureText(str);
+                if (adv > cellBox) {
+                    // Shrink to fit so the glyph doesn't bleed into the
+                    // next column. Pivot at cell center so left/right
+                    // shrink symmetrically.
+                    float s = cellBox / adv;
+                    float cx = cellLeft + cellBox / 2f;
+                    int sc = canvas.save();
+                    canvas.scale(s, s, cx, baselineY);
+                    canvas.drawText(str, cellLeft, baselineY, textPaint);
+                    canvas.restoreToCount(sc);
+                } else {
+                    float drawX = cellLeft + (cellBox - adv) / 2f;
+                    canvas.drawText(str, drawX, baselineY, textPaint);
+                }
+            } else {
+                canvas.drawText(str, cellLeft, baselineY, textPaint);
+                textPaint.setFakeBoldText(false);
+                textPaint.setTextSkewX(0f);
+            }
             textPaint.setFakeBoldText(false);
             textPaint.setTextSkewX(0f);
         }
@@ -468,5 +505,37 @@ public final class VTermCanvasRenderer {
                 col++;
             }
         }
+    }
+
+    // Covers the legacy symbol blocks + the SMP emoji planes used by
+    // remote shell output. Mirrors the same ranges libvterm marks as
+    // width=2 in fullwidth.inc so we apply 2-cell layout to the same
+    // set the width table does.
+    private static boolean isEmojiCodepoint(int cp) {
+        if (cp < 0x231A) return false;
+        if (cp < 0x2900) {
+            if (cp == 0x231A || cp == 0x231B) return true;
+            if (cp >= 0x23E9 && cp <= 0x23F3) return true;
+            if (cp == 0x23F8 || cp == 0x23F9 || cp == 0x23FA) return true;
+            if (cp == 0x2614 || cp == 0x2615) return true;
+            if (cp >= 0x2648 && cp <= 0x2653) return true;
+            if (cp == 0x267F || cp == 0x2693 || cp == 0x26A1) return true;
+            if (cp == 0x26AA || cp == 0x26AB) return true;
+            if (cp >= 0x26BD && cp <= 0x26BE) return true;
+            if (cp == 0x26C4 || cp == 0x26C5 || cp == 0x26CE) return true;
+            if (cp == 0x26D4 || cp == 0x26EA) return true;
+            if (cp >= 0x26F2 && cp <= 0x26F3) return true;
+            if (cp == 0x26F5 || cp == 0x26FA || cp == 0x26FD) return true;
+            if (cp == 0x2705) return true;
+            if (cp >= 0x270A && cp <= 0x270B) return true;
+            if (cp == 0x2728) return true;
+            if (cp == 0x274C || cp == 0x274E) return true;
+            if (cp >= 0x2753 && cp <= 0x2755) return true;
+            if (cp == 0x2757) return true;
+            if (cp >= 0x2795 && cp <= 0x2797) return true;
+            if (cp == 0x27B0 || cp == 0x27BF) return true;
+            return false;
+        }
+        return cp >= 0x1F000 && cp <= 0x1FFFF;
     }
 }
