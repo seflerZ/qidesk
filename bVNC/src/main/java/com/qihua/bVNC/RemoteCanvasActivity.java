@@ -1955,18 +1955,19 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
                 return;
             }
             if (panDistance > 0) {
-                if (lastPanDist > 0) {
-                    canvas.relativePan(0, -lastPanDist, false);
-                }
+                // Net set absoluteYPosition instead of undo-then-apply so
+                // DrawWorker only sees one paint with the final position
+                // rather than the interim absY=0 frame (visible flicker
+                // when the SSH paint thread is also writing mbitmap).
                 lastPanDist = panDistance;
-                canvas.relativePan(0, panDistance, true);
+                canvas.absolutePan(0, (int) panDistance, true);
             } else if (lastPanDist > 0) {
-                canvas.relativePan(0, -lastPanDist, false);
+                canvas.absolutePan(0, 0, true);
                 lastPanDist = 0;
             }
         } else {
             if (lastPanDist > 0) {
-                canvas.relativePan(0, -lastPanDist, false);
+                canvas.absolutePan(0, 0, true);
                 lastPanDist = 0;
             }
             cursorIsInKeyboard = false;
