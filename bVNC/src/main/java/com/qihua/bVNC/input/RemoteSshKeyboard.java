@@ -58,14 +58,7 @@ public class RemoteSshKeyboard extends RemoteKeyboard {
     @Override
     public boolean processLocalKeyEvent(int keyCode, KeyEvent evt, int additionalMetaState) {
         String chars = evt.getCharacters();
-        Log.i("RemoteSshKeyboard", "processLocalKeyEvent keyCode=" + keyCode
-                + " action=" + evt.getAction()
-                + " metaState=0x" + Integer.toHexString(evt.getMetaState())
-                + " additionalMeta=0x" + Integer.toHexString(additionalMetaState)
-                + " unicode(noMeta)=" + evt.getUnicodeChar(0)
-                + " unicode(fullMeta)=" + evt.getUnicodeChar(evt.getMetaState() | additionalMetaState)
-                + " chars=" + chars
-                + " termSession=" + (termSession != null));
+
         if (termSession == null) return false;
         // Unicode-text delivery. The IME dispatches the final candidate
         // text (e.g. "你好") as a KeyEvent with no keycode but with the

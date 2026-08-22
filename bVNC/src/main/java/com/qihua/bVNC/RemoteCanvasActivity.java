@@ -487,7 +487,16 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
                     lastPanDist = 0;
                 }
             } else {
+                // Pretend cursor was already stable so repanCanvas4SSH skips
+                // its 50 ms settle window and pans on the first IME-up event.
+                if (isToolbarShow) {
+                    cursorIsInKeyboard = true;
+                    cursorStateChangedAt = 0L;
+                }
                 repanCanvas4SSH(isToolbarShow);
+                if (isToolbarShow) {
+                    canvas.reDraw(0, 0, canvas.getWidth(), canvas.getHeight());
+                }
             }
         });
 
