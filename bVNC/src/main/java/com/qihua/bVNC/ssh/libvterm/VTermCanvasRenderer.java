@@ -424,7 +424,19 @@ public final class VTermCanvasRenderer {
                     canvas.drawText(str, drawX, baselineY, textPaint);
                 }
             } else {
-                canvas.drawText(str, cellLeft, baselineY, textPaint);
+                if ((cell.attrs & ATTR_ITALIC) != 0) {
+                    // Italic (-0.25 skewX about baseline) shifts the glyph's
+                    // glyph-top rightward by tan(0.25)*ascent (~0.25 * em).
+                    // textPaint.measureText does NOT include that rightward
+                    // bulge, so drawing at cellLeft would have the
+                    // glyph-top edge bleed into the next column. We trim
+                    // the drawX slightly leftward so the visible glyph
+                    // top sits inside the current column instead.
+                    float slack = fontSizePx * 0.25f;
+                    canvas.drawText(str, cellLeft - slack, baselineY, textPaint);
+                } else {
+                    canvas.drawText(str, cellLeft, baselineY, textPaint);
+                }
                 textPaint.setFakeBoldText(false);
                 textPaint.setTextSkewX(0f);
             }
