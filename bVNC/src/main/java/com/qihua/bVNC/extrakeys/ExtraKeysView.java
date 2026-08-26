@@ -89,6 +89,9 @@ public final class ExtraKeysView extends GridLayout {
     /** Defines the fallback duration in milliseconds for {@link #mLongPressTimeout}. */
     public static final int FALLBACK_LONG_PRESS_DURATION = 400;
 
+    /** Max width of one key; past keys×this the bar splits into two edge-docked groups. */
+    private static final float MAX_KEY_WIDTH_DP = 56f;
+
     /** Defines the minimum allowed duration in milliseconds for {@link #mLongPressRepeatDelay}. */
     public static final int MIN_LONG_PRESS__REPEAT_DELAY = 5;
     /** Defines the maximum allowed duration in milliseconds for {@link #mLongPressRepeatDelay}. */
@@ -155,6 +158,11 @@ public final class ExtraKeysView extends GridLayout {
     /** The popup window shown if {@link ExtraKeyButton#getPopup()} returns a {@code non-null} value
      * and a swipe up action is done on an extra key. */
     protected PopupWindow mPopupWindow;
+
+    /** Number of key columns, excluding the flexible middle spacer column. */
+    private int mKeyColumnCount;
+    /** Invisible middle spacer that absorbs excess width on wide screens. */
+    private View mSpacerView;
 
     protected ScheduledExecutorService mScheduledExecutor;
     protected Handler mHandler;
@@ -349,8 +357,13 @@ public final class ExtraKeysView extends GridLayout {
 
         ExtraKeyButton[][] buttons = extraKeysInfo.getMatrix();
 
+        int keyCols = maximumLength(buttons);
+        int splitAt = keyCols / 2;
+        boolean splittable = keyCols >= 2;
+        mKeyColumnCount = keyCols;
+
         setRowCount(buttons.length);
-        setColumnCount(maximumLength(buttons));
+        setColumnCount(keyCols + (splittable ? 1 : 0));
 
         for (int row = 0; row < buttons.length; row++) {
             for (int col = 0; col < buttons[row].length; col++) {
@@ -435,13 +448,46 @@ public final class ExtraKeysView extends GridLayout {
                     param.height = 0;
                 }
                 param.setMargins(0, 0, 0, 0);
-                param.columnSpec = GridLayout.spec(col, GridLayout.FILL, 1.f);
+                int gridCol = (!splittable || col < splitAt) ? col : col + 1;
+                param.columnSpec = GridLayout.spec(gridCol, GridLayout.FILL, 1.f);
                 param.rowSpec = GridLayout.spec(row, GridLayout.FILL, 1.f);
                 button.setLayoutParams(param);
 
                 addView(button);
             }
         }
+
+        if (splittable) {
+            mSpacerView = new View(getContext());
+            mSpacerView.setVisibility(View.INVISIBLE);
+            LayoutParams spacerParams = new LayoutParams();
+            spacerParams.width = 0;
+            spacerParams.height = 0;
+            spacerParams.setMargins(0, 0, 0, 0);
+            spacerParams.columnSpec = GridLayout.spec(splitAt, GridLayout.FILL, 0f);
+            spacerParams.rowSpec = GridLayout.spec(0, buttons.length, GridLayout.FILL, 0f);
+            mSpacerView.setLayoutParams(spacerParams);
+            addView(mSpacerView);
+        } else {
+            mSpacerView = null;
+        }
+    }
+
+    @Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        updateSpacerWidth(MeasureSpec.getSize(widthMeasureSpec));
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+    }
+
+    /** Hand all width beyond the keys' cap to the spacer, splitting the bar into two groups. */
+    private void updateSpacerWidth(int availableWidth) {
+        if (mSpacerView == null) return;
+        float density = getResources().getDisplayMetrics().density;
+        int maxContentWidth = (int) (MAX_KEY_WIDTH_DP * density * mKeyColumnCount + 0.5f);
+        int spacerWidth = Math.max(0, availableWidth - maxContentWidth);
+        LayoutParams params = (LayoutParams) mSpacerView.getLayoutParams();
+        // Mutated in place mid-measure; GridLayout reads child params during its own measure pass.
+        if (params.width != spacerWidth) params.width = spacerWidth;
     }
 
 
