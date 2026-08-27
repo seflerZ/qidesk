@@ -971,6 +971,8 @@ Below that is where you configure your connection.
     <string name="inertia_enabled_hint">Cursor and scrolling keep gliding after a fast flick</string>
     <string name="back_tap_show_keyboard">Back Tap to Show Keyboard</string>
     <string name="back_tap_show_keyboard_hint">Double tap the phone or shake to invoke the soft keyboard</string>
+    <string name="custom_keyboard_enabled">Use Built-in Keyboard</string>
+    <string name="custom_keyboard_enabled_hint">Replace the system IME with the app\'s own keyboard. Sends plain Unicode keys, docks under Extra Keys, splits on wide screens, drag to reposition, only the Back key dismisses it</string>
 
     <string name="extrakeys_pref">Extra Key Customization</string>
     <string name="pref_extrakeys_vertical_pref">Configs for Vertical Screen</string>

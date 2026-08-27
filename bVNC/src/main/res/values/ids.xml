@@ -5,4 +5,6 @@
     <item name="sshSelectionSelectAll" type="id" />
     <item name="sshSelectionCancel" type="id" />
     <item name="statusBarOverlay" type="id" />
+    <item name="key_fade_animator" type="id" />
+    <item name="key_flash_drawable" type="id" />
 </resources>

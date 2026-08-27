@@ -873,6 +873,8 @@ aSPICE对应的功能如下：
     <string name="inertia_enabled_hint">快速滑动松手后，光标与滚动继续惯性滑行</string>
     <string name="back_tap_show_keyboard">背部敲击唤出键盘</string>
     <string name="back_tap_show_keyboard_hint">双击手机背部或者轻晃唤出软键盘</string>
+    <string name="custom_keyboard_enabled">使用自带键盘</string>
+    <string name="custom_keyboard_enabled_hint">用应用自绘键盘替代系统输入法,仅发送 Unicode 按键;与 ExtraKeys 一体显示,宽屏自动分裂,可上下拖动位置,仅返回键收起</string>
 
     <string name="extrakeys_pref">软键盘配置</string>
     <string name="pref_extrakeys_vertical_pref">竖屏时显示内容</string>

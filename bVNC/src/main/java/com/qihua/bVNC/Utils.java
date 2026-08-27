@@ -20,6 +20,9 @@
 
 package com.qihua.bVNC;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.ActivityManager.MemoryInfo;
@@ -38,6 +41,8 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
@@ -815,5 +820,54 @@ public class Utils {
     // 快捷方法：显示 1 秒的短 Toast（比系统 SHORT 更短）
     public static void showVeryShortToast(Context context, String message, Handler handler) {
         showCustomDurationToast(context, message, 1000, handler); // 1000 毫秒 = 1 秒
+    }
+
+    /** Release fade-out duration for the key press flash. */
+    private static final long KEY_PRESS_FADE_MS = 500L;
+    /** Peak alpha (of 255) of the press flash. */
+    private static final int KEY_FLASH_ALPHA = 90;
+
+    /**
+     * Key press feedback: an instant white flash on press, faded out over 250ms on
+     * release. Drawn via ViewOverlay so it never fights MaterialButton's background
+     * handling. Re-pressing mid-fade cancels the fade and re-pops the flash.
+     */
+    public static void setKeyPressedFlash(View view, boolean pressed) {
+        if (pressed) {
+            Object prevAnim = view.getTag(R.id.key_fade_animator);
+            if (prevAnim instanceof ValueAnimator) ((ValueAnimator) prevAnim).cancel();
+            Object prevFlash = view.getTag(R.id.key_flash_drawable);
+            if (prevFlash instanceof ColorDrawable) view.getOverlay().remove((ColorDrawable) prevFlash);
+
+            ColorDrawable flash = new ColorDrawable(Color.WHITE);
+            flash.setAlpha(KEY_FLASH_ALPHA);
+            flash.setBounds(0, 0, view.getWidth(), view.getHeight());
+            view.getOverlay().add(flash);
+            view.setTag(R.id.key_flash_drawable, flash);
+            view.setTag(R.id.key_fade_animator, null);
+            return;
+        }
+
+        Object f = view.getTag(R.id.key_flash_drawable);
+        if (!(f instanceof ColorDrawable)) return;
+        final ColorDrawable flash = (ColorDrawable) f;
+        final View host = view;
+        ValueAnimator animator = ValueAnimator.ofInt(KEY_FLASH_ALPHA, 0);
+        animator.setDuration(KEY_PRESS_FADE_MS);
+        animator.addUpdateListener(a -> flash.setAlpha((int) a.getAnimatedValue()));
+        animator.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                host.getOverlay().remove(flash);
+            }
+
+            @Override
+            public void onAnimationCancel(Animator animation) {
+                host.getOverlay().remove(flash);
+            }
+        });
+        view.setTag(R.id.key_flash_drawable, null);
+        view.setTag(R.id.key_fade_animator, animator);
+        animator.start();
     }
 }

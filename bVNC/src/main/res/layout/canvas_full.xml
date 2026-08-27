@@ -75,4 +75,23 @@
 
     </RelativeLayout>
 
+    <!-- Custom keyboard container: drag handle + ExtraKeys + CustomKeyboardView (added in code) -->
+    <LinearLayout
+        android:id="@+id/customKeyboardLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <ImageView
+            android:id="@+id/keyboardDragHandle"
+            android:layout_width="match_parent"
+            android:layout_height="18dp"
+            android:scaleType="center"
+            android:src="@drawable/keyboard_drag_handle"
+            android:visibility="gone" />
+
+    </LinearLayout>
+
 </FrameLayout>

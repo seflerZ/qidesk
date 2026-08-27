@@ -54,5 +54,11 @@
             app:defaultValue="false"
             android:title="@string/back_tap_show_keyboard"
             android:summary="@string/back_tap_show_keyboard_hint"/>
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:key="customKeyboardEnabled"
+            app:defaultValue="false"
+            android:title="@string/custom_keyboard_enabled"
+            android:summary="@string/custom_keyboard_enabled_hint"/>
     </PreferenceCategory>
 </PreferenceScreen>

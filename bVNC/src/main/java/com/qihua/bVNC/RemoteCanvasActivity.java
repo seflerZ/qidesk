@@ -79,6 +79,7 @@ import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
@@ -105,6 +106,7 @@ import com.qihua.bVNC.extrakeys.ExtraKeysInfo;
 import com.qihua.bVNC.extrakeys.ExtraKeysView;
 import com.qihua.bVNC.extrakeys.SpecialButton;
 import com.qihua.bVNC.gesture.GestureActionLibrary;
+import com.qihua.bVNC.input.CustomKeyboardView;
 import com.qihua.bVNC.input.InputHandler;
 import com.qihua.util.BackTapKeyboardHelper;
 import com.qihua.bVNC.input.InputHandlerDirectTouch;
@@ -246,6 +248,10 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     private int keyboardHeight;
     private static final String PREFS_INPUT_TIPS = "input_mode_tips";
     private BackTapKeyboardHelper backTapKeyboardHelper;
+    private LinearLayout customKeyboardLayout;
+    private View keyboardDragHandle;
+    private CustomKeyboardView customKeyboardView;
+    private boolean customKeyboardEnabled;
 
     /**
      * Helper method to get Display object based on Android version and context type
@@ -458,6 +464,12 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
                 return;
             }
 
+            // The custom keyboard owns keyboardHeight and pans via
+            // repanCustomKeyboardForSsh; IME-height updates don't apply.
+            if (customKeyboardEnabled) {
+                return;
+            }
+
             this.keyboardHeight = keyBoardHeight;
 
             Rect r = new Rect();
@@ -576,6 +588,9 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             @Override
             public void onExtraKeySpecialButtonState(String key, boolean down) {
                 ensureOnScreenModsAutoResetRegistered();
+                if ("SHIFT".equals(key) && customKeyboardView != null) {
+                    customKeyboardView.setExternalShiftActive(down);
+                }
                 KeyEvent evt;
                 switch (key) {
                     case "SHIFT":
@@ -607,10 +622,18 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         });
         extraKeysView.setButtonTextAllCaps(true);
 
-        int orientation = getResources().getConfiguration().orientation;
-        recreateExtraKeys(orientation == Configuration.ORIENTATION_LANDSCAPE);
+        customKeyboardEnabled = Utils.querySharedPreferenceBoolean(this, Constants.customKeyboardEnabled, false);
+        customKeyboardLayout = findViewById(R.id.customKeyboardLayout);
+        keyboardDragHandle = findViewById(R.id.keyboardDragHandle);
+        if (customKeyboardEnabled && customKeyboardLayout != null) {
+            setupCustomKeyboard();
+        } else {
+            // Container missing from this layout variant — fall back to the system IME.
+            customKeyboardEnabled = false;
+            layoutKeys.addView(extraKeysView);
+        }
 
-        layoutKeys.addView(extraKeysView);
+        recreateExtraKeys(useLandscapeExtraKeys());
 
         // the progress dialog can not be displayed in external monitor, so accept it from the touchpad
         canvas.setProgressDialog(touchpad.getProgressDialog());
@@ -626,6 +649,9 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             extraKeysView.deactivateSpecialButton(SpecialButton.ALT);
             extraKeysView.deactivateSpecialButton(SpecialButton.SHIFT);
             extraKeysView.deactivateSpecialButton(SpecialButton.META);
+            if (customKeyboardView != null) {
+                customKeyboardView.setExternalShiftActive(false);
+            }
         });
     }
 
@@ -931,6 +957,11 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         // so the existing toolbar-toggle / disconnect flow runs.
         if (Build.VERSION.SDK_INT >= 33) {
             backInvokedCallback = () -> {
+                // The custom keyboard is only dismissed by BACK.
+                if (isCustomKeyboardShowing()) {
+                    hideKeyboard();
+                    return;
+                }
                 if (inputHandler != null) {
                     inputHandler.onKeyDown(KeyEvent.KEYCODE_BACK,
                             new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK));
@@ -953,6 +984,12 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 
         // 检查是否需要自动调整远程分辨率
         checkAndAdjustRemoteResolution();
+
+        // With the custom keyboard enabled the IME never shows, so the
+        // keyboard-driven shifting below would only misfire (e.g. on rotation).
+        if (customKeyboardEnabled) {
+            return;
+        }
 
         // To avoid setting the visible height to a wrong value after an screen unlock event
         // (when r.bottom holds the width of the screen rather than the height due to a rotation)
@@ -1133,6 +1170,97 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     }
 
     /**
+     * Wires the custom keyboard: ExtraKeys dock above it as one unit, drag handle
+     * on top. Only called when the customKeyboardEnabled pref is on.
+     */
+    private void setupCustomKeyboard() {
+        float density = getResources().getDisplayMetrics().density;
+        customKeyboardLayout.addView(extraKeysView,
+                new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, (int) (74 * density + 0.5f)));
+
+        customKeyboardView = new CustomKeyboardView(this);
+        customKeyboardView.setOnKeyAction(new CustomKeyboardView.OnKeyAction() {
+            @Override
+            public void onKeyboardText(char c, int extraMeta) {
+                canvas.getKeyboard().sendUnicode(c, canvas.getKeyboard().getMetaState() | extraMeta);
+            }
+
+            @Override
+            public void onKeyboardSpecialKey(int keyCode, int extraMeta) {
+                canvas.getKeyboard().keyEvent(keyCode, new KeyEvent(0, 0, KeyEvent.ACTION_DOWN, keyCode, 0, extraMeta));
+                canvas.getKeyboard().keyEvent(keyCode, new KeyEvent(0, 0, KeyEvent.ACTION_UP, keyCode, 0, extraMeta));
+            }
+        });
+        customKeyboardLayout.addView(customKeyboardView,
+                new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        // Starts hidden; isCustomKeyboardShowing() keys off this view's visibility.
+        customKeyboardView.setVisibility(View.GONE);
+
+        // Vertical-only drag, persisted as bottom-gap fraction of the screen height.
+        keyboardDragHandle.setOnTouchListener(new View.OnTouchListener() {
+            private float dY;
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                View parent = (View) customKeyboardLayout.getParent();
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        dY = customKeyboardLayout.getY() - event.getRawY();
+                        return true;
+                    case MotionEvent.ACTION_MOVE:
+                        float newY = Math.max(0, Math.min(event.getRawY() + dY,
+                                parent.getHeight() - customKeyboardLayout.getHeight()));
+                        customKeyboardLayout.setY(newY);
+                        return true;
+                    case MotionEvent.ACTION_UP:
+                        if (parent.getHeight() > 0) {
+                            float bottomGap = parent.getHeight()
+                                    - (customKeyboardLayout.getY() + customKeyboardLayout.getHeight());
+                            getSharedPreferences(Constants.generalSettingsTag, MODE_PRIVATE).edit()
+                                    .putFloat(Constants.customKeyboardBottomFraction,
+                                            Math.max(0f, bottomGap) / parent.getHeight())
+                                    .apply();
+                        }
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+        });
+    }
+
+    private void showCustomKeyboard() {
+        keyboardDragHandle.setVisibility(View.VISIBLE);
+        customKeyboardView.setVisibility(View.VISIBLE);
+        if (!extraKeysHidden) extraKeysView.setVisibility(View.VISIBLE);
+        customKeyboardLayout.setVisibility(View.VISIBLE);
+        // Semi-transparent overlay: no keyboardHeight bookkeeping, no canvas pan.
+        customKeyboardLayout.post(this::applyCustomKeyboardPosition);
+        softKeyboardUp = true;
+    }
+
+    private void hideCustomKeyboard() {
+        customKeyboardLayout.setVisibility(View.GONE);
+        customKeyboardView.setVisibility(View.GONE);
+        softKeyboardUp = false;
+    }
+
+    private void applyCustomKeyboardPosition() {
+        float fraction = getSharedPreferences(Constants.generalSettingsTag, MODE_PRIVATE)
+                .getFloat(Constants.customKeyboardBottomFraction, 0f);
+        View parent = (View) customKeyboardLayout.getParent();
+        int parentH = parent.getHeight();
+        int viewH = customKeyboardLayout.getHeight();
+        float y = parentH - viewH - fraction * parentH;
+        customKeyboardLayout.setY(Math.max(0, Math.min(y, parentH - viewH)));
+    }
+
+    private boolean isCustomKeyboardShowing() {
+        return customKeyboardEnabled && customKeyboardView != null
+                && customKeyboardView.getVisibility() == View.VISIBLE;
+    }
+
+    /**
      * Resets the state and image of the on-screen keys.
      */
     public void resetOnScreenKeys(int keyCode) {
@@ -1146,6 +1274,22 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
      * Sets the visibility of the extra keys appropriately.
      */
     private void setExtraKeysVisibility(int visibility, boolean forceVisible) {
+        // In custom-keyboard mode ExtraKeys lives inside customKeyboardLayout;
+        // toggle the view itself and keep the container's visibility in sync.
+        if (customKeyboardEnabled) {
+            if (visibility == View.VISIBLE && !extraKeysHidden
+                    && connection.getExtraKeysToggleType() == Constants.EXTRA_KEYS_ON) {
+                extraKeysView.setVisibility(View.VISIBLE);
+                customKeyboardLayout.setVisibility(View.VISIBLE);
+            } else if (visibility == View.GONE) {
+                extraKeysView.setVisibility(View.GONE);
+                if (!isCustomKeyboardShowing()) {
+                    customKeyboardLayout.setVisibility(View.GONE);
+                }
+            }
+            return;
+        }
+
         if (!extraKeysHidden && forceVisible &&
                 connection.getExtraKeysToggleType() == Constants.EXTRA_KEYS_ON) {
             layoutKeys.setVisibility(View.VISIBLE);
@@ -1269,6 +1413,13 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
             ((ConnectionSettable) dialog).setConnection(connection);
     }
 
+    /** Horizontal ExtraKeys content when landscape, or whenever the screen is wide enough that the custom keyboard splits. */
+    private boolean useLandscapeExtraKeys() {
+        Configuration config = getResources().getConfiguration();
+        return config.orientation == Configuration.ORIENTATION_LANDSCAPE
+                || (customKeyboardEnabled && config.screenWidthDp > CustomKeyboardView.SPLIT_WIDTH_THRESHOLD_DP);
+    }
+
     private void recreateExtraKeys(boolean landscape) {
         if (landscape) {
             try {
@@ -1310,6 +1461,13 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 
         try {
             setExtraKeysVisibility(View.GONE, false);
+
+            // In custom-keyboard mode no IME relayout will restore the bar;
+            // re-show it here and re-anchor the (possibly dragged) position.
+            if (isCustomKeyboardShowing()) {
+                extraKeysView.setVisibility(extraKeysHidden ? View.GONE : View.VISIBLE);
+                customKeyboardLayout.post(this::applyCustomKeyboardPosition);
+            }
 
             // Correct a few times just in case. There is no visual effect.
             handler.postDelayed(this::correctAfterRotation, 300);
@@ -1400,7 +1558,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
         canvas.connInitializer.onDisplayRectChanged(display);
 
         // Auto change extra keys to horizontal or vertical mode
-        recreateExtraKeys(touchpad.getWidth() > touchpad.getHeight());
+        recreateExtraKeys(useLandscapeExtraKeys());
 
         handler.postDelayed(() -> {
             canvas.repaint(0, 0, canvas.getWidth(), canvas.getHeight());
@@ -1804,17 +1962,35 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     private final Rect extraKeysRect = new Rect();
     private boolean nonTouchDown = false;
 
+    /** Hit-test only real leaf views (keys, drag handle); container gaps fall through to the touchpad. */
+    private boolean hitInteractiveLeaf(View v, int x, int y, Rect rect) {
+        if (v.getVisibility() != View.VISIBLE) return false;
+        if (v instanceof ViewGroup) {
+            ViewGroup g = (ViewGroup) v;
+            for (int i = 0; i < g.getChildCount(); i++) {
+                if (hitInteractiveLeaf(g.getChildAt(i), x, y, rect)) return true;
+            }
+            return false;
+        }
+        return v.getGlobalVisibleRect(rect) && rect.contains(x, y);
+    }
+
     @Override
     public boolean dispatchTouchEvent(MotionEvent event) {
         try {
             int x = (int) event.getX();
             int y = (int) event.getY();
 
-            extraKeysView.getGlobalVisibleRect(extraKeysRect);
+            boolean customKeysVisible = customKeyboardEnabled && customKeyboardLayout != null
+                    && customKeyboardLayout.getVisibility() == View.VISIBLE;
+            // 只把真实按键算作命中;键与键之间的空隙(分裂中缝、错位缺口)穿透给触摸板
+            boolean onKeys = customKeysVisible
+                    ? hitInteractiveLeaf(customKeyboardLayout, x, y, extraKeysRect)
+                    : (layoutKeys.getVisibility() == View.VISIBLE
+                            && hitInteractiveLeaf(layoutKeys, x, y, extraKeysRect));
 
-            // 判断触摸点是否落在 ExtraKeyboardView 的可见区域内，且可见
-            if (extraKeysRect.contains(x, y) && layoutKeys.getVisibility() == View.VISIBLE
-                    && event.getAction() == MotionEvent.ACTION_DOWN) {
+            // 判断触摸点是否落在按键区域内,且可见
+            if (onKeys && event.getAction() == MotionEvent.ACTION_DOWN) {
                 nonTouchDown = true;
             }
 
@@ -1976,6 +2152,10 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     }
 
     public void showKeyboard() {
+        if (customKeyboardEnabled) {
+            showCustomKeyboard();
+            return;
+        }
         android.util.Log.i(TAG, "Showing keyboard and hiding action bar");
 
         Utils.showKeyboard(this, touchpad);
@@ -1987,6 +2167,10 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
     }
 
     public void hideKeyboard() {
+        if (customKeyboardEnabled) {
+            hideCustomKeyboard();
+            return;
+        }
         android.util.Log.i(TAG, "Hiding keyboard and hiding action bar");
 
         Utils.hideKeyboard(this, touchpad);
@@ -2046,6 +2230,11 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 
     @Override
     public void onBackPressed() {
+        // The custom keyboard is only dismissed by BACK.
+        if (isCustomKeyboardShowing()) {
+            hideKeyboard();
+            return;
+        }
         if (inputHandler != null) {
             inputHandler.onKeyDown(KeyEvent.KEYCODE_BACK, new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK));
         }

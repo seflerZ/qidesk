@@ -218,6 +218,8 @@ public class Constants {
     public static final String dragHelpEnabled = "dragHelpEnabled";
     public static final String inertiaEnabled = "inertiaEnabled";
     public static final String backTapShowKeyboard = "backTapShowKeyboard";
+    public static final String customKeyboardEnabled = "customKeyboardEnabled";
+    public static final String customKeyboardBottomFraction = "customKeyboardBottomFraction";
     public static final String softwareKeyboardType = "softwareKeyboardType";
     public static final String ACTION_USB_PERMISSION = "com.qihua.aSPICE.USB_PERMISSION";
     public static final int usbDeviceTimeout = 5000;
