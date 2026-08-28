@@ -5,7 +5,7 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Rect;
-import android.media.SoundPool;
+import android.media.AudioManager;
 import android.os.Build;
 import android.provider.Settings;
 import android.view.HapticFeedbackConstants;
@@ -46,7 +46,7 @@ public class CustomKeyboardView extends ViewGroup {
         void onKeyboardShiftState(boolean down);
     }
 
-    private static final float MAX_KEY_WIDTH_DP = 64f;
+    private static final float MAX_KEY_WIDTH_DP = 55f;
     private static final float ROW_HEIGHT_DP = 48f;
     private static final int ROW_COUNT = 4;
     /** Reference row width in key units (row 0: 10 letters + 1.5u BKSP). */
@@ -56,7 +56,7 @@ public class CustomKeyboardView extends ViewGroup {
     /** Per-half content width in key units when split; SPACE flexes to fill it so both bars touch the center gap. */
     private static final float SPLIT_HALF_UNITS = 6f;
     private static final float STAGGER_ROW1 = 0.35f;
-    private static final float STAGGER_ROW2 = 0.5f;
+    private static final float STAGGER_ROW2 = 0.75f;
     private static final long REPEAT_INITIAL_MS = 400;
     private static final long REPEAT_DELAY_MS = 20;
 
@@ -93,6 +93,10 @@ public class CustomKeyboardView extends ViewGroup {
         return new KeyDef(String.valueOf(c), c, 0, swipe, 1f, 1f);
     }
 
+    private static KeyDef kd(char c, char swipe, float weightFlat, float weightSplit) {
+        return new KeyDef(String.valueOf(c), c, 0, swipe, weightFlat, weightSplit);
+    }
+
     private static final class Row {
         final KeyDef[] keys;
         final float stagger;  // row indent in units (applies per group in split mode)
@@ -117,10 +121,12 @@ public class CustomKeyboardView extends ViewGroup {
     private static final KeyDef DOT = kd('.', '>');
     private static final KeyDef SEMI = kd(';', ':');
     private static final KeyDef QUESTION = kd('?', '/');
-    private static final KeyDef HYPEN = kd('-', '_');
+    private static final KeyDef HYPHEN = kd('-', '_');
+    private static final KeyDef WAVE = kd('`', '~');
     private static final KeyDef APOSTROPHE = kd('\'', '"');
     /** Split row 2 puts b on both halves — either thumb may hit it. */
     private static final KeyDef B_RIGHT = kd('b');
+    private static final KeyDef Y_LEFT = kd('y', '6');
 
     private static final Row[] ROWS_FLAT;
     private static final Row[] ROWS_SPLIT;
@@ -128,16 +134,16 @@ public class CustomKeyboardView extends ViewGroup {
     static {
         KeyDef z = kd('z'), x = kd('x'), c = kd('c'), v = kd('v'), b = kd('b'), n = kd('n'), m = kd('m');
         KeyDef[] r0 = {kd('q', '1'), kd('w', '2'), kd('e', '3'), kd('r', '4'), kd('t', '5'),
-                kd('y', '6'), kd('u', '7'), kd('i', '8'), kd('o', '9'), kd('p', '0'), BKSP};
+                Y_LEFT, kd('y', '6'), kd('u', '7'), kd('i', '8'), kd('o', '9'), kd('p', '0'), BKSP};
         KeyDef[] r1 = {kd('a'), kd('s'), kd('d'), kd('f'), kd('g'), kd('h'), kd('j'), kd('k'), kd('l'), ENTER};
-        KeyDef[] r2 = {z, x, c, v, b, n, m, QUESTION, HYPEN, SHIFT};
-        KeyDef[] r2split = {z, x, c, v, b, B_RIGHT, n, m, QUESTION, HYPEN, SHIFT};
+        KeyDef[] r2 = {z, x, c, v, b, n, m, QUESTION, SHIFT};
+        KeyDef[] r2split = {z, x, c, v, b, B_RIGHT, n, m, QUESTION, SHIFT};
         KeyDef[] r3flat = {COMMA, DOT, SPACE_FLAT, SEMI, APOSTROPHE};
-        KeyDef[] r3split = {COMMA, DOT, SPACE_L, SPACE_R, SEMI, APOSTROPHE};
+        KeyDef[] r3split = {COMMA, DOT, WAVE, SPACE_L, SPACE_R, HYPHEN, SEMI, APOSTROPHE};
         ROWS_FLAT = new Row[]{new Row(r0, 0, r0.length), new Row(r1, STAGGER_ROW1, r1.length),
                 new Row(r2, STAGGER_ROW2, r2.length), new Row(r3flat, 0, r3flat.length)};
-        ROWS_SPLIT = new Row[]{new Row(r0, 0, 5), new Row(r1, STAGGER_ROW1, 5),
-                new Row(r2split, STAGGER_ROW2, 5), new Row(r3split, 0, 3)};
+        ROWS_SPLIT = new Row[]{new Row(r0, 0, 6), new Row(r1, STAGGER_ROW1, 5),
+                new Row(r2split, STAGGER_ROW2, 5), new Row(r3split, 0, 4)};
     }
 
     private final List<KeyButton> buttons = new ArrayList<>();
@@ -151,10 +157,6 @@ public class CustomKeyboardView extends ViewGroup {
     private boolean shiftLatched;      // own on-keyboard ⇧
     private boolean extraShiftActive;  // ExtraKeys bar's SHIFT
 
-    /** Bundled click (system playSoundEffect is gated by the touch-sounds setting). */
-    private static SoundPool soundPool;
-    private static int clickSoundId = -1;
-
     private OnKeyAction keyAction;
     private PopupWindow popupWindow;
     private ScheduledExecutorService repeatExecutor;
@@ -167,11 +169,6 @@ public class CustomKeyboardView extends ViewGroup {
         colorBg = ContextCompat.getColor(context, R.color.extraKeysButtonBackgroundColor);
         colorBgActive = ContextCompat.getColor(context, R.color.extraKeysButtonActiveBackgroundColor);
         gapPaint.setColor(colorBg);
-
-        if (soundPool == null) {
-            soundPool = new SoundPool.Builder().setMaxStreams(4).build();
-            clickSoundId = soundPool.load(context, R.raw.key_click, 1);
-        }
 
         LinkedHashSet<KeyDef> union = new LinkedHashSet<>();
         for (Row row : ROWS_FLAT) for (KeyDef k : row.keys) union.add(k);
@@ -255,7 +252,7 @@ public class CustomKeyboardView extends ViewGroup {
             float w = split ? row.keys[i].weightSplit : row.keys[i].weightFlat;
             if (w > 0) fixed += w;
         }
-        return Math.max(1f, availUnits - fixed);
+        return Math.max(0.5f, availUnits - fixed);
     }
 
     private int keyWidthPx(KeyDef k, boolean split, int unitW, float flexUnits) {
@@ -357,13 +354,11 @@ public class CustomKeyboardView extends ViewGroup {
     }
 
     private void playKeySound() {
-        if (soundPool == null || clickSoundId <= 0) return;
-        // Sound follows the system touch-sound switch, haptics the system haptic switch;
-        // both are additionally gated by the app's own touch-feedback pref.
-        if (Settings.System.getInt(getContext().getContentResolver(),
-                Settings.System.SOUND_EFFECTS_ENABLED, 1) == 0) return;
+        // Bypass View.playSoundEffect's per-window debounce — it drops ~50ms-spaced repeats.
+        // AudioManager plays the same system key click, no throttling.
         if (!Utils.querySharedPreferenceBoolean(getContext(), Constants.touchpadFeedback, false)) return;
-        soundPool.play(clickSoundId, 0.7f, 0.7f, 1, 0, 1f);
+        AudioManager am = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
+        am.playSoundEffect(AudioManager.FX_KEY_CLICK);
     }
 
     private void performHaptic(View v) {
