@@ -1190,6 +1190,15 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
                 canvas.getKeyboard().keyEvent(keyCode, new KeyEvent(0, 0, KeyEvent.ACTION_DOWN, keyCode, 0, extraMeta));
                 canvas.getKeyboard().keyEvent(keyCode, new KeyEvent(0, 0, KeyEvent.ACTION_UP, keyCode, 0, extraMeta));
             }
+
+            @Override
+            public void onKeyboardShiftState(boolean down) {
+                canvas.getKeyboard().keyEvent(KeyEvent.KEYCODE_SHIFT_RIGHT,
+                        new KeyEvent(0, 0, down ? KeyEvent.ACTION_DOWN : KeyEvent.ACTION_UP,
+                                KeyEvent.KEYCODE_SHIFT_RIGHT, 0,
+                                KeyEvent.META_SHIFT_ON | KeyEvent.META_SHIFT_RIGHT_ON,
+                                0, RemoteKeyboard.SCAN_RIGHTSHIFT));
+            }
         });
         customKeyboardLayout.addView(customKeyboardView,
                 new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
@@ -1241,6 +1250,7 @@ public class RemoteCanvasActivity extends AppCompatActivity implements OnKeyList
 
     private void hideCustomKeyboard() {
         customKeyboardLayout.setVisibility(View.GONE);
+        customKeyboardView.releaseShiftLatch();
         customKeyboardView.setVisibility(View.GONE);
         softKeyboardUp = false;
     }

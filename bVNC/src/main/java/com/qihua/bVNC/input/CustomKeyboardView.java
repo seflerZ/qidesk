@@ -42,6 +42,8 @@ public class CustomKeyboardView extends ViewGroup {
     public interface OnKeyAction {
         void onKeyboardText(char c, int extraMeta);
         void onKeyboardSpecialKey(int androidKeyCode, int extraMeta);
+        /** Latch flipped: down=true means R-SHIFT is now held on the remote. */
+        void onKeyboardShiftState(boolean down);
     }
 
     private static final float MAX_KEY_WIDTH_DP = 64f;
@@ -108,13 +110,14 @@ public class CustomKeyboardView extends ViewGroup {
     private static final KeyDef SPACE_L = new KeyDef("SPACE", (char) 0, KeyEvent.KEYCODE_SPACE, (char) 0, 0f, -1f);
     private static final KeyDef SPACE_R = new KeyDef("SPACE", (char) 0, KeyEvent.KEYCODE_SPACE, (char) 0, 0f, -1f);
     private static final KeyDef ENTER = new KeyDef("ENTER ⏎", "⏎", (char) 0, KeyEvent.KEYCODE_ENTER, (char) 0, -1f, 1.5f);
-    /** Right shift latch: one-shot, meta rides on the next key (SSH needs it on the letter itself). */
-    private static final KeyDef SHIFT = new KeyDef("SHIFT", (char) 0, KeyEvent.KEYCODE_SHIFT_RIGHT, (char) 0, -1f, 1.5f);
+    /** Right shift latch: one-shot; the latch also sends R-SHIFT down/up to the remote. */
+    private static final KeyDef SHIFT = new KeyDef("SHIFT", (char) 0, KeyEvent.KEYCODE_SHIFT_RIGHT, (char) 0, -1f, 1f);
     // Punctuation swipe-ups mirror the physical keyboard's Shift pairs (?/ is flipped: ? is the face).
     private static final KeyDef COMMA = kd(',', '<');
     private static final KeyDef DOT = kd('.', '>');
     private static final KeyDef SEMI = kd(';', ':');
     private static final KeyDef QUESTION = kd('?', '/');
+    private static final KeyDef HYPEN = kd('-', '_');
     private static final KeyDef APOSTROPHE = kd('\'', '"');
     /** Split row 2 puts b on both halves — either thumb may hit it. */
     private static final KeyDef B_RIGHT = kd('b');
@@ -127,8 +130,8 @@ public class CustomKeyboardView extends ViewGroup {
         KeyDef[] r0 = {kd('q', '1'), kd('w', '2'), kd('e', '3'), kd('r', '4'), kd('t', '5'),
                 kd('y', '6'), kd('u', '7'), kd('i', '8'), kd('o', '9'), kd('p', '0'), BKSP};
         KeyDef[] r1 = {kd('a'), kd('s'), kd('d'), kd('f'), kd('g'), kd('h'), kd('j'), kd('k'), kd('l'), ENTER};
-        KeyDef[] r2 = {z, x, c, v, b, n, m, QUESTION, SHIFT};
-        KeyDef[] r2split = {z, x, c, v, b, B_RIGHT, n, m, QUESTION, SHIFT};
+        KeyDef[] r2 = {z, x, c, v, b, n, m, QUESTION, HYPEN, SHIFT};
+        KeyDef[] r2split = {z, x, c, v, b, B_RIGHT, n, m, QUESTION, HYPEN, SHIFT};
         KeyDef[] r3flat = {COMMA, DOT, SPACE_FLAT, SEMI, APOSTROPHE};
         KeyDef[] r3split = {COMMA, DOT, SPACE_L, SPACE_R, SEMI, APOSTROPHE};
         ROWS_FLAT = new Row[]{new Row(r0, 0, r0.length), new Row(r1, STAGGER_ROW1, r1.length),
@@ -138,6 +141,9 @@ public class CustomKeyboardView extends ViewGroup {
     }
 
     private final List<KeyButton> buttons = new ArrayList<>();
+    /** Key-color filler for edge slivers (stagger indents, truncation); the split center gap stays clear. */
+    private final List<Rect> gapRects = new ArrayList<>();
+    private final Paint gapPaint = new Paint();
     private final int colorText;
     private final int colorTextActive;
     private final int colorBg;
@@ -160,6 +166,7 @@ public class CustomKeyboardView extends ViewGroup {
         colorTextActive = ContextCompat.getColor(context, R.color.extraKeysButtonActiveTextColor);
         colorBg = ContextCompat.getColor(context, R.color.extraKeysButtonBackgroundColor);
         colorBgActive = ContextCompat.getColor(context, R.color.extraKeysButtonActiveBackgroundColor);
+        gapPaint.setColor(colorBg);
 
         if (soundPool == null) {
             soundPool = new SoundPool.Builder().setMaxStreams(4).build();
@@ -192,6 +199,7 @@ public class CustomKeyboardView extends ViewGroup {
 
         Row[] rows = split ? ROWS_SPLIT : ROWS_FLAT;
         for (KeyButton b : buttons) b.targetRect = null;
+        gapRects.clear();
 
         for (int r = 0; r < rows.length; r++) {
             layoutRow(rows[r], split, unitW, availW, r * rowH, rowH);
@@ -221,6 +229,10 @@ public class CustomKeyboardView extends ViewGroup {
         for (int i = 0; i < row.splitAfter; i++) {
             x += place(row.keys[i], split, unitW, flexLeft, x, y, rowH);
         }
+        // Edge slivers get key-color filler (left stagger indent, right stagger margin /
+        // truncation); the split center gap stays see-through. Key rects stay put.
+        if (staggerPx > 0) gapRects.add(new Rect(0, y, staggerPx, y + rowH));
+        if (!split && x < availW) gapRects.add(new Rect(x, y, availW, y + rowH));
 
         if (row.splitAfter < row.keys.length) {
             float flexRight = flexUnits(row, row.splitAfter, row.keys.length, split, groupUnits);
@@ -232,6 +244,7 @@ public class CustomKeyboardView extends ViewGroup {
             for (int i = row.splitAfter; i < row.keys.length; i++) {
                 rx += place(row.keys[i], split, unitW, flexRight, rx, y, rowH);
             }
+            if (rx < availW) gapRects.add(new Rect(rx, y, availW, y + rowH));
         }
     }
 
@@ -270,6 +283,14 @@ public class CustomKeyboardView extends ViewGroup {
         }
     }
 
+    @Override
+    protected void dispatchDraw(Canvas canvas) {
+        if (!gapRects.isEmpty()) {
+            for (Rect r : gapRects) canvas.drawRect(r, gapPaint);
+        }
+        super.dispatchDraw(canvas);
+    }
+
     private void sendKey(KeyDef def) {
         if (keyAction == null) return;
         if (def == SHIFT) {
@@ -295,9 +316,16 @@ public class CustomKeyboardView extends ViewGroup {
     }
 
     private void setShiftLatched(boolean latched) {
+        if (shiftLatched == latched) return;
         shiftLatched = latched;
         buttonFor(SHIFT).setTextColor(latched ? colorTextActive : colorText);
         updateLetterCase();
+        if (keyAction != null) keyAction.onKeyboardShiftState(latched);
+    }
+
+    /** Release the latch (remote gets the shift-up) — call when the keyboard hides. */
+    public void releaseShiftLatch() {
+        setShiftLatched(false);
     }
 
     /** ExtraKeys bar's SHIFT state — drives letter case display only (meta comes from its own path). */
