@@ -113,9 +113,9 @@ public class CustomKeyboardView extends ViewGroup {
     private static final KeyDef SPACE_FLAT = new KeyDef("SPACE", (char) 0, KeyEvent.KEYCODE_SPACE, (char) 0, -1f, 0f);
     private static final KeyDef SPACE_L = new KeyDef("SPACE", (char) 0, KeyEvent.KEYCODE_SPACE, (char) 0, 0f, -1f);
     private static final KeyDef SPACE_R = new KeyDef("SPACE", (char) 0, KeyEvent.KEYCODE_SPACE, (char) 0, 0f, -1f);
-    private static final KeyDef ENTER = new KeyDef("ENTER ⏎", "⏎", (char) 0, KeyEvent.KEYCODE_ENTER, (char) 0, -1f, 1.5f);
+    private static final KeyDef ENTER = new KeyDef("ENTER ⏎", "⏎", (char) 0, KeyEvent.KEYCODE_ENTER, (char) 0, -1f, 2f);
     /** Right shift latch: one-shot; the latch also sends R-SHIFT down/up to the remote. */
-    private static final KeyDef SHIFT = new KeyDef("SHIFT", (char) 0, KeyEvent.KEYCODE_SHIFT_RIGHT, (char) 0, -1f, 1f);
+    private static final KeyDef SHIFT = new KeyDef("SHIFT", (char) 0, KeyEvent.KEYCODE_SHIFT_RIGHT, (char) 0, -1f, 1.25f);
     // Punctuation swipe-ups mirror the physical keyboard's Shift pairs (?/ is flipped: ? is the face).
     private static final KeyDef COMMA = kd(',', '<');
     private static final KeyDef DOT = kd('.', '>');
@@ -128,6 +128,8 @@ public class CustomKeyboardView extends ViewGroup {
     private static final KeyDef B_RIGHT = kd('b');
     private static final KeyDef Y_LEFT = kd('y', '6');
 
+    private static final KeyDef BRACKET = kd('（', ')');
+
     private static final Row[] ROWS_FLAT;
     private static final Row[] ROWS_SPLIT;
 
@@ -137,9 +139,9 @@ public class CustomKeyboardView extends ViewGroup {
                 Y_LEFT, kd('y', '6'), kd('u', '7'), kd('i', '8'), kd('o', '9'), kd('p', '0'), BKSP};
         KeyDef[] r1 = {kd('a'), kd('s'), kd('d'), kd('f'), kd('g'), kd('h'), kd('j'), kd('k'), kd('l'), ENTER};
         KeyDef[] r2 = {z, x, c, v, b, n, m, QUESTION, SHIFT};
-        KeyDef[] r2split = {z, x, c, v, b, B_RIGHT, n, m, QUESTION, SHIFT};
-        KeyDef[] r3flat = {COMMA, DOT, SPACE_FLAT, SEMI, APOSTROPHE};
-        KeyDef[] r3split = {COMMA, DOT, WAVE, SPACE_L, SPACE_R, HYPHEN, SEMI, APOSTROPHE};
+        KeyDef[] r2split = {z, x, c, v, b, B_RIGHT, n, m, QUESTION, HYPHEN, SHIFT};
+        KeyDef[] r3flat = {DOT, COMMA, SPACE_FLAT, SEMI, APOSTROPHE};
+        KeyDef[] r3split = {WAVE, DOT, COMMA, SPACE_L, SPACE_R, BRACKET, SEMI, APOSTROPHE};
         ROWS_FLAT = new Row[]{new Row(r0, 0, r0.length), new Row(r1, STAGGER_ROW1, r1.length),
                 new Row(r2, STAGGER_ROW2, r2.length), new Row(r3flat, 0, r3flat.length)};
         ROWS_SPLIT = new Row[]{new Row(r0, 0, 6), new Row(r1, STAGGER_ROW1, 5),
@@ -237,7 +239,8 @@ public class CustomKeyboardView extends ViewGroup {
             for (int i = row.splitAfter; i < row.keys.length; i++) {
                 totalW += keyWidthPx(row.keys[i], split, unitW, flexRight);
             }
-            int rx = availW - staggerPx - totalW;
+            // Stagger indents the group's inner (center-gap) edge only; the outer edge stays flush.
+            int rx = availW - totalW;
             for (int i = row.splitAfter; i < row.keys.length; i++) {
                 rx += place(row.keys[i], split, unitW, flexRight, rx, y, rowH);
             }
