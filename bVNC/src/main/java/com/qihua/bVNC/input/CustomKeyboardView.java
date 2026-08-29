@@ -120,7 +120,7 @@ public class CustomKeyboardView extends ViewGroup {
     private static final KeyDef COMMA = kd(',', '<');
     private static final KeyDef DOT = kd('.', '>');
     private static final KeyDef SEMI = kd(';', ':');
-    private static final KeyDef QUESTION = kd('?', '/');
+    private static final KeyDef QUESTION = kd('?', '!');
     private static final KeyDef HYPHEN = kd('-', '_');
     private static final KeyDef WAVE = kd('`', '~');
     private static final KeyDef APOSTROPHE = kd('\'', '"');

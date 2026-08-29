@@ -369,14 +369,15 @@ public final class ExtraKeysView extends GridLayout {
             for (int col = 0; col < buttons[row].length; col++) {
                 final ExtraKeyButton buttonInfo = buttons[row][col];
 
-                MaterialButton button;
+                HintButton button;
                 if (isSpecialButton(buttonInfo)) {
                     button = createSpecialButton(buttonInfo.getKey(), true);
                     if (button == null) return;
                 } else {
-                    button = new MaterialButton(getContext(), null, android.R.attr.buttonBarButtonStyle);
+                    button = new HintButton(getContext());
                 }
 
+                if (buttonInfo.getPopup() != null) button.hint = buttonInfo.getPopup().getDisplay();
                 button.setText(buttonInfo.getDisplay());
                 button.setTextColor(mButtonTextColor);
                 button.setBackgroundColor(mButtonBackgroundColor);
@@ -701,11 +702,11 @@ public final class ExtraKeysView extends GridLayout {
         }
     }
 
-    public MaterialButton createSpecialButton(String buttonKey, boolean needUpdate) {
+    public HintButton createSpecialButton(String buttonKey, boolean needUpdate) {
         SpecialButtonState state = mSpecialButtons.get(SpecialButton.valueOf(buttonKey));
         if (state == null) return null;
         state.setIsCreated(true);
-        MaterialButton button = new MaterialButton(getContext(), null, android.R.attr.buttonBarButtonStyle);
+        HintButton button = new HintButton(getContext());
         button.setTextColor(state.isActive ? mButtonActiveTextColor : mButtonTextColor);
         if (needUpdate) {
             state.buttons.add(button);
@@ -714,6 +715,28 @@ public final class ExtraKeysView extends GridLayout {
     }
 
 
+
+    /** Button that paints its swipe-up popup key as a small corner hint. */
+    public class HintButton extends MaterialButton {
+        String hint;
+        private final android.graphics.Paint hintPaint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+
+        HintButton(Context context) {
+            super(context, null, android.R.attr.buttonBarButtonStyle);
+            hintPaint.setColor(mButtonTextColor);
+            hintPaint.setAlpha(180);
+        }
+
+        @Override
+        protected void onDraw(android.graphics.Canvas canvas) {
+            super.onDraw(canvas);
+            if (hint == null || hint.isEmpty()) return;
+            hintPaint.setTextSize(getTextSize() * 0.5f);
+            float padX = getWidth() * 0.12f;
+            canvas.drawText(hint, getWidth() - hintPaint.measureText(hint) - padX,
+                    getHeight() * 0.08f + hintPaint.getTextSize(), hintPaint);
+        }
+    }
 
     /**
      * General util function to compute the longest column length in a matrix.
